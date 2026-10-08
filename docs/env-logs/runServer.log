@@ -1,0 +1,121 @@
+> Task :createMinecraftArtifacts UP-TO-DATE
+> Task :compileJava NO-SOURCE
+> Task :processResources NO-SOURCE
+> Task :classes UP-TO-DATE
+> Task :downloadAssets UP-TO-DATE
+> Task :writeServerLegacyClasspath
+> Task :prepareServerRun
+> Task :syncRunMods UP-TO-DATE
+
+> Task :runServer
+WARN StatusConsoleListener Advanced terminal features are not available in this environment
+[09:42:21] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher running: args [--launchTarget, forgeserverdev, --gameDir, ., --fml.fmlVersion, 4.0.45, --fml.mcVersion, 1.21.1, --fml.neoForgeVersion, 21.1.256, --fml.neoFormVersion, 20240808.144430, --nogui]
+[09:42:21] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: JVM identified as Oracle Corporation Java HotSpot(TM) 64-Bit Server VM 21.0.12+7-LTS-205
+[09:42:21] [main/INFO] [cp.mo.mo.Launcher/MODLAUNCHER]: ModLauncher 11.0.5+main.901c6ea8 starting: java version 21.0.12 by Oracle Corporation; OS Windows 11 arch amd64 version 10.0
+[09:42:22] [main/INFO] [ne.ne.fm.lo.ImmediateWindowHandler/]: ImmediateWindowProvider not loading because launch target is forgeserverdev
+[09:42:22] [main/INFO] [mixin/]: SpongePowered MIXIN Subsystem Version=0.8.7 Source=union:/C:/Users/Sellu/.gradle/caches/modules-2/files-2.1/net.fabricmc/sponge-mixin/0.16.4+mixin.0.8.7/26d01f0567ab46e9ca0d2ed89d0ecc11aadbd433/sponge-mixin-0.16.4+mixin.0.8.7.jar%2394!/ Service=ModLauncher Env=SERVER
+[09:42:22] [main/INFO] [ne.ne.fm.lo.mo.lo.JarInJarDependencyLocator/]: Found 13 dependencies adding them to mods collection
+[09:42:22] [main/INFO] [ne.ne.fm.lo.mo.ModDiscoverer/]: 
+     Mod List:
+		Name Version (Mod Id)
+
+		Create 6.0.10 (create)
+		Create Aeronautics 1.3.2 (aeronautics)
+		Create Aeronautics 1.3.2 (aeronautics_bundled)
+		Create Offroad 1.3.2 (offroad)
+		Create Simulated 1.3.2 (simulated)
+		Fealty 0.1.0 (fealty)
+		Flywheel 1.0.6 (flywheel)
+		GeckoLib 4 4.9.3 (geckolib)
+		Minecraft 1.21.1 (minecraft)
+		NeoForge 21.1.256 (neoforge)
+		Ponder 1.0.82+mc1.21.1 (ponder)
+		Sable 2.0.6 (sable)
+		Sable Companion 1.6.0 (sablecompanion)
+		Veil 4.3.2 (veil)
+[09:42:23] [main/INFO] [mixin/]: Compatibility level set to JAVA_21
+[09:42:23] [main/INFO] [cp.mo.mo.LaunchServiceHandler/MODLAUNCHER]: Launching target 'forgeserverdev' with arguments [--gameDir, ., --nogui]
+[09:42:23] [main/WARN] [mixin/]: Reference map 'simulated.refmap.json' for simulated.mixins.json could not be read. If this is a development environment you can ignore this message
+[09:42:23] [main/WARN] [mixin/]: Reference map 'geckolib.refmap.json' for geckolib.mixins.json could not be read. If this is a development environment you can ignore this message
+[09:42:23] [main/WARN] [mixin/]: Reference map 'aeronautics.refmap.json' for aeronautics.mixins.json could not be read. If this is a development environment you can ignore this message
+[09:42:23] [main/WARN] [mixin/]: Reference map 'ponder.refmap.json' for ponder-common.mixins.json could not be read. If this is a development environment you can ignore this message
+[09:42:23] [main/INFO] [de.ry.sa.mi.AbstractSableMixinPlugin/]: Using Vanilla renderer mixins
+[09:42:23] [main/INFO] [de.ry.sa.mi.AbstractSableMixinPlugin/]: Using Vanilla renderer mixins
+[09:42:23] [main/WARN] [mixin/]: Reference map 'offroad.refmap.json' for offroad.mixins.json could not be read. If this is a development environment you can ignore this message
+[09:42:24] [main/WARN] [mixin/]: Error loading class: org/jetbrains/annotations/ApiStatus$ScheduledForRemoval (java.lang.ClassNotFoundException: org.jetbrains.annotations.ApiStatus$ScheduledForRemoval)
+[09:42:24] [main/INFO] [MixinExtras|Service/]: Initializing MixinExtras via com.llamalad7.mixinextras.service.MixinExtrasServiceImpl(version=0.5.5).
+[09:42:31] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, location] and [teleport, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
+[09:42:31] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, location] and [teleport, targets] with inputs: [0.1 -0.5 .9, 0 0 0]
+[09:42:31] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, destination] and [teleport, targets] with inputs: [Player, 0123, @e, dd12be42-52a9-4a91-a8a1-11c01849e498]
+[09:42:31] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, targets] and [teleport, destination] with inputs: [Player, 0123, dd12be42-52a9-4a91-a8a1-11c01849e498]
+[09:42:31] [main/WARN] [minecraft/Commands]: Ambiguity between arguments [teleport, targets, location] and [teleport, targets, destination] with inputs: [0.1 -0.5 .9, 0 0 0]
+[09:42:31] [modloading-worker-0/INFO] [Veil/]: Veil is initializing.
+[09:42:31] [modloading-worker-0/INFO] [ne.ne.ne.co.NeoForgeMod/NEOFORGE-MOD]: NeoForge mod loading, version 21.1.256, for MC 1.21.1
+[09:42:31] [modloading-worker-0/INFO] [co.si.cr.Create/]: Create 6.0.10 initializing! Commit hash: ac0c444d9828da3453ae8cc65338e8de063286fb
+[09:42:32] [modloading-worker-0/INFO] [de.ry.sa.Sable/]: Sable loaded!
+[09:42:34] [main/INFO] [mojang/YggdrasilAuthenticationService]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, name=PROD]
+[09:42:34] [NeoForge Version Check/INFO] [ne.ne.fm.VersionChecker/]: [create] Starting version check at https://api.modrinth.com/updates/create/forge_updates.json?neoforge=only
+[09:42:34] [main/WARN] [minecraft/VanillaPackResourcesBuilder]: Assets URL 'union:/C:/Users/Sellu/Documents/Projects/Skyseam/build/moddev/artifacts/neoforge-21.1.256.jar%23128!/assets/.mcassetsroot' uses unexpected schema
+[09:42:34] [main/WARN] [minecraft/VanillaPackResourcesBuilder]: Assets URL 'union:/C:/Users/Sellu/Documents/Projects/Skyseam/build/moddev/artifacts/neoforge-21.1.256.jar%23128!/data/.mcassetsroot' uses unexpected schema
+[09:42:34] [main/INFO] [co.si.cr.Create/]: Created 157 recipes which will be injected into the game
+[09:42:34] [main/INFO] [co.si.cr.Create/]: Created 0 tags which will be injected into the game
+[09:42:34] [NeoForge Version Check/INFO] [ne.ne.fm.VersionChecker/]: [create] Found status: OUTDATED Current: 6.0.10 Target: 6.0.10+mc1.21.1
+[09:42:35] [main/INFO] [minecraft/RecipeManager]: Loaded 2946 recipes
+[09:42:35] [main/INFO] [minecraft/AdvancementTree]: Loaded 2679 advancements
+[09:42:35] [main/INFO] [co.se.fe.Fealty/]: Fealty: loaded 5 entries from fealty/tiers
+[09:42:35] [main/INFO] [co.se.fe.Fealty/]: Fealty: loaded 4 entries from fealty/factions
+[09:42:35] [main/INFO] [co.se.fe.Fealty/]: Fealty: loaded 25 entries from fealty/rep_actions
+[09:42:35] [main/INFO] [co.se.fe.Fealty/]: Fealty: loaded 24 entries from fealty/crimes
+[09:42:35] [main/INFO] [co.se.fe.Fealty/]: Fealty: loaded 129 entries from fealty/rep_quests
+[09:42:35] [main/INFO] [co.se.fe.Fealty/]: Fealty: loaded 2 entries from fealty/quest_chains
+[09:42:35] [main/INFO] [co.se.fe.Fealty/]: Fealty: loaded 6 entries from fealty/village_trades
+[09:42:35] [main/INFO] [co.se.fe.Fealty/]: Fealty: loaded 11 entries from fealty/black_market
+[09:42:35] [main/INFO] [co.se.fe.Fealty/]: Fealty: loaded 5 entries from fealty/stronghold_kinds
+[09:42:35] [main/INFO] [co.se.fe.Fealty/]: Fealty: loaded 4 entries from fealty/village_layouts
+[09:42:35] [main/INFO] [co.se.fe.Fealty/]: Fealty: loaded 32 entries from fealty/chatter
+[09:42:35] [main/INFO] [co.se.fe.Fealty/]: Fealty: loaded 32 entries from fealty/dialogue
+[09:42:35] [main/INFO] [co.se.fe.Fealty/]: Fealty: loaded 1 entries from fealty/rumours
+[09:42:35] [main/INFO] [co.se.fe.Fealty/]: Fealty: loaded 0 entries from fealty/conversations
+[09:42:36] [Server thread/INFO] [minecraft/DedicatedServer]: Starting minecraft server version 1.21.1
+[09:42:36] [Server thread/INFO] [minecraft/DedicatedServer]: Loading properties
+[09:42:36] [Server thread/INFO] [minecraft/DedicatedServer]: Default game type: SURVIVAL
+[09:42:36] [Server thread/INFO] [minecraft/MinecraftServer]: Generating keypair
+[09:42:36] [Server thread/INFO] [minecraft/DedicatedServer]: Starting Minecraft server on *:25565
+[09:42:36] [Server thread/INFO] [de.ry.sa.Sable/]: Adding UDP server channel future
+[09:42:36] [Netty Server IO #0/INFO] [de.ry.sa.Sable/]: Server UDP channel active
+[09:42:36] [Server thread/INFO] [minecraft/ServerConnectionListener]: Using default channel type
+[09:42:36] [Server thread/WARN] [minecraft/DedicatedServer]: **** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!
+[09:42:36] [Server thread/WARN] [minecraft/DedicatedServer]: The server will make no attempt to authenticate usernames. Beware.
+[09:42:36] [Server thread/WARN] [minecraft/DedicatedServer]: While this makes the game possible to play without internet access, it also opens up the ability for hackers to connect with any username they choose.
+[09:42:36] [Server thread/WARN] [minecraft/DedicatedServer]: To change this, set "online-mode" to "true" in the server.properties file.
+[09:42:36] [Server thread/INFO] [minecraft/DedicatedServer]: Preparing level "world"
+[09:42:36] [Server thread/INFO] [de.ry.sa.Sable/]: Creating physics pipeline for ResourceKey[minecraft:dimension / minecraft:overworld] using RapierPhysicsPipelineProvider
+[09:42:36] [Server thread/INFO] [de.ry.sa.Sable/]: Using game directory relative Sable Rapier native directory C:\Users\Sellu\Documents\Projects\Skyseam\run\.sable\natives
+[2026-10-08T13:42:37.054553200Z] [[32mINFO[0m] (sable_rapier) Rapier scene initialized
+[09:42:37] [Server thread/INFO] [de.ry.sa.Sable/]: Creating physics pipeline for ResourceKey[minecraft:dimension / minecraft:the_nether] using RapierPhysicsPipelineProvider
+[2026-10-08T13:42:37.231816900Z] [[32mINFO[0m] (sable_rapier) Rapier scene initialized
+[09:42:37] [Server thread/INFO] [de.ry.sa.Sable/]: Creating physics pipeline for ResourceKey[minecraft:dimension / minecraft:the_end] using RapierPhysicsPipelineProvider
+[2026-10-08T13:42:37.262857800Z] [[32mINFO[0m] (sable_rapier) Rapier scene initialized
+[09:42:37] [Server thread/INFO] [minecraft/MinecraftServer]: Preparing start region for dimension minecraft:overworld
+[09:42:37] [worldgen/INFO] [minecraft/LoggerChunkProgressListener]: Preparing spawn area: 0%
+[09:42:37] [Server thread/INFO] [minecraft/LoggerChunkProgressListener]: Time elapsed: 243 ms
+[09:42:37] [Server thread/INFO] [minecraft/DedicatedServer]: Done (0.693s)! For help, type "help"
+[09:42:37] [Server thread/INFO] [ne.ne.ne.ga.GameTestHooks/]: Enabled Gametest Namespaces: [skyseam]
+[09:42:37] [Server thread/INFO] [ne.ne.ne.se.pe.PermissionAPI/]: Successfully initialized permission handler neoforge:default_handler
+
+> Task :runServer FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':runServer'.
+> Process 'command 'C:\Program Files\Java\jdk-21.0.12\bin\java.exe'' finished with non-zero exit value -1
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 1m 18s
+6 actionable tasks: 3 executed, 3 up-to-date

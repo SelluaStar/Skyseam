@@ -1,0 +1,117 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+sourceSets {
+    main {
+        resources.srcDir 'src/generated/resources'
+    }
+}
+
+repositories {
+    exclusiveContent {
+        forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }
+        filter { includeGroup 'maven.modrinth' }
+    }
+    maven {
+        name = 'RyanHCode (Sable)'
+        url = 'https://maven.ryanhcode.dev/releases'
+        content { includeGroupAndSubgroups 'dev.ryanhcode' }
+    }
+    maven {
+        name = 'GeckoLib'
+        url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+        content { includeGroupAndSubgroups 'software.bernie' }
+    }
+    maven {
+        name = 'Create'
+        url = 'https://maven.createmod.net'
+        content {
+            includeGroup 'com.simibubi.create'
+            includeGroupAndSubgroups 'net.createmod'
+            includeGroupAndSubgroups 'dev.engine-room'
+        }
+    }
+}
+
+// Mods that ship nested jars (Create: Flywheel, Ponder, Registrate. Aeronautics: Simulated, Offroad.
+// Sable: Veil, rapier natives, sable-companion) only load those nested jars from a mods folder.
+// So the runtime mods are copied into run/mods/ exactly as a player would install them.
+configurations {
+    runMods {
+        canBeConsumed = false
+        canBeResolved = true
+        transitive = false
+    }
+}
+
+dependencies {
+    implementation "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
+
+    compileOnly("dev.ryanhcode.sable:sable-neoforge-${minecraft_version}:${sable_version}") { transitive = false }
+    compileOnly files("libs/fealty-${fealty_version}+api.${fealty_api_version}-api.jar")
+
+    runMods "maven.modrinth:create:${create_version}"
+    runMods "maven.modrinth:create-aeronautics:${aeronautics_version}"
+    runMods "dev.ryanhcode.sable:sable-neoforge-${minecraft_version}:${sable_version}"
+    runMods files("libs/fealty-${fealty_version}.jar")
+}
+
+def syncRunMods = tasks.register('syncRunMods', Sync) {
+    description = 'Copies the runtime mods (Create, Aeronautics, Sable, Fealty) into run/mods.'
+    from configurations.runMods
+    into file('run/mods')
+}
+
+neoForge {
+    version = project.neo_version
+
+    parchment {
+        mappingsVersion = project.parchment_mappings_version
+        minecraftVersion = project.parchment_minecraft_version
+    }
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+            programArgument '--nogui'
+        }
+        gameTestServer {
+            type = 'gameTestServer'
+        }
+        data {
+            data()
+            programArguments.addAll '--mod', project.mod_id, '--all',
+                    '--output', file('src/generated/resources/').getAbsolutePath(),
+                    '--existing', file('src/main/resources/').getAbsolutePath()
+        }
+        configureEach {
+            // -PgametestNamespaces=sable runs another mod's GameTests (used by the Step 0 physics check).
+            systemProperty 'neoforge.enabledGameTestNamespaces',
+                    (project.findProperty('gametestNamespaces') ?: project.mod_id).toString()
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.INFO
+        }
+    }
+}
+
+tasks.matching { it.name.startsWith('run') && it.name != 'runMods' }.configureEach {
+    dependsOn syncRunMods
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

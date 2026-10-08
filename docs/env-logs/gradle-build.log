@@ -1,0 +1,67 @@
+Starting a Gradle Daemon, 1 incompatible and 1 stopped Daemons could not be reused, use --status for details
+
+> Task :createMinecraftArtifacts
+Loaded 145 artifacts from C:\Users\Sellu\Documents\Projects\Skyseam\build\tmp\createMinecraftArtifacts\nfrt_artifact_manifest.properties
+[1m*** Started working on [4mdownloadJson[23;0m[23;0m
+ [1m[92mDONE [23;0m Completed [4mdownloadJson[23;0m in 0.02s
+[1m*** Started working on [4mdownloadServer[23;0m[23;0m
+[1m*** Started working on [4mdownloadClient[23;0m[23;0m
+[1m*** Started working on [4mdownloadClientMappings[23;0m[23;0m
+ [1m[92mDONE [23;0m Completed [4mdownloadClient[23;0m in 0.03s
+ [1m[92mDONE [23;0m Completed [4mdownloadClientMappings[23;0m in 0.03s
+ [1m[92mDONE [23;0m Completed [4mdownloadServer[23;0m in 0.03s
+[1m*** Started working on [4mstripClient[23;0m[23;0m
+[1m*** Started working on [4mmergeMappings[23;0m[23;0m
+ [1m[92mREUSE[23;0m Used cache of [4mstripClient[23;0m in 0.00s
+ [1m[92mREUSE[23;0m Used cache of [4mmergeMappings[23;0m in 0.00s
+[1m*** Started working on [4mextractServer[23;0m[23;0m
+ [1m[92mREUSE[23;0m Used cache of [4mextractServer[23;0m in 0.00s
+[1m*** Started working on [4mstripServer[23;0m[23;0m
+ [1m[92mREUSE[23;0m Used cache of [4mstripServer[23;0m in 0.00s
+[1m*** Started working on [4mmerge[23;0m[23;0m
+ [1m[92mREUSE[23;0m Used cache of [4mmerge[23;0m in 0.00s
+[1m*** Started working on [4mrename[23;0m[23;0m
+ [1m[92mREUSE[23;0m Used cache of [4mrename[23;0m in 0.00s
+[1m*** Started working on [4mdecompile[23;0m[23;0m
+ [1m[92mREUSE[23;0m Used cache of [4mdecompile[23;0m in 0.00s
+[1m*** Started working on [4minject[23;0m[23;0m
+ [1m[92mREUSE[23;0m Used cache of [4minject[23;0m in 0.00s
+[1m*** Started working on [4mpatch[23;0m[23;0m
+ [1m[92mREUSE[23;0m Used cache of [4mpatch[23;0m in 0.00s
+[1m*** Started working on [4mapplyNeoforgePatches[23;0m[23;0m
+ RUN   Running external tool io.codechicken:DiffPatch:2.0.0.36:all
+ [1m[92mDONE [23;0m Completed [4mapplyNeoforgePatches[23;0m in 2.24s
+[1m*** Started working on [4mtransformSources[23;0m[23;0m
+ RUN   Running external tool net.neoforged.jst:jst-cli-bundle:2.0.11
+ [1m[92mDONE [23;0m Completed [4mtransformSources[23;0m in 8.68s
+[1m*** Started working on [4mrecompile[23;0m[23;0m
+ 110 items on the compile classpath
+ 0 items on the sourcepath
+[1m*** Started working on [4msourcesWithNeoForge[23;0m[23;0m
+ Compiling 5364 source files
+ [1m[92mDONE [23;0m Completed [4msourcesWithNeoForge[23;0m in 3.28s
+Copied 0 resource files
+ [1m[92mDONE [23;0m Completed [4mrecompile[23;0m in 22.92s
+[1m*** Started working on [4mcompiledWithNeoForge[23;0m[23;0m
+ [1m[92mDONE [23;0m Completed [4mcompiledWithNeoForge[23;0m in 4.53s
+[1m*** Started working on [4msourcesAndCompiledWithNeoForge[23;0m[23;0m
+ [1m[92mDONE [23;0m Completed [4msourcesAndCompiledWithNeoForge[23;0m in 2.16s
+Total runtime: 41.42s
+
+
+> Task :compileJava NO-SOURCE
+> Task :processResources NO-SOURCE
+> Task :classes UP-TO-DATE
+> Task :jarJar NO-SOURCE
+> Task :jar
+> Task :assemble
+> Task :compileTestJava NO-SOURCE
+> Task :processTestResources NO-SOURCE
+> Task :testClasses UP-TO-DATE
+> Task :test NO-SOURCE
+> Task :check UP-TO-DATE
+> Task :build
+> Task :syncRunMods
+
+BUILD SUCCESSFUL in 55s
+3 actionable tasks: 3 executed

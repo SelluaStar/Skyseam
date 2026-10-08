@@ -1,0 +1,29 @@
+# Gradle / IDE
+.gradle/
+build/
+out/
+*.iml
+.idea/
+.vscode/
+bin/
+
+# Minecraft run folders (dev worlds, logs, copied runtime mods)
+run/
+
+# Python
+tools/.venv/
+__pycache__/
+*.pyc
+
+# Blockbench backups and scratch
+art/models/_probe/
+*.bbmodel.bak
+
+# OS
+Thumbs.db
+desktop.ini
+
+# Local-only inputs: the Fealty jars and the Fealty source snapshot are not published
+# with Skyseam (the Skyseam repo is public). Copy them from the Fealty project, see docs/ENVIRONMENT.md.
+libs/
+vendor/

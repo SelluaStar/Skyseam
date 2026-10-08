@@ -1,0 +1,28 @@
+Requirement already satisfied: pip in .\tools\.venv\Lib\site-packages (26.2.1)
+Collecting numpy
+  Downloading numpy-2.5.3-cp314-cp314-win_amd64.whl.metadata (6.6 kB)
+Collecting pillow
+  Downloading pillow-12.3.0-cp314-cp314-win_amd64.whl.metadata (9.3 kB)
+Collecting soundfile
+  Downloading soundfile-0.14.0-py2.py3-none-win_amd64.whl.metadata (18 kB)
+Collecting nbtlib
+  Downloading nbtlib-2.0.4-py3-none-any.whl.metadata (11 kB)
+Collecting cffi>=1.0 (from soundfile)
+  Downloading cffi-2.1.1-cp314-cp314-win_amd64.whl.metadata (2.6 kB)
+Collecting typing-extensions (from soundfile)
+  Downloading typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting pycparser (from cffi>=1.0->soundfile)
+  Downloading pycparser-3.1-py3-none-any.whl.metadata (8.2 kB)
+Downloading numpy-2.5.3-cp314-cp314-win_amd64.whl (12.7 MB)
+   ---------------------------------------- 12.7/12.7 MB 8.7 MB/s  0:00:01
+Downloading pillow-12.3.0-cp314-cp314-win_amd64.whl (7.2 MB)
+   ---------------------------------------- 7.2/7.2 MB 8.7 MB/s  0:00:00
+Downloading soundfile-0.14.0-py2.py3-none-win_amd64.whl (1.0 MB)
+   ---------------------------------------- 1.0/1.0 MB 9.4 MB/s  0:00:00
+Downloading nbtlib-2.0.4-py3-none-any.whl (28 kB)
+Downloading cffi-2.1.1-cp314-cp314-win_amd64.whl (187 kB)
+Downloading pycparser-3.1-py3-none-any.whl (48 kB)
+Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Installing collected packages: typing-extensions, pycparser, pillow, numpy, nbtlib, cffi, soundfile
+
+Successfully installed cffi-2.1.1 nbtlib-2.0.4 numpy-2.5.3 pillow-12.3.0 pycparser-3.1 soundfile-0.14.0 typing-extensions-4.16.0
