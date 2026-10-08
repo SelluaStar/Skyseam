@@ -112,6 +112,19 @@ public final class SableBridge {
                 .min(Comparator.comparingDouble(ship -> position(ship).distanceToSqr(pos)));
     }
 
+    /** Every live ship whose centre is within {@code radius} blocks of {@code pos}. */
+    public static List<Ship> shipsWithin(ServerLevel level, Vec3 pos, double radius) {
+        ServerSubLevelContainer container = SubLevelContainer.getContainer(level);
+        if (container == null) {
+            return List.of();
+        }
+        return container.getAllSubLevels().stream()
+                .filter(subLevel -> !subLevel.isRemoved())
+                .map(Ship::new)
+                .filter(ship -> position(ship).distanceToSqr(pos) <= radius * radius)
+                .toList();
+    }
+
     /** The ship's world position (the centre of its pose). */
     public static Vec3 position(Ship ship) {
         Vector3dc p = ship.subLevel.logicalPose().position();

@@ -1,0 +1,251 @@
+{
+ "settle": 120,
+ "steps": [
+  {
+   "command": "gamemode creative"
+  },
+  {
+   "command": "time set 6000"
+  },
+  {
+   "command": "weather clear"
+  },
+  {
+   "command": "setblock 0 -41 0 barrier"
+  },
+  {
+   "command": "setblock 22 -41 12 barrier"
+  },
+  {
+   "command": "setblock 0 -41 62 barrier"
+  },
+  {
+   "command": "setblock 0 -41 16 barrier"
+  },
+  {
+   "command": "tp @s 0.5 -40 0.5 0 0"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "command": "skyseam seam open 0.5 -38 30.5 32 24"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_01_hairline_0.5s"
+  },
+  {
+   "wait": 15
+  },
+  {
+   "shot": "seam_02_hairline_1.25s"
+  },
+  {
+   "wait": 15
+  },
+  {
+   "shot": "seam_03_crack_2s"
+  },
+  {
+   "wait": 15
+  },
+  {
+   "shot": "seam_04_crack_2.75s"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_05_threads_3.25s"
+  },
+  {
+   "wait": 15
+  },
+  {
+   "shot": "seam_06_threads_4s"
+  },
+  {
+   "wait": 15
+  },
+  {
+   "shot": "seam_07_threads_4.75s"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_08_open_5.25s"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_09_open_5.75s"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "shot": "seam_10_stable_6.75s"
+  },
+  {
+   "command": "tp @s 22.5 -40 12.5 50.7 0"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_11_stable_angle"
+  },
+  {
+   "command": "tp @s 0.5 -40 62.5 180 0"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_12_stable_back"
+  },
+  {
+   "command": "tp @s 0.5 -40 16.5 0 -10"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_13_stable_close"
+  },
+  {
+   "command": "tp @s 0.5 -40 0.5 0 0"
+  },
+  {
+   "command": "time set 18000"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_14_stable_night"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_15_ring_pulse_00"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_15_ring_pulse_01"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_15_ring_pulse_02"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_15_ring_pulse_03"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_15_ring_pulse_04"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_15_ring_pulse_05"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_15_ring_pulse_06"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_15_ring_pulse_07"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_15_ring_pulse_08"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_15_ring_pulse_09"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_15_ring_pulse_10"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_15_ring_pulse_11"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "command": "time set 6000"
+  },
+  {
+   "command": "skyseam seam mend"
+  },
+  {
+   "wait": 15
+  },
+  {
+   "shot": "seam_17_mending_0.75s"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "shot": "seam_18_mending_1.75s"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "shot": "seam_19_mending_2.75s"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "shot": "seam_20_scar"
+  },
+  {
+   "command": "time set 18000"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "seam_21_scar_night"
+  },
+  {
+   "quit": true
+  }
+ ]
+}

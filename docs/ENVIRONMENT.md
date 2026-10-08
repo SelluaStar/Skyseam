@@ -178,6 +178,28 @@ optional-compat probes inside dependency mods and are harmless.
   - round-tripped a gzipped structure-style NBT with nbtlib.
 - `tools/docs/pdf_to_md.py` regenerates `docs/Skyseam-Build-Spec.md` from the PDF (standard library only).
 
-## What Claude Code cannot do here (unchanged from spec §2)
-It cannot see the running game window or hear any sound. It can read logs, run headless servers and GameTests, and view
-PNGs. Anything that needs eyes or ears is reported as "built but unverified".
+### Looking at the running game: the capture client (since M1)
+`gradlew runCaptureClient -Pscene=tools/capture/<scene>.json` starts a client in its own folder `run/capture` (own
+options, saves and a copy of the mods, so `run/` is untouched). `client/dev/DevSceneCapture`:
+1. makes a fresh superflat creative world;
+2. plays the scene's steps (commands run with full permission, waits in ticks, screenshots with the HUD hidden);
+3. saves the screenshots to `run/capture/screenshots/` and quits.
+
+A full run takes about 2 minutes and opens a game window while it runs. Scenes so far: `seam_reveal.json` (the whole
+reveal, day and night, three viewpoints, mending and scar) and `seam_check.json` (close-up plus a burst over one ring
+pulse). Waits count client ticks, and the scene runs a little slower than real time, so time-sensitive moments are
+caught with a burst of shots.
+
+### GameTest notes (since M1)
+- **No mock server players.** `GameTestHelper.makeMockServerPlayerInLevel()` fails with these mods loaded: Simulated
+  sends a `simulated:end_sea` payload when a player joins, and the mock connection rejects it
+  (`UnsupportedOperationException`). Tests stand in for players another way (DECISIONS K40).
+- **Far coordinates.** GameTest structures sit millions of blocks from the origin. There, Sable's physics positions
+  round to half a block, so a slow ship looks as if it never moves. Motion tests run near the End's origin (K41).
+- **Sable velocity units** are blocks per second: a falling raft reached 5.9 blocks/s after 0.6 s (g ≈ 9.8).
+
+## What Claude Code cannot do here (spec §2, updated in M1)
+It cannot hear any sound, judge motion or feel, or play the game. Since M1 it can see **still frames** of the running
+game through the capture client above. Those show whether something draws and roughly how it looks, which is enough to
+catch broken rendering. They are not a judgement of the look: anything that needs eyes on motion, or ears, is reported
+as "built, needs your eyes or ears".

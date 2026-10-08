@@ -37,3 +37,9 @@ where the spec is simply silent go in `DECISIONS.md` instead.
 | D14 | An entity search over an area returns entities in that area | With Sable loaded, a search over a ship's plot area **also returns entities standing on the ship in the world**, and the reverse | Every search also checks that the entity's own position is inside the area (`PlotEntityMover`, `ShipTransfer`) |
 | D15 | A ship's state lives in its blocks | Aeronautics balloon gas lives in a per-dimension `BalloonMap`. It is saved as `SavedBalloon(bounds, controllerPos, gasData)` and restored by the burners matching `controllerPos` | `AeronauticsBridge` moves it with the ship (DECISIONS K25) |
 | D16 | A loaded chunk is live | A chunk loaded or generated just now becomes entity-ticking only after its entity data loads in the background, which took 20–35 ticks at server start. Entities placed before that are hidden | Crossings wait for the arrival area to be live (DECISIONS K24) |
+
+## Found in M1 (the Seam)
+
+| # | Expected (spec) | Reality | What Skyseam does |
+|---|---|---|---|
+| D17 | Spec §6: "Everyone within 256 blocks sees the animation" | Minecraft sends an entity to a player only within the smaller of the entity's tracking range and the server's view distance (10 chunks, 160 blocks, by default) | The Seam's tracking range is 16 chunks (256 blocks), so a server with view distance 16 or more shows it at 256 blocks. Its **sounds** reach 256 blocks whatever the view distance (fixed-range sound events, DECISIONS K33). The author can raise `view-distance` in `server.properties` |

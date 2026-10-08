@@ -1,0 +1,119 @@
+{
+ "settle": 120,
+ "steps": [
+  {
+   "command": "gamemode creative"
+  },
+  {
+   "command": "time set 6000"
+  },
+  {
+   "command": "weather clear"
+  },
+  {
+   "command": "setblock 0 -41 0 barrier"
+  },
+  {
+   "command": "setblock 0 -41 16 barrier"
+  },
+  {
+   "command": "tp @s 0.5 -40 16.5 0 -10"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "command": "skyseam seam open 0.5 -38 30.5 32 24"
+  },
+  {
+   "wait": 140
+  },
+  {
+   "shot": "check_01_close"
+  },
+  {
+   "command": "tp @s 0.5 -40 0.5 0 0"
+  },
+  {
+   "command": "time set 18000"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "check_ring_00"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "check_ring_01"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "check_ring_02"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "check_ring_03"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "check_ring_04"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "check_ring_05"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "check_ring_06"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "check_ring_07"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "check_ring_08"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "check_ring_09"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "check_ring_10"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "check_ring_11"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "quit": true
+  }
+ ]
+}
