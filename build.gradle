@@ -58,7 +58,9 @@ configurations {
 dependencies {
     implementation "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
 
+    // Sable and its Companion API are compile-only: at runtime they load from run/mods (see runMods below).
     compileOnly("dev.ryanhcode.sable:sable-neoforge-${minecraft_version}:${sable_version}") { transitive = false }
+    compileOnly("dev.ryanhcode.sable-companion:sable-companion-common-${minecraft_version}:${sable_companion_version}") { transitive = false }
     compileOnly files("libs/fealty-${fealty_version}+api.${fealty_api_version}-api.jar")
 
     runMods "maven.modrinth:create:${create_version}"
@@ -88,6 +90,8 @@ neoForge {
         server {
             server()
             programArgument '--nogui'
+            // gradlew runServer -PbootCheck: stop on its own once the server has started (dev/DevBootCheck).
+            systemProperty 'skyseam.dev.stopAfterBoot', project.hasProperty('bootCheck').toString()
         }
         gameTestServer {
             type = 'gameTestServer'
@@ -106,7 +110,39 @@ neoForge {
             logLevel = org.slf4j.event.Level.INFO
         }
     }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
 }
+
+var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    var replaceProperties = [
+            minecraft_version_range  : minecraft_version_range,
+            neo_version_range        : neo_version_range,
+            loader_version_range     : loader_version_range,
+            mod_id                   : mod_id,
+            mod_name                 : mod_name,
+            mod_license              : mod_license,
+            mod_version              : mod_version,
+            mod_authors              : mod_authors,
+            mod_description          : mod_description,
+            create_version_range     : create_version_range,
+            simulated_version_range  : simulated_version_range,
+            aeronautics_version_range: aeronautics_version_range,
+            sable_version_range      : sable_version_range,
+            geckolib_version_range   : geckolib_version_range,
+            fealty_version_range     : fealty_version_range
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from 'src/main/templates'
+    into 'build/generated/sources/modMetadata'
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
 
 tasks.matching { it.name.startsWith('run') && it.name != 'runMods' }.configureEach {
     dependsOn syncRunMods

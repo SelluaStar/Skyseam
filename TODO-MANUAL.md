@@ -14,7 +14,7 @@ Claude Code keeps this current at every milestone. **No item blocks a build or a
 - [MANUAL] (optional) Polish on the hero structures: Conservatory Spire, Sundered Obelisk, Standing Arch | build in creative, save with a structure block, overwrite `data/skyseam/structure/<name>.nbt` and keep the markers in `docs/STRUCTURE-MARKERS.md` | now: planned generated `.nbt` files (M3, M6, M9) | owner: author
 - [MANUAL] Playtest tuning: difficulty, Tide timers, spawn rates, boss health, journey length | the config file or data pack JSON | now: the spec's numbers as defaults (from each milestone) | owner: author
 - [MANUAL] Real-hardware checks: shader packs, performance, multiplayer, dedicated server | send logs and screenshots back | now: headless server boots and GameTests only (Step 0: dependencies boot headless ✓) | owner: author
-- [MANUAL] Mod identity: icon, page art, screenshots, trailer, changelog | `src/main/resources/logo.png` and the mod page | now: planned plain placeholder `logo.png` (M-1) | owner: author
+- [MANUAL] Mod identity: icon, page art, screenshots, trailer, changelog | `src/main/resources/logo.png` and the mod page | now: plain placeholder `logo.png` (pastel disc with a white seam line, made by `tools/textures/make_placeholder_logo.py`) | owner: author
 - [MANUAL] License check and publishing (Sable is PolyForm Shield; Aeronautics art is all rights reserved; Skyseam's own license field is a placeholder, DECISIONS K1) | the author | now: license notes in spec §23 | owner: author
 
 ## [SUPPORT ONLY]: optional, the hooks are built and the content is added if needed
