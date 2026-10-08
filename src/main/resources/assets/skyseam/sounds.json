@@ -1,0 +1,46 @@
+{
+  "seam.hairline": {
+    "subtitle": "subtitles.skyseam.seam.hairline",
+    "sounds": [{"name": "skyseam:seam/hairline", "attenuation_distance": 96}]
+  },
+  "seam.crack": {
+    "subtitle": "subtitles.skyseam.seam.crack",
+    "sounds": [{"name": "skyseam:seam/crack", "attenuation_distance": 160}]
+  },
+  "seam.thread_snap_1": {
+    "subtitle": "subtitles.skyseam.seam.thread_snap",
+    "sounds": [{"name": "skyseam:seam/thread_snap_1", "volume": 0.8, "attenuation_distance": 96}]
+  },
+  "seam.thread_snap_2": {
+    "subtitle": "subtitles.skyseam.seam.thread_snap",
+    "sounds": [{"name": "skyseam:seam/thread_snap_2", "volume": 0.8, "attenuation_distance": 96}]
+  },
+  "seam.thread_snap_3": {
+    "subtitle": "subtitles.skyseam.seam.thread_snap",
+    "sounds": [{"name": "skyseam:seam/thread_snap_3", "volume": 0.8, "attenuation_distance": 96}]
+  },
+  "seam.thread_snap_4": {
+    "subtitle": "subtitles.skyseam.seam.thread_snap",
+    "sounds": [{"name": "skyseam:seam/thread_snap_4", "volume": 0.8, "attenuation_distance": 96}]
+  },
+  "seam.thread_snap_5": {
+    "subtitle": "subtitles.skyseam.seam.thread_snap",
+    "sounds": [{"name": "skyseam:seam/thread_snap_5", "volume": 0.8, "attenuation_distance": 96}]
+  },
+  "seam.hum": {
+    "subtitle": "subtitles.skyseam.seam.hum",
+    "sounds": [{"name": "skyseam:seam/hum", "volume": 0.6, "attenuation_distance": 64}]
+  },
+  "seam.ring_pulse": {
+    "subtitle": "subtitles.skyseam.seam.ring_pulse",
+    "sounds": [{"name": "skyseam:seam/ring_pulse", "attenuation_distance": 128}]
+  },
+  "seam.crossing": {
+    "subtitle": "subtitles.skyseam.seam.crossing",
+    "sounds": [{"name": "skyseam:seam/crossing", "attenuation_distance": 64}]
+  },
+  "seam.mend": {
+    "subtitle": "subtitles.skyseam.seam.mend",
+    "sounds": [{"name": "skyseam:seam/mend", "attenuation_distance": 128}]
+  }
+}

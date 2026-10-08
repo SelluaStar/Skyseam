@@ -91,6 +91,11 @@ def syncRunMods = tasks.register('syncRunMods', Sync) {
     from configurations.runMods
     into file('run/mods')
 }
+def syncCaptureMods = tasks.register('syncCaptureMods', Sync) {
+    description = 'Copies the runtime mods into run/capture/mods for the screenshot client (runCaptureClient).'
+    from configurations.runMods
+    into file('run/capture/mods')
+}
 
 neoForge {
     version = project.neo_version
@@ -112,6 +117,14 @@ neoForge {
         }
         gameTestServer {
             type = 'gameTestServer'
+        }
+        // gradlew runCaptureClient -Pscene=tools/capture/<scene>.json: a throwaway client in run/capture that plays a
+        // scene and saves screenshots to run/capture/screenshots (client/dev/DevSceneCapture). Development only.
+        captureClient {
+            client()
+            gameDirectory = file('run/capture')
+            systemProperty 'skyseam.dev.capture', project.findProperty('scene') ? file(project.findProperty('scene')).absolutePath : ''
+            programArguments.addAll '--width', '1280', '--height', '720'
         }
         data {
             data()
@@ -163,6 +176,9 @@ neoForge.ideSyncTask generateModMetadata
 
 tasks.matching { it.name.startsWith('run') && it.name != 'runMods' }.configureEach {
     dependsOn syncRunMods
+}
+tasks.matching { it.name == 'runCaptureClient' }.configureEach {
+    dependsOn syncCaptureMods
 }
 
 tasks.withType(JavaCompile).configureEach {
