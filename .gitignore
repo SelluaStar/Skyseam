@@ -23,7 +23,3 @@ art/models/_probe/
 Thumbs.db
 desktop.ini
 
-# Local-only inputs: the Fealty jars and the Fealty source snapshot are not published
-# with Skyseam (the Skyseam repo is public). Copy them from the Fealty project, see docs/ENVIRONMENT.md.
-libs/
-vendor/
