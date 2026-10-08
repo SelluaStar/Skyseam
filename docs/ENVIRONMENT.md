@@ -51,7 +51,24 @@ Create, Aeronautics and Sable keep their sub-mods inside nested jars, and those 
 `build.gradle` therefore has a `runMods` configuration and a `syncRunMods` task. They copy
 Create, Aeronautics-bundled, Sable and Fealty into `run/mods/` before every run, the same way a player installs
 them. The log line `JarInJarDependencyLocator: Found 13 dependencies` confirms the nested jars load. GeckoLib
-is a normal `implementation` dependency. Sable (non-transitive) and the Fealty API jar are `compileOnly`.
+is a normal `implementation` dependency. Sable and Sable Companion 1.6.0
+(`dev.ryanhcode.sable-companion:sable-companion-common-1.21.1`, home of `SableCompanion`, `SubLevelAccess` and
+`BoundingBox3i`), both non-transitive, and the Fealty API jar are `compileOnly`. Veil is not needed to compile.
+
+### Checking a milestone: `tools/verify_milestone.py` (since M-1)
+`tools/.venv/Scripts/python.exe tools/verify_milestone.py` runs the spec §19 "done when" checks in order:
+- `build`;
+- `runData`;
+- `runGameTestServer`;
+- `runServer -PbootCheck`, where `-PbootCheck` makes the dedicated server log `Skyseam boot check passed` and stop itself.
+
+It judges each step by its **log**, not by Gradle's exit code:
+- `All N required tests passed`;
+- `Done (` plus the boot-check marker;
+- no ERROR line or stack frame from Skyseam;
+- no crash report.
+
+Logs go to `build/verify/<step>.log`. You can also run single steps, for example `… verify_milestone.py gametest`.
 
 ## External ids and APIs confirmed in the pinned jars (spec §1 rule 9)
 
@@ -83,7 +100,7 @@ Log: `env-logs/gradle-build.log`. All dependencies resolved, BUILD SUCCESSFUL. T
 Log: `env-logs/runGameTestServer.log`. All 14 mods load. Then `IllegalArgumentException: No test functions were given!`,
 because no Skyseam GameTests exist yet.
 **Note A:** Gradle still reports BUILD SUCCESSFUL when the game-test server fails to start, so the exit code alone
-cannot be trusted. M-1 adds a smoke GameTest, and every milestone checks the log for
+cannot be trusted. **Fixed in M-1:** Skyseam has its own GameTests, and `tools/verify_milestone.py` reads the log for
 `All N required tests passed`.
 
 ### Sable native physics on a headless server ✓
@@ -97,8 +114,9 @@ Log: `env-logs/runGameTestServer-sable.log` (`gradlew runGameTestServer -Pgamete
 Log: `env-logs/runServer.log`. A dev EULA file `run/eula.txt` was written with the author's approval. The server reached
 `Done (0.693s)! For help, type "help"`, with Rapier initialised in all three dimensions.
 **Note B:** Gradle does not forward stdin, so `stop` could not be sent and the process was killed. That is why the log
-ends in BUILD FAILED. M-1 adds a dev-only switch (system property) that stops the server cleanly after boot, so
-the headless boot check ends on its own.
+ends in BUILD FAILED. **Fixed in M-1:** `gradlew runServer -PbootCheck` sets `-Dskyseam.dev.stopAfterBoot=true`,
+and `dev/DevBootCheck` then logs `Skyseam boot check passed` and stops the server cleanly (exit 0). A plain
+`runServer` is unchanged.
 
 ### `runData` ✓
 Log: `env-logs/runData.log`. All mods load, the data gatherer runs for `skyseam` (no providers yet), and the run exits cleanly.

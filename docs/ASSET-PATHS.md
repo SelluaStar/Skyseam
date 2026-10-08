@@ -23,6 +23,9 @@ All paths are under `src/main/resources/`. The namespace is `skyseam`.
 
 Note that 1.21 data folders are **singular**: `recipe/`, `advancement/`, `loot_table/`, `structure/`.
 
+`data/skyseam/structure/gametest/` holds GameTest templates (`empty.nbt` from `tools/structures/make_gametest_empty.py`).
+They are test scaffolding, not world structures. Structure checks skip them, and there is nothing in that folder to hand-build.
+
 ## Source files (outside the resources folder)
 
 | Kind | Folder | Notes |
