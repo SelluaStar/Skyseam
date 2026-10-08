@@ -69,6 +69,23 @@ dependencies {
     runMods files("libs/fealty-${fealty_version}.jar")
 }
 
+// Aeronautics and Create keep the classes Skyseam compiles against (the balloon map, catnip's WorldAttached in
+// Ponder) inside nested jars. Extract just those for the compile classpath; at runtime they load from run/mods.
+def nestedModsDir = layout.buildDirectory.dir('nested-mods')
+def extractNestedMods = tasks.register('extractNestedMods', Sync) {
+    description = 'Extracts the nested Aeronautics and Ponder jars that Skyseam compiles against.'
+    from {
+        configurations.runMods.filter { it.name.startsWith('create-') }.collect { zipTree(it) }
+    }
+    include 'META-INF/jarjar/dev.eriksonn.aeronautics.aeronautics-*.jar', 'META-INF/jarjar/ponder-*.jar'
+    eachFile { path = name }
+    includeEmptyDirs = false
+    into nestedModsDir
+}
+dependencies {
+    compileOnly files(nestedModsDir.map { it.asFileTree.matching { include '*.jar' } }).builtBy(extractNestedMods)
+}
+
 def syncRunMods = tasks.register('syncRunMods', Sync) {
     description = 'Copies the runtime mods (Create, Aeronautics, Sable, Fealty) into run/mods.'
     from configurations.runMods

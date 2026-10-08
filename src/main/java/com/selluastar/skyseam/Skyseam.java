@@ -7,6 +7,8 @@ import com.selluastar.skyseam.compat.fealty.FealtyCompat;
 import com.selluastar.skyseam.dev.DevBootCheck;
 import com.selluastar.skyseam.dev.SpikeCommands;
 import com.selluastar.skyseam.external.ExternalIds;
+import com.selluastar.skyseam.transfer.CrossingHolds;
+import com.selluastar.skyseam.transfer.ShipTransfer;
 
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
@@ -24,6 +26,9 @@ public final class Skyseam {
         modBus.addListener(Skyseam::commonSetup);
         NeoForge.EVENT_BUS.addListener(DevBootCheck::onServerStarted);
         NeoForge.EVENT_BUS.addListener(SpikeCommands::register);
+        NeoForge.EVENT_BUS.addListener(ShipTransfer::onServerTick);
+        NeoForge.EVENT_BUS.addListener(CrossingHolds::onLevelTick);
+        NeoForge.EVENT_BUS.addListener(CrossingHolds::onServerStopping);
     }
 
     private static void commonSetup(FMLCommonSetupEvent event) {
