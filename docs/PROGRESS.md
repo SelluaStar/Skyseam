@@ -154,3 +154,59 @@ How route A was made to work (all found from failing runs, see DEVIATIONS D12):
 **Stubs:** none. This milestone is a spike.
 
 **Git:** commit on `main`, `with-fealty` updated, both pushed.
+
+---
+
+## M0 follow-up: fixes from the author's in-game test (2026-10-08)
+
+The author crossed real Aeronautics ships with `/skyseam spike cross` and reported three problems. All three are
+fixed, together with related problems found while fixing them. The crossing is now one Skyseam call,
+`transfer/ShipTransfer.begin`, which the spike command uses. It will also be the Seam's ship transfer in M2.
+
+| Reported | Cause | Fix |
+|---|---|---|
+| 1. The player sometimes lands on the ground, not on the ship | The player arrived before their client knew about the ship, so the client saw no deck. The arrival chunks were also often not live yet | Riders keep their exact spot in the ship's own coordinates, and seated players are re-seated. The crossing first waits (up to 5 s) until every chunk under the arrival is live. Then a **3 s hold** keeps the ship still and puts any rider who drifts off or falls back on their spot (`CrossingHolds`), before giving the ship back 50% of its velocity |
+| 2. Ship state is not kept (hot-air balloon fill resets to 0) | Aeronautics keeps balloon gas in a per-dimension `BalloonMap`, not in the ship's blocks | `AeronauticsBridge` saves each balloon in the ship (Aeronautics' own `saveBalloon`), moves it to the new plot and files it in the target dimension's map. The burners pick it up again as if their chunk had reloaded. **Also found:** entities in the ship's plot (item frames, paintings, seats, armor stands) were being lost. `PlotEntityMover` now carries them |
+| 3. The ship sometimes arrives inside a wall | The ship was placed at the same x/z with no check | `ArrivalFinder` picks the **nearest spot where the ship's box plus 1 block of clearance touches no solid block, no fluid (never in water or lava) and no fire**. It searches up to 24 blocks sideways and 48 up or down; moving down counts double, so the ship would rather rise out of a hill than sink into a cave. If there is no safe spot, the crossing is refused and nothing moves |
+
+Other related fixes:
+- Route B (copy blocks) now carries balloons, plot entities and riders too.
+- A failed crossing leaves the ship and riders where they were.
+- The spike command reports when the ship had to be moved to a clear spot.
+
+**Verified (actually run)**
+`tools/verify_milestone.py`: all PASS, **11/11 required GameTests**, and the GameTest step passed 3 runs in a row. New tests in `gametest/ShipTransferTests.java`:
+- **Safe spot.** A stone block fills the destination with water beside it. The finder picks a dry, clear spot 6 blocks away, and the test checks every block of the cleared box.
+- **Full crossing, route A and route B.** The test ship carries a hung item frame (with an emerald), an armor stand on deck, a saved balloon in its plot, a chest with diamonds and a Create shaft. The End's arrival area is deliberately not pre-loaded. The test checks:
+  - all 11 blocks, the chest contents and the shaft's block entity;
+  - the balloon filed at the new plot position, and gone from the overworld;
+  - the frame in the new plot;
+  - the armor stand in the End on its deck spot;
+  - the ship not moving during the hold;
+  - the armor stand still aboard after release.
+  Route A took 165–233 ms including waiting for fresh End chunks; route B took 4–6 ms.
+
+**Untested / needs the author**
+- Real players (GameTests can't move a real player between dimensions), seated players, and how it looks on the client.
+- A *live* balloon refilling from the carried state. The test uses a saved balloon; the real burners → `loadFrom` path only runs in game.
+
+**Known gaps (state still not carried, for the author to report if it matters)**
+- Simulated ropes whose data stores absolute positions.
+- Physics-staff locks.
+- Sable force-load tickets and tracking points.
+- Levitite crystallization progress.
+- Ships made of several linked bodies.
+
+Each gap can be added as another `PlotMoveListener` when needed.
+
+**Author's in-game test (M0 follow-up)**
+1. Same setup as before: a creative world with cheats, this jar and the pinned mods.
+2. Build a ship with a hot-air balloon and fill it. Put a chest with items on it, hang an item frame on it, and put a seat on it.
+3. Stand on the deck and run `/skyseam spike cross minecraft:the_end`. You should see "Preparing the crossing…" and then the "Moved ship …" line. Check:
+   - you land **on the deck**, not below;
+   - the ship hangs still for about 3 seconds, then carries on;
+   - the **balloon is still full**;
+   - the frame and chest contents are there.
+4. Sit in the seat and cross back (`… cross minecraft:overworld`). You should still be seated when you arrive.
+5. Stand next to a hill or a lake in the End or the overworld and cross so the ship would land inside it. It should arrive at the nearest clear, dry spot, with the chat line saying how far it moved.
+6. Send `logs/latest.log` and screenshots of anything wrong.

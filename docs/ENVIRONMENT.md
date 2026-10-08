@@ -55,6 +55,12 @@ is a normal `implementation` dependency. Sable and Sable Companion 1.6.0
 (`dev.ryanhcode.sable-companion:sable-companion-common-1.21.1`, home of `SableCompanion`, `SubLevelAccess` and
 `BoundingBox3i`), both non-transitive, and the Fealty API jar are `compileOnly`. Veil is not needed to compile.
 
+### Compiling against nested jars (since the M0 follow-up)
+Skyseam calls Create Aeronautics' balloon map (`AeronauticsBridge`), and that API uses catnip's `WorldAttached`, which ships
+inside Ponder. Both jars sit nested in the pinned mods (Aeronautics inside the bundled jar, Ponder inside Create). The
+`extractNestedMods` task copies them to `build/nested-mods/` for the compile classpath only. At run time they still
+load from `run/mods/`.
+
 ### Checking a milestone: `tools/verify_milestone.py` (since M-1)
 `tools/.venv/Scripts/python.exe tools/verify_milestone.py` runs the spec §19 "done when" checks in order:
 - `build`;

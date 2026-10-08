@@ -21,6 +21,7 @@ import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
 import dev.ryanhcode.sable.companion.SableCompanion;
 import dev.ryanhcode.sable.companion.SubLevelAccess;
 import dev.ryanhcode.sable.companion.math.BoundingBox3d;
+import dev.ryanhcode.sable.companion.math.BoundingBox3dc;
 import dev.ryanhcode.sable.companion.math.BoundingBox3i;
 import dev.ryanhcode.sable.companion.math.BoundingBox3ic;
 import dev.ryanhcode.sable.companion.math.Pose3d;
@@ -33,6 +34,7 @@ import dev.ryanhcode.sable.util.SableNBTUtils;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.Vec3i;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -42,6 +44,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -120,6 +123,33 @@ public final class SableBridge {
         return ship.subLevel.getPlot().getCenterBlock();
     }
 
+    /** The ship's position and rotation. */
+    public static ShipPose pose(Ship ship) {
+        return new ShipPose(position(ship), ship.subLevel.logicalPose().orientation());
+    }
+
+    /** The space the ship takes up in the world. */
+    public static AABB worldBounds(Ship ship) {
+        BoundingBox3dc box = ship.subLevel.boundingBox();
+        return new AABB(box.minX(), box.minY(), box.minZ(), box.maxX(), box.maxY(), box.maxZ());
+    }
+
+    /** The block bounds of the ship's plot, in plot coordinates (where its blocks and plot entities live). */
+    public static AABB plotRegion(Ship ship) {
+        BoundingBox3ic box = ship.subLevel.getPlot().getBoundingBox();
+        return new AABB(box.minX(), box.minY(), box.minZ(), box.maxX() + 1, box.maxY() + 1, box.maxZ() + 1);
+    }
+
+    /** A world position as a position in the ship's plot, so it can be found again after the ship moves or turns. */
+    public static Vec3 toPlot(Ship ship, Vec3 world) {
+        return ship.subLevel.logicalPose().transformPositionInverse(world);
+    }
+
+    /** A position in the ship's plot as the world position it currently occupies. */
+    public static Vec3 toWorld(Ship ship, Vec3 plot) {
+        return ship.subLevel.logicalPose().transformPosition(plot);
+    }
+
     /** Every non-air block stored in the ship, as positions in its plot. */
     public static List<BlockPos> blocks(Ship ship) {
         BoundingBox3ic box = ship.subLevel.getPlot().getBoundingBox();
@@ -140,8 +170,26 @@ public final class SableBridge {
         return new Vec3(v.x, v.y, v.z);
     }
 
+    public static Vec3 angularVelocity(Ship ship) {
+        Vector3d v = pipeline(ship.level()).getAngularVelocity(ship.subLevel, new Vector3d());
+        return new Vec3(v.x, v.y, v.z);
+    }
+
     public static void addVelocity(Ship ship, Vec3 linear) {
-        pipeline(ship.level()).addLinearAndAngularVelocity(ship.subLevel, new Vector3d(linear.x, linear.y, linear.z), new Vector3d());
+        addVelocity(ship, linear, Vec3.ZERO);
+    }
+
+    public static void addVelocity(Ship ship, Vec3 linear, Vec3 angular) {
+        pipeline(ship.level()).addLinearAndAngularVelocity(ship.subLevel,
+                new Vector3d(linear.x, linear.y, linear.z), new Vector3d(angular.x, angular.y, angular.z));
+    }
+
+    /** Holds the ship exactly at {@code pose} with no motion. Called every tick to keep a ship still. */
+    public static void pin(Ship ship, ShipPose pose) {
+        PhysicsPipeline pipeline = pipeline(ship.level());
+        Vec3 p = pose.position();
+        pipeline.teleport(ship.subLevel, new Vector3d(p.x, p.y, p.z), pose.orientation());
+        pipeline.resetVelocity(ship.subLevel);
     }
 
     // ---- Assembly and removal ---------------------------------------------------------------------------------
@@ -184,6 +232,17 @@ public final class SableBridge {
      */
     @Nullable
     public static Ship moveBySaveAndLoad(Ship ship, ServerLevel target, Vec3 arrival, double velocityFactor) {
+        return moveBySaveAndLoad(ship, target, arrival, velocityFactor, List.of());
+    }
+
+    /**
+     * Route A with listeners that carry state stored outside the ship's blocks. They run once the ship has loaded in
+     * {@code target} and before the original is removed.
+     */
+    @Nullable
+    public static Ship moveBySaveAndLoad(Ship ship, ServerLevel target, Vec3 arrival, double velocityFactor,
+            List<? extends PlotMoveListener> listeners) {
+        AABB sourceRegion = plotRegion(ship);
         SubLevelData saved = SubLevelSerializer.toData(ship.subLevel, List.of());
         CompoundTag tag = saved.fullTag().copy();
 
@@ -249,6 +308,8 @@ public final class SableBridge {
             Skyseam.LOGGER.warn("Ship {} landed in plot {} but block entities were moved for plot {}. Some may be lost",
                     saved.uuid(), arrived.getPlot().getChunkMin(), targetMin);
         }
+        PlotMove move = new PlotMove(ship.level(), target, sourceRegion, new Vec3i(dx, 0, dz));
+        listeners.forEach(listener -> listener.onPlotMoved(move));
         remove(ship);
         return new Ship(arrived);
     }
@@ -263,14 +324,22 @@ public final class SableBridge {
      */
     @Nullable
     public static Ship moveByCopyingBlocks(Ship ship, ServerLevel target, BlockPos arrivalCorner, double velocityFactor) {
+        return moveByCopyingBlocks(ship, target, arrivalCorner, velocityFactor, List.of());
+    }
+
+    /** Route B with listeners, which run once the copy is assembled and before the original is removed. */
+    @Nullable
+    public static Ship moveByCopyingBlocks(Ship ship, ServerLevel target, BlockPos arrivalCorner, double velocityFactor,
+            List<? extends PlotMoveListener> listeners) {
         ServerLevel source = ship.level();
         HolderLookup.Provider registries = source.registryAccess();
-        BoundingBox3ic box = ship.subLevel.getPlot().getBoundingBox();
-        BlockPos min = new BlockPos(box.minX(), box.minY(), box.minZ());
+        AABB sourceRegion = plotRegion(ship);
+        List<BlockPos> sourceBlocks = blocks(ship);
+        BlockPos min = lowestCorner(sourceBlocks);
         Vec3 velocity = linearVelocity(ship);
 
         List<BlockPos> placed = new ArrayList<>();
-        for (BlockPos pos : blocks(ship)) {
+        for (BlockPos pos : sourceBlocks) {
             BlockState state = source.getBlockState(pos);
             BlockEntity sourceEntity = source.getBlockEntity(pos);
             CompoundTag entityTag = sourceEntity == null ? null : sourceEntity.saveWithoutMetadata(registries);
@@ -292,8 +361,24 @@ public final class SableBridge {
             return null;
         }
         addVelocity(arrived, velocity.scale(velocityFactor));
+        // Assembly keeps the blocks' layout, so the new plot is the old one translated.
+        BlockPos newMin = lowestCorner(blocks(arrived));
+        PlotMove move = new PlotMove(source, target, sourceRegion, newMin.subtract(min));
+        listeners.forEach(listener -> listener.onPlotMoved(move));
         remove(ship);
         return arrived;
+    }
+
+    private static BlockPos lowestCorner(List<BlockPos> blocks) {
+        int x = Integer.MAX_VALUE;
+        int y = Integer.MAX_VALUE;
+        int z = Integer.MAX_VALUE;
+        for (BlockPos pos : blocks) {
+            x = Math.min(x, pos.getX());
+            y = Math.min(y, pos.getY());
+            z = Math.min(z, pos.getZ());
+        }
+        return new BlockPos(x, y, z);
     }
 
     // ---- Internals --------------------------------------------------------------------------------------------
