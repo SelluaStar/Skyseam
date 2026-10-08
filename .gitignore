@@ -27,3 +27,6 @@ desktop.ini
 # with Skyseam (the Skyseam repo is public). Copy them from the Fealty project, see docs/ENVIRONMENT.md.
 libs/
 vendor/
+
+# Local build output
+build-log.txt
