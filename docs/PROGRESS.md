@@ -93,3 +93,64 @@ Placeholder logo viewed as a PNG.
 **Stubs:** no gameplay yet, by design. M0 is the ship-crossing spike.
 
 **Git:** commit on `main`, then `with-fealty` brought up to date (main + `libs/` and `vendor/`). Both pushed.
+
+---
+
+## M0: ship-crossing spike (2026-10-08)
+
+**Question (spec §19):** can a Sable ship be moved between two dimensions, by route A (Sable save/load) or route B
+(copy the blocks)? **Answer: yes, by both. Route A is chosen** (DECISIONS K19, K20). The §23 fallback is not needed.
+
+**Built**
+- `SableBridge.moveBySaveAndLoad` (route A).
+  - Snapshots the ship with `toData`.
+  - Rewrites the saved tag: arrival pose, velocity × 0.5, a free plot slot if the saved one is taken, block entities, ticks and rotation point shifted to the new plot, and sections re-indexed for the target's floor.
+  - Loads it with `fullyLoad`, and only then removes the original.
+- `SableBridge.moveByCopyingBlocks` (route B, the backup): copies blocks and block entities, re-assembles, and restores velocity × 0.5.
+- `Ship`, a handle class, so no package outside `external/` touches a Sable type. The M-1 test now uses it too.
+- 3 GameTests in `gametest/ShipCrossingSpikeTests.java`:
+  - route A round trip (with a ship already in the End taking a plot slot);
+  - route B round trip;
+  - route A timing with a 1,152-block ship.
+- Temporary operator command `/skyseam spike ship` and `/skyseam spike cross <dimension> [route_a|route_b]` (`dev/SpikeCommands.java`), for the in-game test below.
+
+**Verified (actually run)**
+`tools/verify_milestone.py`: build ✓, data ✓, **All 8 required tests passed** ✓ (run twice), server boot ✓.
+Each spike test checks, after every leg, that the ship has all 11 blocks, the chest still holds its 3 diamonds, and the Create shaft keeps its block entity:
+
+| Route | Leg | Result |
+|---|---|---|
+| A | overworld → End | ✓ same ship id; velocity (1.07, 0, 0) → (0.48, 0, 0); plot slot (0,3) was taken, so slot (0,9) was used |
+| A | 30 ticks in the End | ✓ still there, falling under gravity as expected |
+| A | End → overworld | ✓ same ship id |
+| B | overworld → End → overworld | ✓ new id each leg; velocity 1.07 → 0.54; arrives level (rotation not kept) |
+| A, 1,152 blocks | overworld → End | assembled in 45–55 ms, **crossed in 32–34 ms** |
+
+How route A was made to work (all found from failing runs, see DEVIATIONS D12):
+1. block entities first loaded into air because their absolute plot coordinates pointed at the old plot;
+2. the ship vanished after a slot change because the pose's rotation point still pointed at the old plot;
+3. blocks landed 64 blocks too high because the End's floor is at y 0, not −64.
+
+**Untested / needs the author** (GameTests can't build a real Aeronautics ship):
+- Real Aeronautics ships: propellers, envelopes, seats, ropes, Create kinetics running across the crossing.
+- Ships made of several linked bodies (Sable "loading dependencies"; Skyseam passes none yet).
+- The client side: whether the ship renders right away after crossing, and how the player is placed.
+- Players riding seats (only the command's own player is moved, by teleport).
+
+**Author's in-game test (M0)**
+1. Open a creative world with cheats on, built with this jar plus the pinned mods.
+2. Build a small Aeronautics ship (a few blocks, a propeller or two, a seat, a chest with items) and get it into the air.
+3. Stand on or near it (within 48 blocks) and run `/skyseam spike ship`. It should name the ship and its block count.
+4. Run `/skyseam spike cross minecraft:the_end`. You and the ship should appear in the End at the same x and z, with a chat line giving the block count before and after and the time in ms.
+5. Check: every block is there, the chest items are kept, the propellers and controls still work, you can fly it, and it looks right without relogging.
+6. Run `/skyseam spike cross minecraft:overworld` to come back. Then try `… cross minecraft:the_end route_b` once to compare.
+7. Send `logs/latest.log`, the chat lines, and screenshots of anything broken: missing blocks, parts that stopped working, an invisible ship, a ship falling apart, or the player landing in the wrong place.
+
+**Known problems**
+- Route B loses the ship's rotation and id by design. It is only a backup.
+- Linked multi-body ships are not handled yet (M2).
+- The spike command is temporary, and its feedback is not in the lang file.
+
+**Stubs:** none. This milestone is a spike.
+
+**Git:** commit on `main`, `with-fealty` updated, both pushed.

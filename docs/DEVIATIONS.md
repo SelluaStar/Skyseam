@@ -21,4 +21,11 @@ where the spec is simply silent go in `DECISIONS.md` instead.
 ## Still to confirm at the milestone that needs it
 - Whether the Pneumatic Coupler (a renamed `simulated:creative_physics_staff`) really works for a survival player. The static scan found no creative check; M5 adds a GameTest and the author checks it in game.
 - The exact JSON shape of `base_gravity` and `pressure_function` (M3).
-- Cross-dimension ship transfer through `toData`/`fullyLoad` and through `assembleBlocks`. This is the M0 spike.
+- ~~Cross-dimension ship transfer through `toData`/`fullyLoad` and through `assembleBlocks`.~~ Answered in M0: both work, route A with corrections (D12, DECISIONS K19).
+
+## Found in M0 (ship crossing spike)
+
+| # | Expected (spec) | Reality (Sable 2.0.6) | What Skyseam does |
+|---|---|---|---|
+| D12 | Spec §6 route A: "Sable's own save and load path (`SubLevelSerializer.toData` then `fullyLoad` into the Halcyon level)" | Works across dimensions **only with three corrections**. Sable's saved data assumes the ship reloads into the same slot of the same level:<br>1. **Plot slot.** `fullyLoad` reuses the saved slot and fails if the target uses it.<br>2. **Absolute plot coordinates.** Block entities, scheduled ticks and the pose's `rotation_point` are saved in absolute plot coordinates, and plots sit at a different place in another level or slot. Without the shift every block entity loads into air and the ship drifts off.<br>3. **Section indexes.** Chunk sections are saved by index from the world floor, so a dimension with another floor (overworld −64 vs End 0) moves every block by 64. | `SableBridge.moveBySaveAndLoad` edits the saved tag before loading:<br>1. picks a free slot;<br>2. shifts block entities, ticks and the rotation point by the plot offset;<br>3. re-indexes sections and drops heightmaps.<br>It refuses a ship that doesn't fit the target height. |
+| D13 | Spec §6: `toData` snapshots the ship | `fullyLoad` ignores the `pose` in `SubLevelData` and reads the pose, velocity and plot slot from the saved tag. `toData`'s `List<UUID>` is Sable's **loading dependencies** (linked sub-levels), not riders | Arrival position and the 50% velocity are written into the tag. Riders and passengers are Skyseam's job (moved in M2). Multi-part ships linked through loading dependencies are not handled yet (see PROGRESS M0) |
