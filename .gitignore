@@ -23,3 +23,6 @@ art/models/_probe/
 Thumbs.db
 desktop.ini
 
+
+# Local build output
+build-log.txt
