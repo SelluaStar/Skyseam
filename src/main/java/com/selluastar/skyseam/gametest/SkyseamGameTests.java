@@ -7,9 +7,7 @@ import com.selluastar.skyseam.Skyseam;
 import com.selluastar.skyseam.compat.fealty.FealtyCompat;
 import com.selluastar.skyseam.external.ExternalIds;
 import com.selluastar.skyseam.external.SableBridge;
-
-import dev.ryanhcode.sable.companion.SubLevelAccess;
-import dev.ryanhcode.sable.sublevel.ServerSubLevel;
+import com.selluastar.skyseam.external.Ship;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -83,18 +81,18 @@ public final class SkyseamGameTests {
         }
         int before = SableBridge.subLevelCount(level);
 
-        ServerSubLevel subLevel = SableBridge.assemble(level, from, from, to);
+        Ship ship = SableBridge.assemble(level, from, from, to);
 
-        helper.assertTrue(subLevel != null, "Sable did not assemble the 3x1x3 platform");
+        helper.assertTrue(ship != null, "Sable did not assemble the 3x1x3 platform");
         for (BlockPos pos : BlockPos.betweenClosed(from, to)) {
             helper.assertTrue(level.getBlockState(pos).isAir(), "A block was left in the world at " + pos.immutable());
         }
         int after = SableBridge.subLevelCount(level);
         helper.assertTrue(after == before + 1, "Sub-level count went from " + before + " to " + after + ", expected +1");
-        UUID found = SableBridge.containing(level, SableBridge.plotCenter(subLevel))
-                .map(SubLevelAccess::getUniqueId).orElse(null);
-        helper.assertTrue(subLevel.getUniqueId().equals(found),
-                "containing() at the plot centre returned " + found + ", expected " + subLevel.getUniqueId());
+        UUID found = SableBridge.containing(level, SableBridge.plotCenter(ship)).orElse(null);
+        helper.assertTrue(ship.id().equals(found),
+                "containing() at the plot centre returned " + found + ", expected " + ship.id());
+        SableBridge.remove(ship);
         helper.succeed();
     }
 

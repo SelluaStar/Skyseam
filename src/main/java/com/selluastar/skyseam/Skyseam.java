@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
 import com.selluastar.skyseam.compat.fealty.FealtyCompat;
 import com.selluastar.skyseam.dev.DevBootCheck;
+import com.selluastar.skyseam.dev.SpikeCommands;
 import com.selluastar.skyseam.external.ExternalIds;
 
 import net.minecraft.resources.ResourceLocation;
@@ -22,6 +23,7 @@ public final class Skyseam {
     public Skyseam(IEventBus modBus, ModContainer container) {
         modBus.addListener(Skyseam::commonSetup);
         NeoForge.EVENT_BUS.addListener(DevBootCheck::onServerStarted);
+        NeoForge.EVENT_BUS.addListener(SpikeCommands::register);
     }
 
     private static void commonSetup(FMLCommonSetupEvent event) {

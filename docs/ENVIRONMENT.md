@@ -91,6 +91,23 @@ Checked with `javap` and by reading the jars. These are the names `SableBridge` 
 | GeckoLib asset folders | `DefaultedGeoModel` builds `geo/<subtype>/<name>.geo.json` and `animations/<subtype>/<name>.animation.json`. Geometry format **1.12.0** is accepted (1.14.0 and 1.21.0 are rejected) | ✓ matches §20 (`geo/`, `animations/`) |
 | Fealty API 1.3.0 | `FealtyApi.API_VERSION = "1.3.0"`. API jar contains `api.quest.*` (QuestType, QuestObjective, QuestContext, QuestGiver), `api.chain.*` (ChainHandler, ChainContext), `api.dialogue.*` (conditions, effects, DialogueOption), `api.event.{RumourEvent, DialogueEvent, DialogueBuildEvent, ChainStageEvent}`, `VillageInfo`, `RepApi` flags/roles/villages | ✓ M10 can go ahead (details checked again at M10 against `vendor/fealty-source/docs/API.md`) |
 
+### Sable's saved-ship format (read in M0, used by route A)
+`SubLevelSerializer.toData(ship, deps).fullTag()` contains:
+- `uuid` and `pose`. The pose has `position` (world), `orientation`, and `rotation_point` (**absolute plot coordinates**).
+- `world_bounds`, `linear_velocity`, `angular_velocity`, and optional `display_name`, `loading_dependencies` and `user_data`.
+- `plot`, which holds:
+  - `plot_x` and `plot_z`: the slot, relative to the container origin;
+  - `log_size`;
+  - `biome`;
+  - `chunks`: a compound keyed by each chunk's local `ChunkPos` long. Each chunk holds:
+    - `sections`, keyed by **section index from the world floor**;
+    - `block_entities`, `block_ticks` and `fluid_ticks`, all with **absolute** x/y/z;
+    - `heightmaps`.
+
+Slot (x, z) sits at chunk `(origin + slot) << logPlotSize`, with the container origin read at run time. Free slots are scanned like Sable's
+own allocator: x outer, z inner, occupancy bit `x + (z << logSideLength)`. Route A uses `SubLevelContainer`
+(origin, occupancy, plot size) and the `SableNBTUtils` read/write helpers for pose, vector and bounds, all only inside `SableBridge`.
+
 ## Boot details
 
 ### `gradlew build` ✓

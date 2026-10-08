@@ -39,6 +39,9 @@ public final class ExternalIds {
     public static final ResourceLocation PRECISION_MECHANISM = ResourceLocation.fromNamespaceAndPath(CREATE, "precision_mechanism");
     public static final ResourceLocation BRASS_CASING = ResourceLocation.fromNamespaceAndPath(CREATE, "brass_casing");
 
+    /** A Create block with a kinetic block entity, carried by the M0 crossing tests to see that block entities survive. */
+    public static final ResourceLocation SHAFT = ResourceLocation.fromNamespaceAndPath(CREATE, "shaft");
+
     private ExternalIds() {}
 
     private static Map<String, String> pins() {
