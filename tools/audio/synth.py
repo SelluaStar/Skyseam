@@ -10,7 +10,7 @@ tools/.venv/Scripts/python.exe tools/audio/synth.py [group | group/name ...]; th
 tools/audio/check.py. Every file here is a stand-in for the author's final sound design (TODO-MANUAL.md).
 
 Regenerate one sound by name after changing its recipe (e.g. `synth.py seam/crack`). The seam sounds other than
-`hairline`, `crack` and `close` were written by an earlier version that shared one random seed across all sounds; their recipes
+`hairline` and `crack` (and `closing/close`) were written by an earlier version that shared one random seed across all sounds; their recipes
 are unchanged, but a fresh run gives them different noise detail (the thread plucks are the most sensitive to it).
 """
 import sys
@@ -312,10 +312,12 @@ def seam_mend():
 SEAM = (
     [("hairline", seam_hairline), ("crack", seam_crack)]
     + [(f"thread_snap_{k + 1}", (lambda k=k: seam_thread_snap(k))) for k in range(5)]
-    + [("hum", seam_hum), ("ring_pulse", seam_ring_pulse), ("crossing", seam_crossing), ("close", seam_close), ("mend", seam_mend)]
+    + [("hum", seam_hum), ("ring_pulse", seam_ring_pulse), ("crossing", seam_crossing), ("mend", seam_mend)]
 )
 LOOPS = {"seam/hum"}
-GROUPS = {"seam": SEAM}
+# The Seam's closing crackle has its own folder (sounds/closing/), see docs/CLOSING-AUDIO.md.
+CLOSING = [("close", seam_close)]
+GROUPS = {"seam": SEAM, "closing": CLOSING}
 
 
 def main(argv):
