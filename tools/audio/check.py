@@ -24,7 +24,7 @@ SOUNDS = ASSETS / "sounds"
 OUT = ROOT / "build" / "audio-check"
 RATE = 44100
 # Files that loop. Their join must be smooth.
-LOOPS = {"seam/hum"}
+LOOPS = {"seam/hum", "aperture/charge"}
 
 
 def spectrogram(data, path):

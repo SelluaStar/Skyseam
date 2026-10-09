@@ -1,11 +1,16 @@
 package com.selluastar.skyseam.external;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.jetbrains.annotations.Nullable;
@@ -15,6 +20,8 @@ import com.selluastar.skyseam.Skyseam;
 import org.joml.Vector3dc;
 
 import dev.ryanhcode.sable.api.SubLevelAssemblyHelper;
+import dev.ryanhcode.sable.api.SubLevelHelper;
+import dev.ryanhcode.sable.api.block.BlockEntitySubLevelActor;
 import dev.ryanhcode.sable.api.physics.PhysicsPipeline;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
@@ -39,11 +46,14 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -92,6 +102,33 @@ public final class SableBridge {
         return Optional.ofNullable(SableCompanion.INSTANCE.getContaining(level, pos)).map(SubLevelAccess::getUniqueId);
     }
 
+    /** The live ship a block position belongs to, if any. {@code pos} is in the ship's plot. */
+    public static Optional<Ship> shipOf(ServerLevel level, BlockPos pos) {
+        return containing(level, pos).flatMap(id -> find(level, id));
+    }
+
+    /**
+     * True if the entity is aboard the ship: carried by it (Sable tracks it on the ship), riding something in its plot
+     * such as a seat, or standing on its deck, inside the ship's box or up to 2.5 blocks above it (the deck a crossing
+     * carries, docs/DECISIONS.md K27). Sable only tracks some entities, so the deck counts too.
+     */
+    public static boolean isAboard(Entity entity, Ship ship) {
+        SubLevelAccess on = SableCompanion.INSTANCE.getTrackingOrVehicleSubLevel(entity);
+        if (on != null && on.getUniqueId().equals(ship.id())) {
+            return true;
+        }
+        AABB deck = worldBounds(ship).inflate(0.5, 0, 0.5).expandTowards(0, 2.5, 0);
+        return entity.level() == ship.level() && deck.contains(entity.position());
+    }
+
+    /**
+     * Where a position is in the world: a position in a ship's plot becomes the world position it occupies now, and
+     * any other position is returned as it is. Works on both sides.
+     */
+    public static Vec3 projectToWorld(Level level, Vec3 pos) {
+        return SableCompanion.INSTANCE.projectOutOfSubLevel(level, pos);
+    }
+
     /** A live ship in this level by its id. */
     public static Optional<Ship> find(ServerLevel level, UUID id) {
         ServerSubLevelContainer container = SubLevelContainer.getContainer(level);
@@ -123,6 +160,74 @@ public final class SableBridge {
                 .map(Ship::new)
                 .filter(ship -> position(ship).distanceToSqr(pos) <= radius * radius)
                 .toList();
+    }
+
+    /**
+     * The ship and every body linked to it, the ship first. Linked means joined by something Sable knows connects
+     * them: Simulated's ropes, swivel bearings, springs and docking connectors, and anything else whose block reports
+     * a connection or loading dependency. Bodies that only touch the ship are not linked: a boat parked on a deck must
+     * be tied down to come along. They cross a Seam together (docs/DECISIONS.md K53).
+     */
+    public static List<Ship> linked(Ship ship) {
+        Set<ServerSubLevel> found = new LinkedHashSet<>();
+        Deque<ServerSubLevel> open = new ArrayDeque<>();
+        open.add(ship.subLevel);
+        while (!open.isEmpty()) {
+            ServerSubLevel next = open.poll();
+            if (next.isRemoved() || next.getLevel() != ship.level() || !found.add(next)) {
+                continue;
+            }
+            for (BlockEntitySubLevelActor actor : next.getPlot().getBlockEntityActors()) {
+                addLinks(open, found, actor.sable$getConnectionDependencies());
+                addLinks(open, found, actor.sable$getLoadingDependencies());
+            }
+            // Sable's own walk over connections, in case a body reports links some other way.
+            addLinks(open, found, SubLevelHelper.getConnectedChain(next));
+        }
+        return found.stream().map(Ship::new).toList();
+    }
+
+    private static void addLinks(Deque<ServerSubLevel> open, Set<ServerSubLevel> found, @Nullable Iterable<? extends SubLevel> links) {
+        if (links == null) {
+            return;
+        }
+        for (SubLevel link : links) {
+            if (link instanceof ServerSubLevel server && !found.contains(server)) {
+                open.add(server);
+            }
+        }
+    }
+
+    /** A copy of where the ship is now, to place its plot positions as they are at this moment later on. */
+    public static ShipFrame frame(Ship ship) {
+        return new ShipFrame(ship.subLevel.logicalPose());
+    }
+
+    /** The ship's longest side across, in blocks: the larger horizontal side of its blocks' box, however it is turned. */
+    public static double length(Ship ship) {
+        AABB plot = plotRegion(ship);
+        return Math.max(plot.getXsize(), plot.getZsize());
+    }
+
+    /** Every block entity stored in the ship's plot. */
+    public static List<BlockEntity> blockEntities(Ship ship) {
+        AABB plot = plotRegion(ship);
+        ServerLevel level = ship.level();
+        List<BlockEntity> found = new ArrayList<>();
+        for (int cx = Mth.floor(plot.minX) >> 4; cx <= Mth.floor(plot.maxX - 1) >> 4; cx++) {
+            for (int cz = Mth.floor(plot.minZ) >> 4; cz <= Mth.floor(plot.maxZ - 1) >> 4; cz++) {
+                LevelChunk chunk = level.getChunkSource().getChunkNow(cx, cz);
+                if (chunk == null) {
+                    continue;
+                }
+                for (BlockEntity entity : chunk.getBlockEntities().values()) {
+                    if (plot.contains(Vec3.atCenterOf(entity.getBlockPos()))) {
+                        found.add(entity);
+                    }
+                }
+            }
+        }
+        return found;
     }
 
     /** The ship's world position (the centre of its pose). */
@@ -255,13 +360,72 @@ public final class SableBridge {
     @Nullable
     public static Ship moveBySaveAndLoad(Ship ship, ServerLevel target, Vec3 arrival, double velocityFactor,
             List<? extends PlotMoveListener> listeners) {
+        List<MovedShip> moved = moveGroupBySaveAndLoad(List.of(ship), target, arrival.subtract(position(ship)), velocityFactor, listeners);
+        return moved == null ? null : moved.get(0).ship();
+    }
+
+    /** One ship of a group that moved: the ship in its new level, and how its plot moved. */
+    public record MovedShip(UUID oldId, Ship ship, PlotMove move) {}
+
+    /**
+     * Route A for several linked ships at once ({@link #linked}): each is moved by {@code shift}, so they arrive as
+     * they were placed, every one is loaded in {@code target} before any original is removed, and each gets a plot
+     * slot of its own. If any of them cannot load, the ones already loaded are removed again and the originals are
+     * left untouched. The listeners run for each ship once all have loaded.
+     *
+     * @return the moved ships in the order given, or null if the group could not move
+     */
+    @Nullable
+    public static List<MovedShip> moveGroupBySaveAndLoad(List<Ship> ships, ServerLevel target, Vec3 shift, double velocityFactor,
+            List<? extends PlotMoveListener> listeners) {
+        ServerSubLevelContainer targetContainer = SubLevelContainer.getContainer(target);
+        List<UUID> group = ships.stream().map(Ship::id).toList();
+        Set<Integer> claimed = new HashSet<>();
+        List<Prepared> prepared = new ArrayList<>();
+        for (Ship ship : ships) {
+            Prepared ready = prepareMove(ship, target, targetContainer, shift, velocityFactor, group, claimed);
+            if (ready == null) {
+                return null;
+            }
+            prepared.add(ready);
+        }
+
+        List<MovedShip> moved = new ArrayList<>();
+        for (Prepared ready : prepared) {
+            ServerSubLevel arrived = SubLevelSerializer.fullyLoad(target, ready.data());
+            if (arrived == null || arrived.isRemoved()) {
+                Skyseam.LOGGER.warn("Ship {} could not load in {}; its group stays where it was", ready.ship().id(), target.dimension().location());
+                moved.forEach(done -> remove(done.ship()));
+                return null;
+            }
+            if (!arrived.getPlot().getChunkMin().equals(ready.targetMin())) {
+                Skyseam.LOGGER.warn("Ship {} landed in plot {} but block entities were moved for plot {}. Some may be lost",
+                        ready.ship().id(), arrived.getPlot().getChunkMin(), ready.targetMin());
+            }
+            moved.add(new MovedShip(ready.ship().id(), new Ship(arrived),
+                    new PlotMove(ready.ship().level(), target, ready.sourceRegion(), new Vec3i(ready.dx(), 0, ready.dz()))));
+        }
+        for (MovedShip done : moved) {
+            listeners.forEach(listener -> listener.onPlotMoved(done.move()));
+        }
+        ships.forEach(SableBridge::remove);
+        return moved;
+    }
+
+    /** A ship saved and adjusted for its new level, ready to load. */
+    private record Prepared(Ship ship, AABB sourceRegion, SubLevelData data, ChunkPos targetMin, int dx, int dz) {}
+
+    @Nullable
+    private static Prepared prepareMove(Ship ship, ServerLevel target, ServerSubLevelContainer targetContainer, Vec3 shiftBy,
+            double velocityFactor, List<UUID> group, Set<Integer> claimed) {
         AABB sourceRegion = plotRegion(ship);
-        SubLevelData saved = SubLevelSerializer.toData(ship.subLevel, List.of());
+        // The group is saved as each ship's relations, as Sable does when it unloads linked ships together.
+        SubLevelData saved = SubLevelSerializer.toData(ship.subLevel, group);
         CompoundTag tag = saved.fullTag().copy();
 
         Pose3d pose = SableNBTUtils.readPose3d(tag.getCompound(TAG_POSE));
-        Vector3d shift = new Vector3d(arrival.x, arrival.y, arrival.z).sub(pose.position());
-        pose.position().set(arrival.x, arrival.y, arrival.z);
+        Vector3d shift = new Vector3d(shiftBy.x, shiftBy.y, shiftBy.z);
+        pose.position().add(shift);
         tag.put(TAG_POSE, SableNBTUtils.writePose3d(pose));
 
         BoundingBox3d bounds = SableNBTUtils.readBoundingBox(tag.getCompound(TAG_WORLD_BOUNDS));
@@ -271,12 +435,11 @@ public final class SableBridge {
         scaleVector(tag, TAG_LINEAR_VELOCITY, velocityFactor);
         scaleVector(tag, TAG_ANGULAR_VELOCITY, velocityFactor);
 
-        ServerSubLevelContainer targetContainer = SubLevelContainer.getContainer(target);
         CompoundTag plot = tag.getCompound(TAG_PLOT);
         int plotX = plot.getInt(TAG_PLOT_X);
         int plotZ = plot.getInt(TAG_PLOT_Z);
-        if (isPlotUsed(targetContainer, plotX, plotZ)) {
-            int[] free = firstFreePlot(targetContainer);
+        if (isPlotUsed(targetContainer, plotX, plotZ) || claimed.contains(targetContainer.getIndex(plotX, plotZ))) {
+            int[] free = firstFreePlot(targetContainer, claimed);
             if (free == null) {
                 Skyseam.LOGGER.warn("Ship {} cannot enter {}: Sable has no free plot slot there", saved.uuid(), target.dimension().location());
                 return null;
@@ -286,6 +449,7 @@ public final class SableBridge {
             plot.putInt(TAG_PLOT_X, free[0]);
             plot.putInt(TAG_PLOT_Z, free[1]);
         }
+        claimed.add(targetContainer.getIndex(plot.getInt(TAG_PLOT_X), plot.getInt(TAG_PLOT_Z)));
 
         // Sable saves plot chunks at local positions, but block entities, scheduled ticks and the pose's rotation
         // point at absolute plot coordinates. A plot in another dimension or another slot sits elsewhere, so those
@@ -311,20 +475,7 @@ public final class SableBridge {
             pose.rotationPoint().add(dx, 0, dz);
             tag.put(TAG_POSE, SableNBTUtils.writePose3d(pose));
         }
-
-        ServerSubLevel arrived = SubLevelSerializer.fullyLoad(target,
-                new SubLevelData(saved.uuid(), bounds, pose, saved.dependencies(), tag));
-        if (arrived == null || arrived.isRemoved()) {
-            return null;
-        }
-        if (!arrived.getPlot().getChunkMin().equals(targetMin)) {
-            Skyseam.LOGGER.warn("Ship {} landed in plot {} but block entities were moved for plot {}. Some may be lost",
-                    saved.uuid(), arrived.getPlot().getChunkMin(), targetMin);
-        }
-        PlotMove move = new PlotMove(ship.level(), target, sourceRegion, new Vec3i(dx, 0, dz));
-        listeners.forEach(listener -> listener.onPlotMoved(move));
-        remove(ship);
-        return new Ship(arrived);
+        return new Prepared(ship, sourceRegion, new SubLevelData(saved.uuid(), bounds, pose, saved.dependencies(), tag), targetMin, dx, dz);
     }
 
     /**
@@ -478,14 +629,15 @@ public final class SableBridge {
         return container.getOccupancy().get(container.getIndex(x, z));
     }
 
-    /** The first free plot slot, scanned the same way Sable's own allocator does. */
+    /** The first free plot slot not in {@code claimed}, scanned the same way Sable's own allocator does. */
     @Nullable
-    private static int[] firstFreePlot(ServerSubLevelContainer container) {
+    private static int[] firstFreePlot(ServerSubLevelContainer container, Set<Integer> claimed) {
         int side = 1 << container.getLogSideLength();
         BitSet occupancy = container.getOccupancy();
         for (int x = 0; x < side; x++) {
             for (int z = 0; z < side; z++) {
-                if (!occupancy.get(container.getIndex(x, z))) {
+                int index = container.getIndex(x, z);
+                if (!occupancy.get(index) && !claimed.contains(index)) {
                     return new int[] {x, z};
                 }
             }

@@ -55,7 +55,7 @@ public final class AssetDefinitionTests {
                 }
             }
         }
-        helper.assertTrue(checked >= 11, "Only " + checked + " Skyseam sounds are registered, expected the Seam's 11");
+        helper.assertTrue(checked >= 16, "Only " + checked + " Skyseam sounds are registered, expected the Seam's 12 and the Aperture and Skychart's 4");
         helper.succeed();
     }
 
@@ -91,6 +91,51 @@ public final class AssetDefinitionTests {
         }
         for (String texture : SeamTextures.ALL) {
             helper.assertTrue(exists("/assets/skyseam/" + texture), "The Seam renderer's texture " + texture + " is missing");
+        }
+        helper.succeed();
+    }
+
+    /**
+     * Every Skyseam block has a blockstate and a name, every item a model whose textures exist and a name, and the
+     * Harmonic Aperture its GeckoLib model, animations, texture and glow mask, and its screen textures.
+     */
+    @GameTest(template = EMPTY)
+    public static void everyBlockAndItemHasItsFiles(GameTestHelper helper) {
+        JsonObject lang = json(helper, "/assets/skyseam/lang/en_us.json");
+        int blocks = 0;
+        for (ResourceLocation id : BuiltInRegistries.BLOCK.keySet()) {
+            if (id.getNamespace().equals(Skyseam.MOD_ID)) {
+                blocks++;
+                helper.assertTrue(exists("/assets/skyseam/blockstates/" + id.getPath() + ".json"), "Block " + id + " has no blockstate");
+                helper.assertTrue(lang.has("block.skyseam." + id.getPath()), "Block " + id + " has no name in en_us.json");
+                helper.assertTrue(exists("/data/skyseam/loot_table/blocks/" + id.getPath() + ".json"), "Block " + id + " has no loot table");
+            }
+        }
+        int items = 0;
+        for (ResourceLocation id : BuiltInRegistries.ITEM.keySet()) {
+            if (!id.getNamespace().equals(Skyseam.MOD_ID)) {
+                continue;
+            }
+            items++;
+            JsonObject model = json(helper, "/assets/skyseam/models/item/" + id.getPath() + ".json");
+            if (model.has("textures")) {
+                for (var texture : model.getAsJsonObject("textures").entrySet()) {
+                    ResourceLocation sprite = ResourceLocation.parse(texture.getValue().getAsString());
+                    helper.assertTrue(exists("/assets/" + sprite.getNamespace() + "/textures/" + sprite.getPath() + ".png"),
+                            "Item " + id + " names a missing texture " + sprite);
+                }
+            }
+            helper.assertTrue(lang.has("item.skyseam." + id.getPath()) || lang.has("block.skyseam." + id.getPath()), "Item " + id + " has no name");
+        }
+        helper.assertTrue(blocks >= 1 && items >= 2, "Expected the Harmonic Aperture block and two items, found " + blocks + " and " + items);
+        for (String file : new String[] {"geo/block/harmonic_aperture.geo.json", "animations/block/harmonic_aperture.animation.json",
+                "textures/block/harmonic_aperture.png", "textures/block/harmonic_aperture_glowmask.png", "textures/gui/aperture.png",
+                "textures/gui/skychart.png"}) {
+            helper.assertTrue(exists("/assets/skyseam/" + file), "The Harmonic Aperture's " + file + " is missing");
+        }
+        JsonObject animations = json(helper, "/assets/skyseam/animations/block/harmonic_aperture.animation.json").getAsJsonObject("animations");
+        for (String clip : new String[] {"idle", "spin_up", "charged", "cooldown"}) {
+            helper.assertTrue(animations.has(clip), "The Harmonic Aperture has no " + clip + " animation (spec section 20)");
         }
         helper.succeed();
     }

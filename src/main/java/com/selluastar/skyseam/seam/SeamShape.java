@@ -25,6 +25,12 @@ public final class SeamShape {
     private static final float NEVER = Float.POSITIVE_INFINITY;
     /** How much of the half-width the main opening may use at its widest. */
     private static final float LENS = 0.84f;
+    /**
+     * The box the finished opening fits in, as shares of the Seam's width and height: the lens is at most
+     * {@link #LENS} of the width and spans the rows from 6% to 94% of the height. A ship crosses by overlapping it.
+     */
+    public static final float OPENING_WIDTH = LENS;
+    public static final float OPENING_HEIGHT = 0.88f;
 
     public final int cols;
     public final int rows;

@@ -2,6 +2,7 @@ package com.selluastar.skyseam.seam;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalLong;
 
 import org.jetbrains.annotations.Nullable;
@@ -9,6 +10,8 @@ import org.jetbrains.annotations.Nullable;
 import com.selluastar.skyseam.Skyseam;
 import com.selluastar.skyseam.config.SkyseamConfig;
 import com.selluastar.skyseam.registry.SkyseamEntities;
+import com.selluastar.skyseam.seam.site.SeamSite;
+import com.selluastar.skyseam.seam.site.SeamSites;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -62,6 +65,9 @@ public final class Seams {
         }
         seam.setUp(centre, Mth.wrapDegrees(yaw), w, h, now);
         level.addFreshEntity(seam);
+        // Load the area now rather than on the Seam's first tick: a Seam opened for a ship far out may sit in a chunk
+        // that is not ticking yet, and it would never tick to load it.
+        seam.holdChunks(level);
         SeamSavedData.get(level).opened(seam.getUUID(), pos);
         Skyseam.LOGGER.info("Opened a Seam {}x{} at {} in {}", (int) w, (int) h, pos.toShortString(), level.dimension().location());
         return new OpenResult(seam, null);
@@ -91,6 +97,57 @@ public final class Seams {
         AABB area = new AABB(pos.x - radius, level.getMinBuildHeight(), pos.z - radius, pos.x + radius, level.getMaxBuildHeight(), pos.z + radius);
         return level.getEntities(SkyseamEntities.SEAM.get(), area,
                 seam -> seam.state().isOpening() && Mth.square(seam.getX() - pos.x) + Mth.square(seam.getZ() - pos.z) <= radius * radius);
+    }
+
+    /** The closed Seam (dormant or charging) waiting at {@code site}, if there is one. */
+    public static Optional<SeamEntity> closedAt(ServerLevel level, SeamSite site) {
+        AABB area = new AABB(site.x() - 2, level.getMinBuildHeight(), site.z() - 2, site.x() + 3, level.getMaxBuildHeight(), site.z() + 3);
+        return level.getEntities(SkyseamEntities.SEAM.get(), area, seam -> seam.state().isClosed() && site.equals(seam.site())).stream().findFirst();
+    }
+
+    /**
+     * Puts a closed Seam at {@code site}, hanging {@code dormant_height} blocks above the ground there, unless the site
+     * already has a Seam in any state within the entry radius, or a scar that has not faded.
+     *
+     * @return the Seam waiting at the site, new or already there, or empty if the site is busy
+     */
+    public static Optional<SeamEntity> placeClosed(ServerLevel level, SeamSite site) {
+        Optional<SeamEntity> existing = closedAt(level, site);
+        if (existing.isPresent()) {
+            return existing;
+        }
+        int radius = SkyseamConfig.ENTRY_RADIUS.get();
+        Vec3 column = site.at(0);
+        AABB area = new AABB(column.x - radius, level.getMinBuildHeight(), column.z - radius, column.x + radius, level.getMaxBuildHeight(), column.z + radius);
+        if (!level.getEntities(SkyseamEntities.SEAM.get(), area, seam -> true).isEmpty()) {
+            return Optional.empty();
+        }
+        long now = level.getGameTime();
+        if (SeamSavedData.get(level).scarNear(BlockPos.containing(column), radius, now).isPresent()) {
+            return Optional.empty();
+        }
+        double y = Math.min(SeamSites.groundY(level, site) + SkyseamConfig.DORMANT_HEIGHT.get(), level.getMaxBuildHeight() - 12);
+        SeamEntity seam = SkyseamEntities.SEAM.get().create(level);
+        if (seam == null) {
+            return Optional.empty();
+        }
+        seam.setUpDormant(site.at(y), site, now);
+        level.addFreshEntity(seam);
+        Skyseam.LOGGER.debug("Placed a closed Seam at site ({}, {}), height {}", site.x(), site.z(), y);
+        return Optional.of(seam);
+    }
+
+    /**
+     * Opens the Seam at {@code site} for a ship whose charge is full (spec section 6): the closed Seam waiting there
+     * gives way to an opening one at {@code centre}. Like {@link #open}, it refuses beside an open Seam or a fresh scar.
+     */
+    public static OpenResult openAtSite(ServerLevel level, SeamSite site, Vec3 centre, float yaw, float width, float height) {
+        Optional<SeamEntity> closed = closedAt(level, site);
+        OpenResult result = open(level, centre, yaw, width, height, false);
+        if (result.opened()) {
+            closed.ifPresent(SeamEntity::discard);
+        }
+        return result;
     }
 
     /** Every Seam in the level, in any state, nearest to {@code pos} first. */

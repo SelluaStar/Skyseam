@@ -3,6 +3,9 @@ package com.selluastar.skyseam;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
+import com.selluastar.skyseam.aperture.ApertureIndex;
+import com.selluastar.skyseam.aperture.ApertureOwnership;
+import com.selluastar.skyseam.command.ShipDrives;
 import com.selluastar.skyseam.command.SkyseamCommands;
 import com.selluastar.skyseam.compat.fealty.FealtyCompat;
 import com.selluastar.skyseam.config.SkyseamClientConfig;
@@ -10,11 +13,21 @@ import com.selluastar.skyseam.config.SkyseamConfig;
 import com.selluastar.skyseam.dev.DevBootCheck;
 import com.selluastar.skyseam.external.ExternalIds;
 import com.selluastar.skyseam.network.SkyseamNetwork;
+import com.selluastar.skyseam.registry.SkyseamBlockEntities;
+import com.selluastar.skyseam.registry.SkyseamBlocks;
+import com.selluastar.skyseam.registry.SkyseamCreativeTabs;
+import com.selluastar.skyseam.registry.SkyseamDataComponents;
 import com.selluastar.skyseam.registry.SkyseamEntities;
+import com.selluastar.skyseam.registry.SkyseamItems;
+import com.selluastar.skyseam.registry.SkyseamMenus;
 import com.selluastar.skyseam.registry.SkyseamParticles;
 import com.selluastar.skyseam.registry.SkyseamSounds;
 import com.selluastar.skyseam.seam.Seams;
+import com.selluastar.skyseam.seam.site.SeamSites;
+import com.selluastar.skyseam.seam.site.SiteKeeper;
+import com.selluastar.skyseam.transfer.AbsentRiders;
 import com.selluastar.skyseam.transfer.CrossingHolds;
+import com.selluastar.skyseam.transfer.SeamCrossing;
 import com.selluastar.skyseam.transfer.ShipTransfer;
 
 import net.minecraft.resources.ResourceLocation;
@@ -36,6 +49,12 @@ public final class Skyseam {
         SkyseamEntities.register(modBus);
         SkyseamSounds.register(modBus);
         SkyseamParticles.register(modBus);
+        SkyseamDataComponents.register(modBus);
+        SkyseamBlocks.register(modBus);
+        SkyseamItems.register(modBus);
+        SkyseamBlockEntities.register(modBus);
+        SkyseamMenus.register(modBus);
+        SkyseamCreativeTabs.register(modBus);
         modBus.addListener(SkyseamNetwork::register);
         modBus.addListener(Skyseam::commonSetup);
 
@@ -45,6 +64,15 @@ public final class Skyseam {
         NeoForge.EVENT_BUS.addListener(ShipTransfer::onServerTick);
         NeoForge.EVENT_BUS.addListener(CrossingHolds::onLevelTick);
         NeoForge.EVENT_BUS.addListener(CrossingHolds::onServerStopping);
+        NeoForge.EVENT_BUS.addListener(SiteKeeper::onLevelTick);
+        NeoForge.EVENT_BUS.addListener(ShipDrives::onLevelTick);
+        NeoForge.EVENT_BUS.addListener(ShipDrives::onServerStopped);
+        NeoForge.EVENT_BUS.addListener(SeamSites::onServerStopped);
+        NeoForge.EVENT_BUS.addListener(ApertureIndex::onServerStopped);
+        NeoForge.EVENT_BUS.addListener(SeamCrossing::onServerStopped);
+        NeoForge.EVENT_BUS.addListener(AbsentRiders::onLoggedOut);
+        NeoForge.EVENT_BUS.addListener(AbsentRiders::onLoggedIn);
+        NeoForge.EVENT_BUS.addListener(ApertureOwnership::onItemCrafted);
     }
 
     private static void commonSetup(FMLCommonSetupEvent event) {

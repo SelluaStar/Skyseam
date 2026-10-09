@@ -367,15 +367,93 @@ def seam_mend():
     return finish(x + zipper * 1.5, fade_out=0.4)
 
 
+# ---- The Harmonic Aperture and the Skychart (spec section 21: "Aperture (charge loop, ready chime, mount click)",
+# "Skychart unfold") -----------------------------------------------------------------------------------------------
+
+
+def aperture_charge():
+    """Beat 1: the Aperture's core spinning up. A 2 second seamless loop: a warm A3 chord with a fast rotating
+    tremolo and a soft whirr of air, as if something is turning fast inside brass. The client raises its pitch and
+    volume as the charge fills, so the loop itself stays level."""
+    seconds = 2.0
+    t = t_axis(seconds)
+    # Whole numbers of cycles in 2 s for every layer, so the loop joins cleanly.
+    spin = 0.5 + 0.5 * np.sin(2 * np.pi * 8 * t)
+    x = np.zeros(len(t))
+    for f, amp in ((220.0, 1.0), (330.0, 0.5), (440.0, 0.35), (660.0, 0.12)):
+        x += amp * np.sin(2 * np.pi * f * t)
+    x *= 0.75 + 0.25 * spin
+    fade = int(0.3 * RATE)
+    whirr = svf(rng.normal(0, 1, len(t) + fade), 1400, q=2.0) * 0.6
+    head = whirr[:fade].copy()
+    whirr = whirr[fade:]
+    ramp = np.linspace(0, 1, fade)
+    whirr[-fade:] = whirr[-fade:] * (1 - ramp) + head * ramp
+    x = x + whirr * spin
+    low = np.sin(2 * np.pi * 110 * t) * 0.4
+    x = one_pole_lowpass(x + low, 5000)
+    x = x - np.mean(x)
+    return x / np.max(np.abs(x)) * PEAK * 0.7
+
+
+def aperture_ready():
+    """The charge is full: a bright rising A-major arpeggio of glass bells (A5, C#6, E6) over a soft low thump,
+    in the opening's hall."""
+    seconds = 2.2
+    t = t_axis(seconds)
+    x = np.zeros(len(t))
+    for start, f0, amp in ((0.0, 880.0, 0.8), (0.08, 1108.73, 0.7), (0.16, 1318.5, 0.9)):
+        n = int(start * RATE)
+        x[n:] += (bell(t, f0, decay=1.1) * amp)[: len(t) - n]
+    thump = np.sin(2 * np.pi * 110 * t) * np.minimum(1, t / 0.004) * np.exp(-t / 0.18)
+    return finish_level(reverb(x * 0.6 + thump, seconds=1.8, wet=0.3), -18, fade_out=0.3)
+
+
+def aperture_mount():
+    """The Aperture clicks into place on a ship: two quick metal clicks and a small low knock."""
+    seconds = 0.6
+    t = t_axis(seconds)
+    x = np.zeros(len(t))
+    for start, centre, amp in ((0.0, 3200, 1.0), (0.07, 2100, 0.8)):
+        n = int(start * RATE)
+        burst = bandpass_noise(seconds, centre, 4.0) * env_exp(t, 0.012, attack=0.0005)
+        ring = np.sin(2 * np.pi * centre * 0.6 * t) * env_exp(t, 0.05, attack=0.0005) * 0.3
+        x[n:] += ((burst + ring) * amp)[: len(t) - n]
+    knock = np.sin(2 * np.pi * (140 - 40 * np.clip(t / 0.1, 0, 1)) * t) * env_exp(t, 0.06, attack=0.002) * 0.8
+    n = int(0.07 * RATE)
+    x[n:] += knock[: len(t) - n]
+    return finish_level(x, -18, fade_out=0.05)
+
+
+def skychart_unfold():
+    """The Skychart unfolds: three soft swishes of stiff paper and a faint sparkle as the chart opens."""
+    seconds = 0.9
+    t = t_axis(seconds)
+    x = np.zeros(len(t))
+    for start, length, centre in ((0.0, 0.18, 3200), (0.16, 0.22, 2600), (0.36, 0.3, 3800)):
+        n = int(start * RATE)
+        local = t_axis(length)
+        shape = np.sin(np.pi * local / length) ** 2
+        swish = bandpass_noise(length, centre, 1.2) * shape
+        swish += crackle(length, 120, centre=4000, q=1.5) * shape * 0.5
+        x[n:n + len(swish)] += swish[: len(t) - n]
+    sparkle = bell(t, 2093.0, decay=0.4) * np.clip((t - 0.45) / 0.02, 0, 1) * 0.15
+    return finish_level(x + sparkle, -24, fade_out=0.1)
+
+
+APERTURE = [("charge", aperture_charge), ("ready", aperture_ready), ("mount", aperture_mount)]
+SKYCHART = [("unfold", skychart_unfold)]
+
+
 SEAM = (
     [("hairline", seam_hairline), ("crack", seam_crack)]
     + [(f"thread_snap_{k + 1}", (lambda k=k: seam_thread_snap(k))) for k in range(5)]
     + [("hum", seam_hum), ("ring_pulse", seam_ring_pulse), ("crossing", seam_crossing), ("mend", seam_mend)]
 )
-LOOPS = {"seam/hum"}
+LOOPS = {"seam/hum", "aperture/charge"}
 # The Seam's closing crackle has its own folder (sounds/closing/), see docs/CLOSING-AUDIO.md.
 CLOSING = [("close", seam_close)]
-GROUPS = {"seam": SEAM, "closing": CLOSING}
+GROUPS = {"seam": SEAM, "closing": CLOSING, "aperture": APERTURE, "skychart": SKYCHART}
 
 
 def main(argv):

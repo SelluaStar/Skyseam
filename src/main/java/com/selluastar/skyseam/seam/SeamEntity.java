@@ -11,7 +11,10 @@ import com.selluastar.skyseam.config.SkyseamConfig;
 import com.selluastar.skyseam.external.SableBridge;
 import com.selluastar.skyseam.external.Ship;
 import com.selluastar.skyseam.registry.SkyseamSounds;
+import com.selluastar.skyseam.seam.site.SeamSite;
+import com.selluastar.skyseam.seam.site.SeamSites;
 import com.selluastar.skyseam.transfer.CrossingHolds;
+import com.selluastar.skyseam.transfer.SeamCrossing;
 
 import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
@@ -38,12 +41,16 @@ import net.minecraft.world.phys.Vec3;
  * 1, rule 10): when it opens, stays open, mends and fades, which sounds play when, and the pull on nearby ships. The
  * client only draws it, from the synced state, start time and size ({@code client/seam/SeamRenderer}).
  *
- * <p>Open one with {@link Seams#open}. It keeps itself open while someone is within the hold radius, mends
+ * <p>Open one with {@link Seams#open}. It keeps itself open while a keeper says so ({@link #keepOpenWhile}: for a
+ * Seam a Harmonic Aperture opened, while a ship carrying an Aperture is within the hold radius), mends
  * {@code mend_delay_seconds} after the last one leaves or after {@code max_open_seconds} regardless, then leaves a scar
  * for {@code scar_seconds} during which no Seam opens near it. The chunks around it stay loaded until it has mended.
+ * A Seam opened by the debug command is also kept open by players ({@link #holdWhilePlayersNear}), so it can be
+ * filmed without a ship.
  *
- * <p>Until the Harmonic Aperture exists (M2), "someone" means a player. M2 narrows it to a piloted ship carrying an
- * Aperture, as the spec's trigger rules say.
+ * <p>A closed Seam waits at each site ({@link SeamState#DORMANT}, made by {@code seam.site.SiteKeeper}) as a faint
+ * scar in the sky. While an Aperture ship charges there it shows the heat shimmer ({@link SeamState#CHARGING}) at the
+ * height the Seam will open; when the charge is full it is replaced by an opening Seam.
  */
 public class SeamEntity extends Entity {
     private static final EntityDataAccessor<Integer> DATA_STATE = SynchedEntityData.defineId(SeamEntity.class, EntityDataSerializers.INT);
@@ -51,11 +58,16 @@ public class SeamEntity extends Entity {
     private static final EntityDataAccessor<Float> DATA_WIDTH = SynchedEntityData.defineId(SeamEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> DATA_HEIGHT = SynchedEntityData.defineId(SeamEntity.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Float> DATA_MEND_FROM = SynchedEntityData.defineId(SeamEntity.class, EntityDataSerializers.FLOAT);
+    /** Beat 1: how full the Aperture's charge is (0 to 1), and the height the shimmer (and later the Seam) sits at. */
+    private static final EntityDataAccessor<Float> DATA_CHARGE = SynchedEntityData.defineId(SeamEntity.class, EntityDataSerializers.FLOAT);
+    private static final EntityDataAccessor<Float> DATA_CHARGE_Y = SynchedEntityData.defineId(SeamEntity.class, EntityDataSerializers.FLOAT);
 
     /** Keeps the chunks around an open Seam loaded (spec section 6, "Edge cases"). Keyed by the entity id. */
     private static final TicketType<Integer> TICKET = TicketType.create("skyseam_seam", Integer::compare);
     /** How often the keep-open check looks for people nearby. */
     private static final int KEEP_CHECK_TICKS = 10;
+    /** A charging Seam goes back to sleep if no Aperture has fed it for this long. */
+    private static final int CHARGE_TIMEOUT_TICKS = 20;
 
     // Server only.
     private final List<BooleanSupplier> keepers = new ArrayList<>();
@@ -65,6 +77,14 @@ public class SeamEntity extends Entity {
     @Nullable
     private ChunkPos ticketCentre;
     private int ticketDistance;
+    private boolean holdByPlayers;
+    @Nullable
+    private SeamSite site;
+    private long lastCharged;
+
+    // Client only.
+    private float shownChargeY = Float.NaN;
+    private float shownChargeYO;
 
     // Both sides: built from the id and size the first time it is needed.
     @Nullable
@@ -89,6 +109,15 @@ public class SeamEntity extends Entity {
         lastKept = now;
     }
 
+    /** Server: a closed Seam waiting at {@code site}, hanging at {@code centre}, before it is added to the level. */
+    void setUpDormant(Vec3 centre, SeamSite site, long now) {
+        setPos(centre);
+        this.site = site;
+        entityData.set(DATA_STATE, SeamState.DORMANT.ordinal());
+        entityData.set(DATA_STATE_START, now);
+        entityData.set(DATA_CHARGE_Y, (float) centre.y);
+    }
+
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         builder.define(DATA_STATE, SeamState.OPENING.ordinal());
@@ -96,6 +125,8 @@ public class SeamEntity extends Entity {
         builder.define(DATA_WIDTH, 16f);
         builder.define(DATA_HEIGHT, 16f);
         builder.define(DATA_MEND_FROM, (float) SeamTimeline.STABLE_AT);
+        builder.define(DATA_CHARGE, 0f);
+        builder.define(DATA_CHARGE_Y, 0f);
     }
 
     // ---- State, shared with the client ---------------------------------------------------------------------------
@@ -115,6 +146,22 @@ public class SeamEntity extends Entity {
 
     public float seamHeight() {
         return entityData.get(DATA_HEIGHT);
+    }
+
+    /** Beat 1: how full the charge is, 0 to 1. Only a charging Seam has one. */
+    public float charge() {
+        return entityData.get(DATA_CHARGE);
+    }
+
+    /** The height a charging Seam's shimmer sits at: where the Seam will open. */
+    public float chargeY() {
+        return entityData.get(DATA_CHARGE_Y);
+    }
+
+    /** The site a closed Seam waits at, or null for a Seam that was opened. Server only. */
+    @Nullable
+    public SeamSite site() {
+        return site;
     }
 
     /** The reveal age a mend started from. */
@@ -142,7 +189,7 @@ public class SeamEntity extends Entity {
             case OPENING -> Math.min(t, SeamTimeline.STABLE_AT);
             case OPEN -> SeamTimeline.STABLE_AT;
             case MENDING -> SeamTimeline.mendingAge(mendFrom(), t);
-            case SCAR -> 0;
+            case SCAR, DORMANT, CHARGING -> 0;
         };
     }
 
@@ -158,7 +205,20 @@ public class SeamEntity extends Entity {
     public void tick() {
         if (level() instanceof ServerLevel level) {
             serverTick(level);
+        } else {
+            // Client: the shimmer glides to the height the Seam will open at, instead of jumping.
+            float target = state() == SeamState.CHARGING ? chargeY() : (float) getY();
+            if (Float.isNaN(shownChargeY)) {
+                shownChargeY = target;
+            }
+            shownChargeYO = shownChargeY;
+            shownChargeY += (target - shownChargeY) * 0.12f;
         }
+    }
+
+    /** Client: the height the shimmer is drawn at, smoothed between ticks. */
+    public float shownChargeY(float partialTick) {
+        return Float.isNaN(shownChargeY) ? (float) getY() : Mth.lerp(partialTick, shownChargeYO, shownChargeY);
     }
 
     private void serverTick(ServerLevel level) {
@@ -168,6 +228,8 @@ public class SeamEntity extends Entity {
             case OPENING -> {
                 holdChunks(level);
                 playRevealCues(level, age);
+                // From the crack on, a ship can go through whatever part is open (docs/DECISIONS.md K51).
+                SeamCrossing.tick(level, this, SeamTimeline.openness(age));
                 keepOpenCheck(level, now);
                 if (state() == SeamState.OPENING && age >= SeamTimeline.STABLE_AT) {
                     setState(SeamState.OPEN, now);
@@ -179,6 +241,7 @@ public class SeamEntity extends Entity {
                     play(level, SkyseamSounds.SEAM_RING_PULSE, position());
                 }
                 pullShips(level);
+                SeamCrossing.tick(level, this, 1);
                 keepOpenCheck(level, now);
             }
             case MENDING -> {
@@ -201,6 +264,45 @@ public class SeamEntity extends Entity {
                     discard();
                 }
             }
+            case DORMANT -> {
+                if (site == null || site.temporary() && !SeamSites.temporary(level).contains(site)) {
+                    discard();
+                }
+            }
+            case CHARGING -> {
+                if (now - lastCharged > CHARGE_TIMEOUT_TICKS) {
+                    entityData.set(DATA_CHARGE, 0f);
+                    entityData.set(DATA_CHARGE_Y, (float) getY());
+                    setState(SeamState.DORMANT, now);
+                }
+            }
+        }
+    }
+
+    /**
+     * Beat 1, from the Aperture that is charging at this site: shows the heat shimmer at the height and size the Seam
+     * will open at, as full as the charge. A charge of 0 puts the Seam back to sleep. Only a closed Seam charges.
+     */
+    public void showCharge(float charge, double y, float width, float height) {
+        if (!(level() instanceof ServerLevel level) || !state().isClosed()) {
+            return;
+        }
+        long now = level.getGameTime();
+        if (charge <= 0) {
+            entityData.set(DATA_CHARGE, 0f);
+            if (state() == SeamState.CHARGING) {
+                entityData.set(DATA_CHARGE_Y, (float) getY());
+                setState(SeamState.DORMANT, now);
+            }
+            return;
+        }
+        lastCharged = now;
+        entityData.set(DATA_CHARGE, Mth.clamp(charge, 0, 1));
+        entityData.set(DATA_CHARGE_Y, (float) y);
+        entityData.set(DATA_WIDTH, width);
+        entityData.set(DATA_HEIGHT, height);
+        if (state() == SeamState.DORMANT) {
+            setState(SeamState.CHARGING, now);
         }
     }
 
@@ -249,17 +351,25 @@ public class SeamEntity extends Entity {
 
     private boolean isSomeoneNear(ServerLevel level) {
         double radius = SkyseamConfig.HOLD_RADIUS.get();
-        return level.players().stream().anyMatch(player -> !player.isSpectator() && player.distanceToSqr(this) <= radius * radius)
+        return holdByPlayers && level.players().stream().anyMatch(player -> !player.isSpectator() && player.distanceToSqr(this) <= radius * radius)
                 || keepers.stream().anyMatch(BooleanSupplier::getAsBoolean);
     }
 
     /**
-     * Keeps the Seam open while {@code keeper} says so, as a player within the hold radius does: it mends
-     * {@code mend_delay_seconds} after every keeper and player is gone, and after {@code max_open_seconds} regardless.
-     * M2's Aperture uses this for the ship that opened the Seam. GameTests use it in place of a player.
+     * Keeps the Seam open while {@code keeper} says so: it mends {@code mend_delay_seconds} after every keeper is
+     * gone, and after {@code max_open_seconds} regardless. A Seam an Aperture opened is kept by any ship carrying an
+     * Aperture within the hold radius. GameTests use it in place of a ship or player.
      */
     public void keepOpenWhile(BooleanSupplier keeper) {
         keepers.add(keeper);
+    }
+
+    /**
+     * Debug and filming: any player within the hold radius also keeps this Seam open, as every Seam did before the
+     * Aperture existed (docs/DECISIONS.md K29). The {@code /skyseam seam open} command uses it.
+     */
+    public void holdWhilePlayersNear() {
+        holdByPlayers = true;
     }
 
     /** Beat 6: a gentle pull on ships within the pull radius, fading to nothing at its edge. */
@@ -305,7 +415,8 @@ public class SeamEntity extends Entity {
         cuesPlayedTo = (int) (level().getGameTime() - stateStart());
     }
 
-    private void holdChunks(ServerLevel level) {
+    /** Keeps the chunks around the Seam loaded and ticking until it mends. Safe to call again. */
+    void holdChunks(ServerLevel level) {
         if (ticketCentre != null) {
             return;
         }
@@ -332,8 +443,8 @@ public class SeamEntity extends Entity {
     public void remove(RemovalReason reason) {
         if (level() instanceof ServerLevel level) {
             releaseChunks(level);
-            // Removed by a command or a mod while still open: treat it as mended on the spot.
-            if (reason.shouldDestroy() && state() != SeamState.SCAR) {
+            // Removed by a command or a mod while still open: treat it as mended on the spot. A closed Seam leaves no scar.
+            if (reason.shouldDestroy() && (state().isOpening() || state() == SeamState.MENDING)) {
                 Seams.recordMended(level, this);
             }
         }
@@ -405,7 +516,9 @@ public class SeamEntity extends Entity {
     public AABB getBoundingBoxForCulling() {
         double reach = Math.max(seamWidth(), seamHeight()) * 2 + 4;
         double up = seamHeight() / 2 + 4;
-        return new AABB(getX() - reach, getY() - up, getZ() - reach, getX() + reach, getY() + up, getZ() + reach);
+        // A charging Seam's shimmer hangs at the ship's height, which can be far above the closed Seam.
+        double shimmer = state() == SeamState.CHARGING ? chargeY() : getY();
+        return new AABB(getX() - reach, Math.min(getY(), shimmer) - up, getZ() - reach, getX() + reach, Math.max(getY(), shimmer) + up, getZ() + reach);
     }
 
     // ---- Not saved: open Seams live in SeamSavedData and are mended when the world loads --------------------------

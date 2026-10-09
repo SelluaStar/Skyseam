@@ -14,6 +14,10 @@ public final class SkyseamNetwork {
         // Client-bound handlers are lambdas so the client classes they call are only loaded on the client.
         registrar.playToClient(ScreenFlashPayload.TYPE, ScreenFlashPayload.STREAM_CODEC,
                 (payload, context) -> com.selluastar.skyseam.client.ScreenFlash.start(payload.holdTicks()));
+        registrar.playToClient(ApertureGaugePayload.TYPE, ApertureGaugePayload.STREAM_CODEC,
+                (payload, context) -> com.selluastar.skyseam.client.aperture.ClientGauge.accept(payload));
+        registrar.playToClient(SkychartPayload.TYPE, SkychartPayload.STREAM_CODEC,
+                (payload, context) -> com.selluastar.skyseam.client.skychart.ClientSkychart.accept(payload));
     }
 
     public static void flash(ServerPlayer player, int holdTicks) {

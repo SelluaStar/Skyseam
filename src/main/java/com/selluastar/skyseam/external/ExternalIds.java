@@ -32,12 +32,15 @@ public final class ExternalIds {
 
     /** Create Aeronautics' creative physics staff. The Pneumatic Coupler recipe renames it (spec section 11, Option A). */
     public static final ResourceLocation PHYSICS_STAFF = ResourceLocation.fromNamespaceAndPath(SIMULATED, "creative_physics_staff");
-    /** The staff's class, named rather than imported so that Skyseam does not compile against Simulated. */
+    /** The staff's class, named rather than imported, so the recipe code loads no Simulated class. */
     public static final String PHYSICS_STAFF_CLASS = "dev.simulated_team.simulated.content.physics_staff.PhysicsStaffItem";
 
     /** The two Create parts in the Harmonic Aperture and Pneumatic Coupler recipes. */
     public static final ResourceLocation PRECISION_MECHANISM = ResourceLocation.fromNamespaceAndPath(CREATE, "precision_mechanism");
     public static final ResourceLocation BRASS_CASING = ResourceLocation.fromNamespaceAndPath(CREATE, "brass_casing");
+
+    /** Simulated's rope connector: holds one end of a rope. The linked-ship crossing test ties two rafts with it. */
+    public static final ResourceLocation ROPE_CONNECTOR = ResourceLocation.fromNamespaceAndPath(SIMULATED, "rope_connector");
 
     /** A Create block with a kinetic block entity, carried by the M0 crossing tests to see that block entities survive. */
     public static final ResourceLocation SHAFT = ResourceLocation.fromNamespaceAndPath(CREATE, "shaft");

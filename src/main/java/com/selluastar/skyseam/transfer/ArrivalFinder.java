@@ -1,5 +1,6 @@
 package com.selluastar.skyseam.transfer;
 
+import java.util.List;
 import java.util.Optional;
 
 import net.minecraft.core.BlockPos;
@@ -7,6 +8,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -36,6 +38,11 @@ public final class ArrivalFinder {
      * @return the nearest safe ship position, or empty if there is none within the search radius
      */
     public static Optional<Vec3> find(ServerLevel level, Vec3 wanted, Vec3 boxMin, Vec3 boxMax) {
+        return find(level, wanted, boxMin, boxMax, List.of());
+    }
+
+    /** Like {@link #find(ServerLevel, Vec3, Vec3, Vec3)}, also keeping clear of {@code obstacles} (other ships' boxes). */
+    public static Optional<Vec3> find(ServerLevel level, Vec3 wanted, Vec3 boxMin, Vec3 boxMax, List<AABB> obstacles) {
         int sizeX = Mth.ceil(boxMax.x - boxMin.x) + 2 * CLEARANCE;
         int sizeY = Mth.ceil(boxMax.y - boxMin.y) + 2 * CLEARANCE;
         int sizeZ = Mth.ceil(boxMax.z - boxMin.z) + 2 * CLEARANCE;
@@ -70,7 +77,7 @@ public final class ArrivalFinder {
             for (int y = 1; y <= ny; y++) {
                 for (int z = 1; z <= nz; z++) {
                     pos.set(x0 + x - 1, y0 + y - 1, z0 + z - 1);
-                    int blocked = isBlocked(level, pos) ? 1 : 0;
+                    int blocked = isBlocked(level, pos) || inside(obstacles, pos) ? 1 : 0;
                     sums[index(x, y, z, ny, nz)] = blocked
                             + sums[index(x - 1, y, z, ny, nz)] + sums[index(x, y - 1, z, ny, nz)] + sums[index(x, y, z - 1, ny, nz)]
                             - sums[index(x - 1, y - 1, z, ny, nz)] - sums[index(x - 1, y, z - 1, ny, nz)] - sums[index(x, y - 1, z - 1, ny, nz)]
@@ -111,6 +118,15 @@ public final class ArrivalFinder {
         return !state.getFluidState().isEmpty()
                 || state.is(BlockTags.FIRE)
                 || !state.getCollisionShape(level, pos).isEmpty();
+    }
+
+    private static boolean inside(List<AABB> boxes, BlockPos pos) {
+        for (AABB box : boxes) {
+            if (box.intersects(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static int index(int x, int y, int z, int ny, int nz) {
