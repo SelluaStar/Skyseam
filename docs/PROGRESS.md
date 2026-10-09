@@ -565,3 +565,35 @@ The author changed the spec in two rounds:
    - the radius and speed limit;
    - the look and sounds of the Aperture and the shimmer;
    - the needle and HUD.
+
+### M2 follow-up: range from the nearest part, growing with speed (2026-10-09)
+
+The author's change after testing M2 (DECISIONS K58): "make the portal open up from a farther range when the ship is
+bigger and when it's going faster … use the closest part of the ship, not the center".
+
+**Changed**
+- **Distance:** the distance to a site is now from the nearest part of the ship. That is the nearest point of its
+  blocks' box, turned with the ship, or of any body tied to it. It used to be from the ship's centre.
+- **Radius:** the entry radius is 48 + 3 per block of ship length + the ship's speed × 8.5 s, up to 256. 8.5 s is how
+  long the charge and the crack take, so a ship flying straight in reaches the site as the Seam opens. Examples:
+  - a 5-block raft at 3 b/s charges from 89 blocks;
+  - a 20-block ship at 8 b/s from 176;
+  - a 40-block ship at 10 b/s from 253.
+- **During a charge:** the radius it started with holds, so easing off the throttle on the way in doesn't cancel it.
+- **Far sites:** a charging Aperture keeps the site's chunks loaded, so the shimmer and the Seam work from far out. The
+  Seam opens once the site is loaded.
+- **Hold:** an open Seam stays open while the nearest part of an Aperture ship is within its hold radius.
+
+**Verified (actually run)**
+- `tools/verify_milestone.py`: build ✓, runData ✓, **39/39 GameTests** ✓ (3 runs in a row), server boot ✓.
+- `rulesShipAndRadius` now checks the new rules:
+  - **Nearest part:** a point 10 blocks east of the 3-block raft's centre is 8.5 blocks from its nearest part, and a
+    point over the raft is at 0.
+  - **Size and speed:** the radius grows with length and by exactly speed × 8.5 s, and stops at its cap.
+  - **Measured from the edge:** a site just inside the radius from the raft's edge counts, and one just outside
+    doesn't.
+- The capture client played the full entry again, with the raft charging from 88.5 blocks.
+
+**Needs the author:** whether the new ranges feel right on a real ship. They're config: `entry_radius_per_block`,
+`max_entry_radius` and `max_speed`. Beyond the server's view distance (160 blocks by default) the shimmer can't be
+seen until you come closer, but the gauge and the charge work.

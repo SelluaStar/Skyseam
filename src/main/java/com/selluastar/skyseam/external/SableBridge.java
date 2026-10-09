@@ -32,6 +32,7 @@ import dev.ryanhcode.sable.companion.math.BoundingBox3dc;
 import dev.ryanhcode.sable.companion.math.BoundingBox3i;
 import dev.ryanhcode.sable.companion.math.BoundingBox3ic;
 import dev.ryanhcode.sable.companion.math.Pose3d;
+import dev.ryanhcode.sable.companion.math.Pose3dc;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.SubLevel;
 import dev.ryanhcode.sable.sublevel.storage.SubLevelRemovalReason;
@@ -196,6 +197,20 @@ public final class SableBridge {
                 open.add(server);
             }
         }
+    }
+
+    /**
+     * How far (x, z) is from the nearest part of the ship, horizontally: the nearest point of its blocks' box, turned
+     * as the ship is turned. 0 when the ship is over the point.
+     */
+    public static double horizontalDistance(Ship ship, double x, double z) {
+        Pose3dc pose = ship.subLevel.logicalPose();
+        Vec3 local = pose.transformPositionInverse(new Vec3(x, position(ship).y, z));
+        AABB box = plotRegion(ship);
+        Vec3 clamped = new Vec3(Mth.clamp(local.x, box.minX, box.maxX), Mth.clamp(local.y, box.minY, box.maxY),
+                Mth.clamp(local.z, box.minZ, box.maxZ));
+        Vec3 nearest = pose.transformPosition(clamped);
+        return Math.hypot(nearest.x - x, nearest.z - z);
     }
 
     /** A copy of where the ship is now, to place its plot positions as they are at this moment later on. */

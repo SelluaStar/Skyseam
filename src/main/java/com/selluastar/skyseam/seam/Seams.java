@@ -1,6 +1,7 @@
 package com.selluastar.skyseam.seam;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
@@ -16,13 +17,18 @@ import com.selluastar.skyseam.seam.site.SeamSites;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.TicketType;
 import net.minecraft.util.Mth;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 
 /** Opening, finding and mending Seams. The Seam's own behaviour is in {@link SeamEntity}. */
 public final class Seams {
+    /** Keeps a site loaded while an Aperture charges at it; it lapses 2 s after the last charge check. */
+    private static final TicketType<ChunkPos> SITE_TICKET = TicketType.create("skyseam_site", Comparator.comparingLong(ChunkPos::toLong), 40);
+
     private Seams() {}
 
     /** What {@link #open} did: the new Seam, or the reason it refused (a translated message). */
@@ -148,6 +154,21 @@ public final class Seams {
             closed.ifPresent(SeamEntity::discard);
         }
         return result;
+    }
+
+    /**
+     * Keeps the area around {@code site} loaded and ticking for a couple of seconds, so a ship charging from far out
+     * finds its closed Seam there and the Seam can open. Called again every few ticks while the charge lasts.
+     */
+    public static void keepSiteLoaded(ServerLevel level, SeamSite site) {
+        ChunkPos chunk = new ChunkPos(BlockPos.containing(site.at(0)));
+        // A region ticket of distance d keeps chunks within d - 2 entity-ticking: two chunks, room for the largest Seam.
+        level.getChunkSource().addRegionTicket(SITE_TICKET, chunk, 4, chunk);
+    }
+
+    /** True if the site's own chunk is entity-ticking, so a Seam placed there is live. */
+    public static boolean isSiteLive(ServerLevel level, @Nullable SeamSite site) {
+        return site != null && level.isPositionEntityTicking(BlockPos.containing(site.at(0)));
     }
 
     /** Every Seam in the level, in any state, nearest to {@code pos} first. */

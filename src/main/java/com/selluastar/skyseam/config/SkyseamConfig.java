@@ -87,12 +87,13 @@ public final class SkyseamConfig {
         MAX_SPEED = b.comment("A ship faster than this, in blocks per second, cannot open a Seam: its charge drains until it",
                         "slows down. It keeps a ship from flying past the site before the Seam has opened.")
                 .defineInRange("max_speed", 10.0, 1.0, 100.0);
-        ENTRY_RADIUS_PER_BLOCK = b.comment("A ship starts charging within a radius that grows with its size: seam.entry_radius plus",
-                        "this many blocks for every block of the ship's length, and never less than the distance a ship at",
-                        "max_speed covers while the Seam charges and cracks open, plus half its length.")
+        ENTRY_RADIUS_PER_BLOCK = b.comment("A ship starts charging within a radius that grows with its size and speed: seam.entry_radius,",
+                        "plus this many blocks for every block of the ship's length, plus as far as the ship flies at its",
+                        "speed while the Seam charges and cracks open. Measured from the nearest part of the ship.")
                 .defineInRange("entry_radius_per_block", 3.0, 0.0, 16.0);
-        MAX_ENTRY_RADIUS = b.comment("The entry radius never grows past this many blocks, however big or fast the ship.")
-                .defineInRange("max_entry_radius", 160, 16, 512);
+        MAX_ENTRY_RADIUS = b.comment("The entry radius never grows past this many blocks, however big or fast the ship. A Seam",
+                        "further away than the server's view distance can't be seen until the ship comes closer.")
+                .defineInRange("max_entry_radius", 256, 16, 512);
         b.pop();
         SPEC = b.build();
     }

@@ -37,8 +37,9 @@ import net.minecraft.world.phys.Vec3;
  * Aperture: its owner or a teammate. Aeronautics has no "pilot" of its own, so aboard is the check
  * (docs/DECISIONS.md K50).</li>
  * <li><b>Dimension:</b> the ship is in the site dimension.</li>
- * <li><b>Radius:</b> the ship's centre is within its entry radius of a site, horizontally. The radius grows with the
- * ship's size, so a long ship starts charging further out ({@link #entryRadius}).</li>
+ * <li><b>Radius:</b> the nearest part of the ship (or of a body tied to it) is within its entry radius of a site,
+ * horizontally. The radius grows with the ship's size and its speed, so a big or fast ship starts charging further
+ * out ({@link #entryRadius}).</li>
  * <li><b>Flying:</b> the ship moves faster than {@code min_speed} and touches no ground or water.</li>
  * <li><b>Speed:</b> the ship is no faster than {@code max_speed}, so it cannot overshoot the site before the Seam opens.</li>
  * <li><b>Altitude:</b> the ship's lowest point is at least {@code min_altitude} above the ground at the site.</li>
@@ -80,16 +81,32 @@ public final class TriggerRules {
     }
 
     /**
-     * How far from a site a ship {@code length} blocks long starts charging (docs/DECISIONS.md K54): the spec's entry
-     * radius plus {@code entry_radius_per_block} for each block of its length, and at least as far as a ship at the
-     * speed limit flies while the Seam charges and cracks open, so that it reaches the site after the Seam has opened.
-     * Never more than {@code max_entry_radius}.
+     * How far from a site a ship {@code length} blocks long, flying at {@code speed} blocks per second, starts charging
+     * (docs/DECISIONS.md K58): the spec's entry radius, plus {@code entry_radius_per_block} for each block of its length,
+     * plus as far as it flies at that speed while the Seam charges and cracks open, so that it reaches the site after
+     * the Seam has opened. Never more than {@code max_entry_radius}. Measured from the nearest part of the ship.
      */
-    public static double entryRadius(double length) {
-        double bySize = SkyseamConfig.ENTRY_RADIUS.get() + SkyseamConfig.ENTRY_RADIUS_PER_BLOCK.get() * length;
-        double opening = SkyseamConfig.CHARGE_SECONDS.get() + SeamTimeline.CRACK_END / 20.0;
-        double bySpeed = SkyseamConfig.MAX_SPEED.get() * opening + length / 2;
-        return Math.min(SkyseamConfig.MAX_ENTRY_RADIUS.get(), Math.max(bySize, bySpeed));
+    public static double entryRadius(double length, double speed) {
+        double bySize = SkyseamConfig.ENTRY_RADIUS_PER_BLOCK.get() * length;
+        double bySpeed = Math.max(0, speed) * leadSeconds();
+        return Math.min(SkyseamConfig.MAX_ENTRY_RADIUS.get(), SkyseamConfig.ENTRY_RADIUS.get() + bySize + bySpeed);
+    }
+
+    /** How long from the start of a charge until the Seam's crack is open: the charge, then the crack (8.5 s). */
+    public static double leadSeconds() {
+        return SkyseamConfig.CHARGE_SECONDS.get() + SeamTimeline.CRACK_END / 20.0;
+    }
+
+    /**
+     * How far the site is from the nearest part of {@code group} (a ship and the bodies tied to it), horizontally: 0
+     * when one of them is over it.
+     */
+    public static double distanceToSite(List<Ship> group, SeamSite site) {
+        double nearest = Double.MAX_VALUE;
+        for (Ship body : group) {
+            nearest = Math.min(nearest, SableBridge.horizontalDistance(body, site.x() + 0.5, site.z() + 0.5));
+        }
+        return nearest;
     }
 
     /** Pilot: a player aboard the ship who may use the Aperture. */
@@ -232,6 +249,14 @@ public final class TriggerRules {
 
     /** Checks every rule for the Aperture at {@code pos} (a position in a ship's plot, if it is on one). */
     public static Status evaluate(ServerLevel level, BlockPos pos, @Nullable ApertureOwner owner) {
+        return evaluate(level, pos, owner, 0);
+    }
+
+    /**
+     * Checks every rule, with an entry radius of at least {@code heldRadius}: while a charge is building the Aperture
+     * passes the radius it started with, so slowing down on the way in does not drop the ship out of range.
+     */
+    public static Status evaluate(ServerLevel level, BlockPos pos, @Nullable ApertureOwner owner, double heldRadius) {
         Optional<Ship> found = SableBridge.shipOf(level, pos);
         if (found.isEmpty()) {
             return Status.notOnShip();
@@ -242,12 +267,12 @@ public final class TriggerRules {
         boolean dimension = SeamSites.hasSites(level);
         boolean flying = isFlying(reading.speed(), reading.grounded());
         boolean slowEnough = isSlowEnough(reading.speed());
-        double entryRadius = entryRadius(reading.length());
+        double entryRadius = Math.max(heldRadius, entryRadius(reading.length(), reading.speed()));
         SeamSite site = SeamSites.nearest(level, reading.position().x, reading.position().z).orElse(null);
         if (site == null) {
             return new Status(ship, reading, pilot, dimension, null, 0, entryRadius, 0, 0, false, flying, slowEnough, false, 0, false);
         }
-        double distance = site.distance(reading.position().x, reading.position().z);
+        double distance = distanceToSite(reading.group(), site);
         int groundY = SeamSites.groundY(level, site);
         int neededY = groundY + SkyseamConfig.MIN_ALTITUDE.get();
         boolean radius = isWithinRadius(distance, entryRadius);

@@ -140,7 +140,9 @@ public class ApertureBlockEntity extends BlockEntity implements GeoBlockEntity, 
         if ((level.getGameTime() + worldPosition.hashCode()) % CHECK_PERIOD != 0) {
             return;
         }
-        status = TriggerRules.evaluate(level, worldPosition, owner);
+        // While charging, the radius the charge started with holds (K58).
+        double heldRadius = chargeTicks > 0 && status != null ? status.entryRadius() : 0;
+        status = TriggerRules.evaluate(level, worldPosition, owner, heldRadius);
         int full = SkyseamConfig.CHARGE_SECONDS.get() * 20;
         if (!status.crewed()) {
             // Losing the pilot, or the Aperture, mid-charge cancels the charge (spec section 6, "Edge cases").
@@ -152,7 +154,8 @@ public class ApertureBlockEntity extends BlockEntity implements GeoBlockEntity, 
             chargeTicks = Math.max(0, chargeTicks - CHECK_PERIOD);
         }
         showChargeAtSite(level, full);
-        if (chargeTicks >= full && status.allMet()) {
+        // A ship can charge from further out than chunks stay loaded: wait at full charge until the site is live.
+        if (chargeTicks >= full && status.allMet() && Seams.isSiteLive(level, status.site())) {
             openSeam(level);
         }
         if (openedSeam != null && (openedSeam.isRemoved() || !openedSeam.state().isOpening())) {
@@ -207,9 +210,13 @@ public class ApertureBlockEntity extends BlockEntity implements GeoBlockEntity, 
         }
         chargingSite = site;
         if (site != null && status.reading() != null) {
-            float[] size = Seams.sizeFor(status.reading().groupBounds());
-            double y = status.reading().position().y;
-            Seams.placeClosed(level, site).ifPresent(seam -> seam.showCharge((float) chargeTicks / full, y, size[0], size[1]));
+            // Load the site's area for as long as the charge lasts, then show the shimmer once it is live.
+            Seams.keepSiteLoaded(level, site);
+            if (Seams.isSiteLive(level, site)) {
+                float[] size = Seams.sizeFor(status.reading().groupBounds());
+                double y = status.reading().position().y;
+                Seams.placeClosed(level, site).ifPresent(seam -> seam.showCharge((float) chargeTicks / full, y, size[0], size[1]));
+            }
         }
     }
 
