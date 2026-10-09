@@ -3,7 +3,8 @@
 Writes, under src/main/resources/assets/skyseam/:
   textures/entity/seam/interior.png         512x256 pre-baked Halcyon sky seen through the Seam, tiles left-right
   textures/entity/seam/interior_glints.png  256x256 sparse glints on black (drawn additively, a nearer parallax layer)
-  textures/particle/<id>_<n>.png            16x16 white sprites for seam_mote, seam_spark, thread_snap and scar
+  textures/particle/<id>_<n>.png            16x16 white sprites for seam_mote, seam_spark (sparks and voxel bits),
+                                            thread_snap and scar
   particles/<id>.json                       the sprite list of each particle
 and a scaled-up contact sheet of everything in build/previews/seam_textures.png to look at.
 
@@ -181,6 +182,10 @@ def particle_sprites(rng):
         v = -(xx - c) * math.sin(turn) + (yy - c) * math.cos(turn)
         arms = np.exp(-(u / 0.7) ** 2) * np.exp(-(np.abs(v) / 5.5)) + np.exp(-(v / 0.7) ** 2) * np.exp(-(np.abs(u) / 5.5))
         sparks.append(sprite((np.exp(-(r / 1.6) ** 2) + 0.9 * arms) * window))
+    # Voxel bits: small solid squares with a soft glow, shed from the border like broken-off pixels.
+    for half, glow in ((2.0, 0.35), (3.0, 0.25)):
+        square = ((np.abs(xx - c) <= half) & (np.abs(yy - c) <= half)).astype(np.float64)
+        sparks.append(sprite(np.maximum(square, glow * np.exp(-(r / (half + 2.5)) ** 2)) * window))
     sprites["seam_spark"] = sparks
     # Thread fragments: short curved strands, tinted gold by the game.
     threads = []
@@ -234,7 +239,7 @@ def main():
     sheet.paste(glint.resize((256, 256), Image.NEAREST), (0, 512))
     for k, image in enumerate(sheet_items):
         big = image.resize((96, 96), Image.NEAREST)
-        sheet.paste(big, (272 + (k % 7) * 104, 524 + (k // 7) * 116), big)
+        sheet.paste(big, (272 + (k % 7) * 104, 524 + (k // 7) * 80), big.resize((96, 96)))
     sheet.save(PREVIEW / "seam_textures.png")
     for path in written:
         print(path.relative_to(ROOT))

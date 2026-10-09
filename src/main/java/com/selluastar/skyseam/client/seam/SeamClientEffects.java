@@ -176,6 +176,52 @@ public final class SeamClientEffects {
                 }
             });
         }
+
+        // All around the border: sparks, voxel bits and motes shed outward while it cracks and opens, fewer once open.
+        if (state != SeamState.MENDING && age >= SeamTimeline.CRACK_AT) {
+            float size = Math.max(shape.cols, shape.rows);
+            float rate = (state == SeamState.OPENING ? 0.25f : 0.08f) * size * density;
+            spawn.chance(rate, () -> borderBit(spawn, shape, now, level.random));
+        }
+
+        // A voxel fragment breaking loose from the border flashes with a few sparks.
+        for (SeamDecor.Fragment fragment : SeamDecor.of(seam).fragments) {
+            if (previous < fragment.appear() && age >= fragment.appear()) {
+                float u = fragment.u() - 1.5f * fragment.ou();
+                float v = fragment.v() - 1.5f * fragment.ov();
+                for (int n = 0; n < Math.max(1, Math.round(4 * density)); n++) {
+                    spawn.plane(SkyseamParticles.SEAM_SPARK.get(), u, v, fragment.z(), (level.random.nextFloat() - 0.5f) * 0.2f,
+                            (level.random.nextFloat() - 0.5f) * 0.2f, (level.random.nextFloat() - 0.5f) * 0.2f, null, 1);
+                }
+            }
+        }
+    }
+
+    /** A spark, voxel bit or mote leaving a random point of the border, outward and a little off the plane. */
+    private static void borderBit(Spawner spawn, SeamShape shape, float openness, RandomSource random) {
+        for (int tries = 0; tries < 12; tries++) {
+            int i = random.nextInt(shape.cols);
+            int j = random.nextInt(shape.rows);
+            if (!shape.isOpen(i, j, openness)) {
+                continue;
+            }
+            int side = random.nextInt(4);
+            int ni = i + (side == 0 ? -1 : side == 1 ? 1 : 0);
+            int nj = j + (side == 2 ? -1 : side == 3 ? 1 : 0);
+            if (shape.isOpen(ni, nj, openness)) {
+                continue;
+            }
+            float nu = ni - i;
+            float nv = nj - j;
+            float u = shape.cellU(i) + 0.5f + nu * 0.5f + (nu == 0 ? random.nextFloat() - 0.5f : 0);
+            float v = shape.cellV(j) + 0.5f + nv * 0.5f + (nv == 0 ? random.nextFloat() - 0.5f : 0);
+            float speed = 0.04f + 0.1f * random.nextFloat();
+            boolean spark = random.nextFloat() < 0.6f;
+            spawn.plane(spark ? SkyseamParticles.SEAM_SPARK.get() : SkyseamParticles.SEAM_MOTE.get(), u, v, (random.nextFloat() - 0.5f) * 0.6f,
+                    nu * speed + (random.nextFloat() - 0.5f) * 0.03f, nv * speed + (random.nextFloat() - 0.5f) * 0.03f,
+                    (random.nextFloat() - 0.5f) * 0.08f, spark ? null : PASTELS[random.nextInt(PASTELS.length)], spark ? 1 : 0.8f);
+            return;
+        }
     }
 
     /** One grain of the dust streaming off the dust edge, out sideways and slowly down. */
@@ -253,6 +299,15 @@ public final class SeamClientEffects {
             Vec3 pos = SeamShape.toWorld(seam.position(), seam.getYRot(), u, v).add(SeamShape.normal(seam.getYRot()).scale(z));
             Vec3 across = SeamShape.toWorld(Vec3.ZERO, seam.getYRot(), 1, 0);
             Vec3 velocity = across.scale(speed).add(0, rise, 0);
+            make(type, pos, velocity, colour, scale);
+        }
+
+        /** A particle at plane point (u, v), z off the plane, with a velocity given in the plane's own axes. */
+        void plane(ParticleOptions type, double u, double v, double z, double vu, double vv, double vz, float[] colour, float scale) {
+            Vec3 normal = SeamShape.normal(seam.getYRot());
+            Vec3 across = SeamShape.toWorld(Vec3.ZERO, seam.getYRot(), 1, 0);
+            Vec3 pos = SeamShape.toWorld(seam.position(), seam.getYRot(), u, v).add(normal.scale(z));
+            Vec3 velocity = across.scale(vu).add(0, vv, 0).add(normal.scale(vz));
             make(type, pos, velocity, colour, scale);
         }
 

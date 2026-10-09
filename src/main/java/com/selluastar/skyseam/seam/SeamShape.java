@@ -18,11 +18,13 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p>Each cell has an opening threshold from 0 to 1. A cell is open once the reveal's openness
  * ({@link SeamTimeline#openness}) reaches its threshold: cells near the crack's spine open first, the outer ones as the
- * threads snap, and a few spurs branch outward in steps.
+ * threads snap, spurs branch outward in steps, and stray voxel holes glitch open a few blocks outside the edge.
  */
 public final class SeamShape {
     public static final int THREADS = SeamTimeline.THREAD_SNAPS.length;
     private static final float NEVER = Float.POSITIVE_INFINITY;
+    /** How much of the half-width the main opening may use at its widest. */
+    private static final float LENS = 0.84f;
 
     public final int cols;
     public final int rows;
@@ -61,13 +63,14 @@ public final class SeamShape {
         float[] right = new float[rows];
         for (int j = 0; j < rows; ) {
             int band = 1 + random.nextInt(3);
-            float leftFactor = 0.7f + 0.3f * random.nextFloat();
-            float rightFactor = 0.7f + 0.3f * random.nextFloat();
+            float leftFactor = 0.55f + 0.45f * random.nextFloat();
+            float rightFactor = 0.55f + 0.45f * random.nextFloat();
             for (int k = j; k < Math.min(rows, j + band); k++) {
                 float t = (k + 0.5f) / rows;
                 float lens = t < 0.06f || t > 0.94f ? 0 : (float) Math.pow(Math.sin(Math.PI * t), 0.75);
-                left[k] = halfCols * lens * leftFactor;
-                right[k] = halfCols * lens * rightFactor;
+                // The main opening keeps clear of the grid's edge, leaving room for spurs and stray holes around it.
+                left[k] = halfCols * LENS * lens * leftFactor;
+                right[k] = halfCols * LENS * lens * rightFactor;
             }
             j += band;
         }
@@ -88,8 +91,8 @@ public final class SeamShape {
             }
         }
 
-        // Spurs: short branches that crack outward from the sides in steps, while the crack opens.
-        int spurs = 2 + random.nextInt(3);
+        // Spurs: branches that crack outward from the sides in steps, while the crack opens.
+        int spurs = 4 + random.nextInt(4);
         for (int s = 0; s < spurs; s++) {
             int row = Mth.floor(rows * (0.2f + 0.6f * random.nextFloat()));
             boolean toRight = random.nextBoolean();
@@ -98,7 +101,7 @@ public final class SeamShape {
                 continue;
             }
             int startCol = Mth.floor(halfCols + spine[row] + (toRight ? w - 0.5f : -w + 0.5f));
-            int length = 2 + random.nextInt(Math.max(2, Math.round(cols * 0.12f)));
+            int length = 2 + random.nextInt(Math.max(2, Math.round(cols * 0.2f)));
             int thickness = 1 + random.nextInt(2);
             int r = row;
             for (int k = 0; k < length; k++) {
@@ -108,6 +111,25 @@ public final class SeamShape {
                 int c = startCol + (toRight ? k : -k);
                 for (int t = 0; t < thickness; t++) {
                     open(openAt, cols, rows, c, r + t, 0.3f + 0.45f * k / length);
+                }
+            }
+        }
+
+        // Stray holes: small voxel clusters that glitch open a few blocks outside the edge, late in the crack.
+        int strays = 6 + random.nextInt(Math.max(1, Math.round((cols + rows) * 0.15f)));
+        for (int s = 0; s < strays; s++) {
+            int row = Mth.floor(rows * (0.12f + 0.76f * random.nextFloat()));
+            boolean toRight = random.nextBoolean();
+            float w = toRight ? right[row] : left[row];
+            float edge = halfCols + spine[row] + (toRight ? w : -w);
+            float gap = 1.5f + 3 * random.nextFloat();
+            int col = Mth.floor(edge + (toRight ? gap : -gap));
+            int strayWidth = 1 + random.nextInt(2);
+            int strayHeight = 1 + random.nextInt(2);
+            float threshold = 0.45f + 0.5f * random.nextFloat();
+            for (int di = 0; di < strayWidth; di++) {
+                for (int dj = 0; dj < strayHeight; dj++) {
+                    open(openAt, cols, rows, col + di, row + dj, threshold);
                 }
             }
         }
