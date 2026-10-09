@@ -304,3 +304,30 @@ the author can film it."
 5. Run `/skyseam seam open` again, then fly more than 128 blocks away. It should mend 5 s later.
 6. On a ship, run `/skyseam ship cross minecraft:the_end` for the white flash and the whoosh.
 7. Film it if you like. Then send `logs/latest.log`, and say what to change in the look, the sounds and the timing.
+
+### M1 follow-up: more depth and spread (2026-10-08)
+
+The author said: "the portal looks a little 2d and also the glitch/voxel event should have more spread and have more
+effects around the border". Changed (DECISIONS K42):
+- **Depth:** the opening is now a recessed voxel hole. Its back is stepped, and its walls glow pink-white where they
+  meet the rim and fade going in. From an angle you see into it, and the sky shows through every surface of it as one
+  deep space.
+- **Rim:** a ragged frame of glowing 3D voxel blocks stands out of the plane towards you and back. Some blocks sit loose
+  and bob. The outline now has pink and teal colour-split ghosts.
+- **Spread:**
+  - stepped cracks branch out from the edge into the surrounding sky as it cracks, then hang faintly;
+  - up to 72 voxel fragments break loose around the border with a spark and drift out, and some show a piece of the
+    Halcyon sky;
+  - more and longer spurs, plus stray voxel holes that glitch open a few blocks outside the edge.
+- **Glitch:** for a few ticks at a time a band of the Seam jumps sideways and its colour split widens. Often while it
+  opens and mends, rarely while it is open.
+- **Particles:** sparks, voxel bits (two new square sprites in `seam_spark`) and motes shed from the whole border, not
+  only the dust edge.
+
+**Verified:** `tools/verify_milestone.py` all PASS (21/21 GameTests). New screenshots from the capture client are in
+the updated contact sheet [`docs/previews/m1-seam-reveal.png`](previews/m1-seam-reveal.png); the angled and close-up
+frames show the hole's depth. The glitch bursts last 3 ticks, so the still frames do not show them clearly: they need
+your eyes in motion.
+
+**Author's in-game test:** same as M1. Look at it from the side and up close to judge the depth, and watch the edge
+while it cracks for the glitch bursts and the fragments breaking loose.
