@@ -10,7 +10,7 @@ tools/.venv/Scripts/python.exe tools/audio/synth.py [group | group/name ...]; th
 tools/audio/check.py. Every file here is a stand-in for the author's final sound design (TODO-MANUAL.md).
 
 Regenerate one sound by name after changing its recipe (e.g. `synth.py seam/crack`). The seam sounds other than
-`hairline` and `crack` were written by an earlier version that shared one random seed across all sounds; their recipes
+`hairline`, `crack` and `close` were written by an earlier version that shared one random seed across all sounds; their recipes
 are unchanged, but a fresh run gives them different noise detail (the thread plucks are the most sensitive to it).
 """
 import sys
@@ -135,6 +135,34 @@ def echo(x, taps=((0.13, 0.3), (0.29, 0.14)), tone=3000):
     return out
 
 
+def crackle(seconds, density, centre=1500, q=1.2):
+    """Static crackle: sharp clicks at random times, most small and a few big, through a band around `centre` Hz.
+    `density` is clicks per second, a scalar or one value per sample, so the crackle can thicken and thin out."""
+    n = int(seconds * RATE)
+    density = np.broadcast_to(np.asarray(density, dtype=np.float64), (n,))
+    out = np.zeros(n)
+    time = rng.exponential(1 / max(density[0], 0.5))
+    while time < seconds:
+        i = int(time * RATE)
+        m = int(rng.uniform(0.0008, 0.005) * RATE) + 2
+        click = rng.normal(0, 1, m) * np.exp(-np.arange(m) / (m / 3)) * rng.uniform(0.2, 1.0) ** 2.5
+        out[i:i + m] += click[: n - i]
+        time += rng.exponential(1 / max(density[min(i, n - 1)], 0.5))
+    return svf(out, centre, q)
+
+
+def saw(t, freq, top=6000):
+    """A soft, band-limited sawtooth whose pitch may glide (freq: scalar or per-sample array, Hz)."""
+    freq = np.broadcast_to(np.asarray(freq, dtype=np.float64), t.shape)
+    phase = 2 * np.pi * np.cumsum(freq) / RATE
+    out = np.zeros_like(t)
+    for k in range(1, 40):
+        if k * float(np.max(freq)) > top:
+            break
+        out += np.sin(k * phase) / k
+    return out
+
+
 def write(group, name, x, loop=False):
     folder = SOUNDS / group
     folder.mkdir(parents=True, exist_ok=True)
@@ -146,54 +174,68 @@ def write(group, name, x, loop=False):
 # ---- The Seam (spec section 20: 11 sounds) ------------------------------------------------------------------------
 
 def seam_hairline():
-    """Beat 2, the Seam appears: a soft breath of air rises into a gentle, round glass chime with a short echo, and a
-    few faint sparkles drift off it (the motes). Kept well under the ear's harshest band and quiet: it is the first
-    thing anyone hears, often close by."""
-    seconds = 2.4
+    """Beat 2, the Seam appears: a dark swell. A low, uneasy buzzing drone rises out of nothing under a crackle of static
+    that keeps thickening, as if the sky were straining, with a few deep pops, and tips straight into the crack."""
+    seconds = 2.0
     t = t_axis(seconds)
-    onset = 0.28
-    # The breath: airy noise swelling into the chime, its band rising as it comes.
-    swell = np.clip(t / onset, 0, 1) ** 2 * np.exp(-np.maximum(0, t - onset) / 0.12)
-    breath = bandpass_noise(seconds, 2500 + 3500 * np.clip(t / onset, 0, 1), 2.0) * swell * 0.25
-    # The chime: E6 with near-harmonic partials, all under 4 kHz, a soft attack and a lower body note (E5).
-    tc = np.maximum(0, t - onset)
-    envelope = np.minimum(1, tc / 0.008) * np.exp(-tc / 0.9) * (t >= onset)
-    chime = (np.sin(2 * np.pi * 1318.5 * tc) + 0.22 * np.sin(2 * np.pi * 2637 * tc + 0.3) + 0.07 * np.sin(2 * np.pi * 3955 * tc)
-             + 0.35 * np.sin(2 * np.pi * 659.25 * tc) * np.exp(-tc / 0.6)) * envelope
-    chime *= 1 + 0.08 * np.sin(2 * np.pi * 5.5 * tc)
-    # Sparkles: a few tiny high blips scattered after the chime.
-    sparkle = np.zeros(len(t))
-    blip = t_axis(0.06)
-    for _ in range(7):
-        n = int((onset + 0.1 + rng.uniform(0, 1.2)) * RATE)
-        tone = np.sin(2 * np.pi * rng.uniform(4500, 7500) * blip) * np.exp(-blip / 0.012) * rng.uniform(0.04, 0.09)
-        sparkle[n:n + len(blip)] += tone[: len(t) - n]
-    return finish_level(echo(breath + chime + sparkle), -24, fade_in=0.01, fade_out=0.2)
+    rise = np.clip(t / 1.4, 0, 1) ** 1.5
+    fade = 1 - np.clip((t - 1.55) / 0.45, 0, 1)
+    # Two low sawtooth voices a little apart (55 and 58 Hz) beat slowly; their filter opens as the swell grows.
+    voices = saw(t, 55) + 0.8 * saw(t, 58.3)
+    drone = one_pole_lowpass(voices, 140 + 360 * rise) * rise * fade
+    rumble = svf(rng.normal(0, 1, len(t)), 110, 0.8, mode="low") * rise * fade * 0.5
+    static = crackle(seconds, 6 + 90 * rise, centre=1400, q=1.0) * fade
+    pops = np.zeros(len(t))
+    pop_t = t_axis(0.09)
+    for _ in range(4):
+        n = int(rng.uniform(0.45, 1.7) * RATE)
+        pop = np.sin(2 * np.pi * rng.uniform(70, 110) * pop_t) * np.exp(-pop_t / 0.025)
+        pops[n:n + len(pop_t)] += pop[: len(t) - n] * rng.uniform(0.5, 0.9)
+    return finish_level(drone * 0.3 + rumble * 0.6 + static * 5.5 + pops * 0.8, -21, fade_in=0.02, fade_out=0.15)
 
 
 def seam_crack():
-    """Beat 3: the voxel cracks branch out in eight steps a quarter second apart (as on screen), each a small cluster of
-    crisp glass crackles, over a soft cloth-tearing swish, with a gentle glass chime and a light low swell."""
-    seconds = 2.6
+    """Beat 3, the sky splits in eight steps a quarter second apart (as on screen): each step a sharp, dark crack (a
+    burst of crackle over a short low thud), static that never quite stops between steps, a low groan that sinks as the
+    crack widens, and a muted low bell as it gives."""
+    seconds = 2.8
     t = t_axis(seconds)
-    crackle = np.zeros(len(t))
-    grain_t = t_axis(0.03)
+    bed_shape = np.clip(t / 0.1, 0, 1) * (1 - np.clip((t - 2.0) / 0.8, 0, 1))
+    bed = crackle(seconds, 35 + 25 * np.sin(2 * np.pi * 1.3 * t) ** 2, centre=1200, q=1.0) * bed_shape * 0.5
+    steps = np.zeros(len(t))
+    burst_t = t_axis(0.16)
     for step in range(8):
-        strength = 0.55 + 0.45 * step / 7
-        for _ in range(int(rng.integers(3, 7))):
-            n = int((step * 0.25 + rng.uniform(0, 0.05)) * RATE)
-            noise = svf(rng.normal(0, 1, len(grain_t)) * np.exp(-grain_t / 0.0025), rng.uniform(2800, 5200), 3.0)
-            tick = np.sin(2 * np.pi * rng.uniform(2200, 3600) * grain_t) * np.exp(-grain_t / 0.01) * 0.35
-            crackle[n:n + len(grain_t)] += ((noise + tick) * strength * rng.uniform(0.6, 1.0))[: len(t) - n]
-    # Cloth tearing: a soft swish whose band rises, roughened by fast random gating.
-    gate = one_pole_lowpass(rng.uniform(0, 1, len(t)) ** 2, 80)
-    gate /= np.max(gate)
-    tear = bandpass_noise(seconds, 900 + 1800 * np.clip(t / 2, 0, 1), 1.2) * gate * np.sin(np.pi * np.clip(t / 2.1, 0, 1)) ** 1.2 * 0.35
-    # A gentle glass chime (C6) just after the first step, and a light low swell under the start.
-    tc = np.maximum(0, t - 0.3)
-    chime = (np.sin(2 * np.pi * 1046.5 * tc) + 0.2 * np.sin(2 * np.pi * 2093 * tc)) * np.minimum(1, tc / 0.006) * np.exp(-tc / 1.0) * (t >= 0.3) * 0.3
-    swell = np.sin(2 * np.pi * 90 * t) * np.minimum(1, t / 0.06) * np.exp(-t / 0.3) * 0.12
-    return finish_level(echo(crackle + tear + chime + swell, taps=((0.11, 0.2),)), -22, fade_out=0.25)
+        n = int(step * 0.25 * RATE)
+        strength = 0.6 + 0.4 * step / 7
+        burst = crackle(0.16, 1100, centre=rng.uniform(900, 1700), q=1.3) * np.exp(-burst_t / 0.035)
+        thud = np.sin(2 * np.pi * (85 - 2 * step) * burst_t) * np.exp(-burst_t / 0.06) * 0.7
+        steps[n:n + len(burst_t)] += ((burst * 5.0 + thud * 0.8) * strength)[: len(t) - n]
+    groan_shape = np.clip(t / 0.3, 0, 1) * (1 - np.clip((t - 1.9) / 0.9, 0, 1))
+    groan = one_pole_lowpass(saw(t, 66 - 22 * np.clip(t / 2.2, 0, 1)), 320) * groan_shape * (1 + 0.15 * np.sin(2 * np.pi * 3 * t)) * 0.12
+    tb = np.maximum(0, t - 0.05)
+    bell_tone = bell(tb, 196, ratios=(1, 2.4, 3.9), amps=(1, 0.35, 0.12), decay=1.6) * (t >= 0.05) * 0.18
+    mix = bed + steps + groan + one_pole_lowpass(bell_tone, 1200)
+    return finish_level(echo(mix, taps=((0.09, 0.25), (0.21, 0.12)), tone=1500), -20, fade_out=0.3)
+
+
+def seam_close():
+    """Beat 8, as the Seam starts to mend: it crackles shut. Air is drawn back in, low and falling, while the static
+    thickens and tightens and a low drone sinks; it all cuts off in a deep, soft thump as the crack seals at 3 s,
+    which is when the closing chime plays on a full mend."""
+    seconds = 3.6
+    t = t_axis(seconds)
+    seal = 3.0
+    build = np.clip(t / seal, 0, 1)
+    # A smooth cut at the seal rather than a click.
+    before = np.clip((seal - t) / 0.012, 0, 1)
+    suck = svf(rng.normal(0, 1, len(t)), 1700 - 1450 * build, 1.1) * build ** 1.3 * before * 0.5
+    static = crackle(seconds, 15 + 220 * build ** 2, centre=1300 - 500 * build, q=1.1) * before * (0.4 + 0.6 * build)
+    drone = one_pole_lowpass(saw(t, 72 - 34 * build), 180 + 220 * build) * build ** 1.5 * before * 0.5
+    after = np.maximum(0, t - seal)
+    thump = np.sin(2 * np.pi * (58 * after - 14 * after * after)) * np.minimum(1, after / 0.004) * np.exp(-after / 0.22) * (t >= seal)
+    tail = svf(rng.normal(0, 1, len(t)), 90, 0.8, mode="low") * np.exp(-after / 0.35) * (t >= seal) * 0.4
+    mix = suck * 1.2 + static * 3.5 + drone * 0.45 + thump * 1.1 + tail
+    return finish_level(echo(mix, taps=((0.1, 0.22),), tone=1200), -19, fade_out=0.25)
 
 
 # Thread snaps: a harp pluck in a rising pentatonic run (C5 D5 E5 G5 A5), with a tiny snap transient.
@@ -270,7 +312,7 @@ def seam_mend():
 SEAM = (
     [("hairline", seam_hairline), ("crack", seam_crack)]
     + [(f"thread_snap_{k + 1}", (lambda k=k: seam_thread_snap(k))) for k in range(5)]
-    + [("hum", seam_hum), ("ring_pulse", seam_ring_pulse), ("crossing", seam_crossing), ("mend", seam_mend)]
+    + [("hum", seam_hum), ("ring_pulse", seam_ring_pulse), ("crossing", seam_crossing), ("close", seam_close), ("mend", seam_mend)]
 )
 LOOPS = {"seam/hum"}
 GROUPS = {"seam": SEAM}

@@ -183,6 +183,9 @@ public class SeamEntity extends Entity {
             }
             case MENDING -> {
                 int total = SeamTimeline.mendTicks(mendFrom());
+                if (passed(0, age)) {
+                    play(level, SkyseamSounds.SEAM_CLOSE, position());
+                }
                 if (passed(Math.round(total * SeamTimeline.MEND_CHIME_AT), age)) {
                     play(level, SkyseamSounds.SEAM_MEND, position());
                 }

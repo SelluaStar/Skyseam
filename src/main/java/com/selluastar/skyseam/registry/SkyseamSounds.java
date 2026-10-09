@@ -21,7 +21,7 @@ public final class SkyseamSounds {
 
     public static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(Registries.SOUND_EVENT, Skyseam.MOD_ID);
 
-    // The Seam (spec section 20, "Sounds": 11 sounds).
+    // The Seam (spec section 20, "Sounds": 11 sounds, plus the closing crackle the author asked for).
     public static final DeferredHolder<SoundEvent, SoundEvent> SEAM_HAIRLINE = seam("hairline");
     public static final DeferredHolder<SoundEvent, SoundEvent> SEAM_CRACK = seam("crack");
     /** Thread snaps in five rising pitches, played in order as the threads snap (index 0 first). */
@@ -31,6 +31,9 @@ public final class SkyseamSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> SEAM_HUM = seam("hum");
     public static final DeferredHolder<SoundEvent, SoundEvent> SEAM_RING_PULSE = seam("ring_pulse");
     public static final DeferredHolder<SoundEvent, SoundEvent> SEAM_CROSSING = seam("crossing");
+    /** Beat 8, as mending starts: the opening crackles shut. Added at the author's request; not in the spec's 11. */
+    public static final DeferredHolder<SoundEvent, SoundEvent> SEAM_CLOSE = seam("close");
+    /** The closing chime, as the crack seals. */
     public static final DeferredHolder<SoundEvent, SoundEvent> SEAM_MEND = seam("mend");
 
     private SkyseamSounds() {}

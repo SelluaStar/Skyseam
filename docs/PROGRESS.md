@@ -351,3 +351,23 @@ bright sound the loudest of the set. The crack 1.5 s later had a heavy 58 Hz thu
 
 **Verified:** `tools/audio/check.py` passes, and build and GameTests pass. **Needs your ears:** whether the new opening
 sounds right, and whether its level now sits well with the thread plucks and the hum.
+
+### M1 follow-up: darker, crackling opening and a closing sound (2026-10-09)
+
+The author said: "make the opening sfx seem more dark or like a crackling sound then also add a sfx for it closing".
+Changed (DECISIONS K44, `tools/audio/synth.py`):
+- **`seam/hairline`**, as the Seam appears: a low, uneasy buzzing drone (two voices at 55 and 58 Hz, beating slowly)
+  swells out of nothing under static that thickens from a few clicks to a dense crackle, with a few deep pops.
+  Subtitle: "The sky strains and crackles".
+- **`seam/crack`**: eight sharp, dark cracks a quarter second apart, matching the eight crack steps on screen. Each is
+  a burst of crackle over a short low thud, standing 10–19 dB above the static between them. Under them, a low groan
+  sinks as the crack widens, and a muted low bell sounds as it gives.
+- **New `seam/close`** (`seam.close`), played the moment mending starts: air drawn back in, crackle thickening and
+  tightening, and a sinking drone, all cut off at 3 s by a deep, soft thump as the crack seals. On a full mend the
+  existing closing chime plays at that same moment. Subtitle: "Seam crackles shut".
+- Measured: about 20–30% of each new sound's energy is in the 500–4000 Hz band, so the crackle still carries on small
+  speakers that can't play the low drone. The other nine Seam sounds are unchanged.
+
+**Verified:** `tools/audio/check.py` passes (12 files). Build and GameTests pass, and the asset test now covers 12
+sounds. **Needs your ears:** the new character. The bright harp plucks of the five thread snaps and the closing chime
+are unchanged and may now feel out of place next to the darker cues.

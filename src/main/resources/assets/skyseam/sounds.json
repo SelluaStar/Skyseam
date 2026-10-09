@@ -39,6 +39,10 @@
     "subtitle": "subtitles.skyseam.seam.crossing",
     "sounds": [{"name": "skyseam:seam/crossing", "attenuation_distance": 64}]
   },
+  "seam.close": {
+    "subtitle": "subtitles.skyseam.seam.close",
+    "sounds": [{"name": "skyseam:seam/close", "attenuation_distance": 128}]
+  },
   "seam.mend": {
     "subtitle": "subtitles.skyseam.seam.mend",
     "sounds": [{"name": "skyseam:seam/mend", "attenuation_distance": 128}]

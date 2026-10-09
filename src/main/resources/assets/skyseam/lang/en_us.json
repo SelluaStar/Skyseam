@@ -1,12 +1,13 @@
 {
   "entity.skyseam.seam": "Seam",
 
-  "subtitles.skyseam.seam.hairline": "Glass tinks in the sky",
-  "subtitles.skyseam.seam.crack": "The sky cracks",
+  "subtitles.skyseam.seam.hairline": "The sky strains and crackles",
+  "subtitles.skyseam.seam.crack": "The sky cracks open",
   "subtitles.skyseam.seam.thread_snap": "A golden thread snaps",
   "subtitles.skyseam.seam.hum": "Seam hums",
   "subtitles.skyseam.seam.ring_pulse": "Seam pulses",
   "subtitles.skyseam.seam.crossing": "Ship slips through the Seam",
+  "subtitles.skyseam.seam.close": "Seam crackles shut",
   "subtitles.skyseam.seam.mend": "Seam mends with a chime",
 
   "skyseam.seam.state.opening": "Opening",
