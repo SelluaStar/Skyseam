@@ -5,10 +5,16 @@ into src/main/resources/assets/skyseam/sounds/<group>/:
   plucked strings for thread snaps, inharmonic bell tones for chimes, filtered noise sweeps for cracks and whooshes,
   layered sine hums for loops (loops are built from whole cycles and crossfaded, so they join cleanly).
 
-Deterministic. Run with tools/.venv/Scripts/python.exe tools/audio/synth.py [group ...]; then check the result with
+Deterministic, and each sound has its own random seed, so changing one recipe never changes another file. Run with
+tools/.venv/Scripts/python.exe tools/audio/synth.py [group | group/name ...]; then check the result with
 tools/audio/check.py. Every file here is a stand-in for the author's final sound design (TODO-MANUAL.md).
+
+Regenerate one sound by name after changing its recipe (e.g. `synth.py seam/crack`). The seam sounds other than
+`hairline` and `crack` were written by an earlier version that shared one random seed across all sounds; their recipes
+are unchanged, but a fresh run gives them different noise detail (the thread plucks are the most sensitive to it).
 """
 import sys
+import zlib
 from pathlib import Path
 
 import numpy as np
@@ -19,7 +25,13 @@ ROOT = Path(__file__).resolve().parents[2]
 SOUNDS = ROOT / "src" / "main" / "resources" / "assets" / "skyseam" / "sounds"
 PEAK = 0.8  # about -2 dBFS, with headroom for the Vorbis encoder
 
+# Each sound gets its own generator, seeded from its name, so changing one recipe never changes another's file.
 rng = np.random.default_rng(20261008)
+
+
+def seed_for(name):
+    global rng
+    rng = np.random.default_rng(20261008 + zlib.crc32(name.encode("utf-8")))
 
 
 def t_axis(seconds):
@@ -97,6 +109,32 @@ def finish(x, fade_in=0.002, fade_out=0.03):
     return x / np.max(np.abs(x)) * PEAK
 
 
+def finish_level(x, loudest_db, fade_in=0.002, fade_out=0.03):
+    """Like finish, but sets how loud the sound is: its loudest 50 ms comes out at `loudest_db` dBFS (RMS), with peaks
+    kept below PEAK. Short bright sounds normalised by peak alone come out much louder than they feel they should."""
+    x = x - np.mean(x)
+    n_in, n_out = int(fade_in * RATE), int(fade_out * RATE)
+    if n_in:
+        x[:n_in] *= np.linspace(0, 1, n_in)
+    if n_out:
+        x[-n_out:] *= np.linspace(1, 0, n_out)
+    window = int(0.05 * RATE)
+    loudest = max(np.sqrt(np.mean(x[i:i + window] ** 2)) for i in range(0, max(1, len(x) - window), window // 2))
+    x = x * (10 ** (loudest_db / 20) / loudest)
+    peak = np.max(np.abs(x))
+    return x * (PEAK / peak) if peak > PEAK else x
+
+
+def echo(x, taps=((0.13, 0.3), (0.29, 0.14)), tone=3000):
+    """A short, softened echo for a sense of space."""
+    soft = one_pole_lowpass(x, tone)
+    out = x.copy()
+    for delay, gain in taps:
+        n = int(delay * RATE)
+        out[n:] += soft[:-n] * gain
+    return out
+
+
 def write(group, name, x, loop=False):
     folder = SOUNDS / group
     folder.mkdir(parents=True, exist_ok=True)
@@ -108,31 +146,54 @@ def write(group, name, x, loop=False):
 # ---- The Seam (spec section 20: 11 sounds) ------------------------------------------------------------------------
 
 def seam_hairline():
-    """Beat 2: a thin glass 'tink', with a second softer tink just after."""
-    t = t_axis(1.4)
-    x = bell(t, 2650, decay=0.5) + 0.35 * np.roll(bell(t, 3170, decay=0.35), int(0.07 * RATE))
-    click = rng.normal(0, 1, len(t)) * env_exp(t, 0.0015) * 0.6
-    return finish(x + one_pole_lowpass(click, 9000))
+    """Beat 2, the Seam appears: a soft breath of air rises into a gentle, round glass chime with a short echo, and a
+    few faint sparkles drift off it (the motes). Kept well under the ear's harshest band and quiet: it is the first
+    thing anyone hears, often close by."""
+    seconds = 2.4
+    t = t_axis(seconds)
+    onset = 0.28
+    # The breath: airy noise swelling into the chime, its band rising as it comes.
+    swell = np.clip(t / onset, 0, 1) ** 2 * np.exp(-np.maximum(0, t - onset) / 0.12)
+    breath = bandpass_noise(seconds, 2500 + 3500 * np.clip(t / onset, 0, 1), 2.0) * swell * 0.25
+    # The chime: E6 with near-harmonic partials, all under 4 kHz, a soft attack and a lower body note (E5).
+    tc = np.maximum(0, t - onset)
+    envelope = np.minimum(1, tc / 0.008) * np.exp(-tc / 0.9) * (t >= onset)
+    chime = (np.sin(2 * np.pi * 1318.5 * tc) + 0.22 * np.sin(2 * np.pi * 2637 * tc + 0.3) + 0.07 * np.sin(2 * np.pi * 3955 * tc)
+             + 0.35 * np.sin(2 * np.pi * 659.25 * tc) * np.exp(-tc / 0.6)) * envelope
+    chime *= 1 + 0.08 * np.sin(2 * np.pi * 5.5 * tc)
+    # Sparkles: a few tiny high blips scattered after the chime.
+    sparkle = np.zeros(len(t))
+    blip = t_axis(0.06)
+    for _ in range(7):
+        n = int((onset + 0.1 + rng.uniform(0, 1.2)) * RATE)
+        tone = np.sin(2 * np.pi * rng.uniform(4500, 7500) * blip) * np.exp(-blip / 0.012) * rng.uniform(0.04, 0.09)
+        sparkle[n:n + len(blip)] += tone[: len(t) - n]
+    return finish_level(echo(breath + chime + sparkle), -24, fade_in=0.01, fade_out=0.2)
 
 
 def seam_crack():
-    """Beat 3: cloth tearing (dense noise crackle that speeds up and brightens) over a low thump, with a glass chime."""
-    seconds = 2.2
+    """Beat 3: the voxel cracks branch out in eight steps a quarter second apart (as on screen), each a small cluster of
+    crisp glass crackles, over a soft cloth-tearing swish, with a gentle glass chime and a light low swell."""
+    seconds = 2.6
     t = t_axis(seconds)
-    # Tearing: grains of noise, sparse then dense, through a lowpass that opens up.
-    grains = np.zeros(len(t))
-    time = 0.0
-    while time < 1.7:
-        start = int(time * RATE)
-        length = int(rng.uniform(0.004, 0.018) * RATE)
-        end = min(len(t), start + length)
-        grains[start:end] += rng.normal(0, 1, end - start) * np.hanning(end - start) * rng.uniform(0.4, 1.0)
-        time += rng.uniform(0.004, 0.03) * (1.2 - time / 1.7)
-    tear = one_pole_lowpass(grains, 1500 + 4500 * np.clip(t / 1.7, 0, 1)) * (1 - np.clip((t - 1.5) / 0.6, 0, 1))
-    thump = np.sin(2 * np.pi * (58 * t - 10 * t * t)) * env_exp(t, 0.18) * 0.9
-    chime = np.roll(bell(t, 1760, decay=0.9), int(0.35 * RATE)) * 0.45
-    chime[: int(0.35 * RATE)] = 0
-    return finish(tear * 1.4 + thump + chime, fade_out=0.15)
+    crackle = np.zeros(len(t))
+    grain_t = t_axis(0.03)
+    for step in range(8):
+        strength = 0.55 + 0.45 * step / 7
+        for _ in range(int(rng.integers(3, 7))):
+            n = int((step * 0.25 + rng.uniform(0, 0.05)) * RATE)
+            noise = svf(rng.normal(0, 1, len(grain_t)) * np.exp(-grain_t / 0.0025), rng.uniform(2800, 5200), 3.0)
+            tick = np.sin(2 * np.pi * rng.uniform(2200, 3600) * grain_t) * np.exp(-grain_t / 0.01) * 0.35
+            crackle[n:n + len(grain_t)] += ((noise + tick) * strength * rng.uniform(0.6, 1.0))[: len(t) - n]
+    # Cloth tearing: a soft swish whose band rises, roughened by fast random gating.
+    gate = one_pole_lowpass(rng.uniform(0, 1, len(t)) ** 2, 80)
+    gate /= np.max(gate)
+    tear = bandpass_noise(seconds, 900 + 1800 * np.clip(t / 2, 0, 1), 1.2) * gate * np.sin(np.pi * np.clip(t / 2.1, 0, 1)) ** 1.2 * 0.35
+    # A gentle glass chime (C6) just after the first step, and a light low swell under the start.
+    tc = np.maximum(0, t - 0.3)
+    chime = (np.sin(2 * np.pi * 1046.5 * tc) + 0.2 * np.sin(2 * np.pi * 2093 * tc)) * np.minimum(1, tc / 0.006) * np.exp(-tc / 1.0) * (t >= 0.3) * 0.3
+    swell = np.sin(2 * np.pi * 90 * t) * np.minimum(1, t / 0.06) * np.exp(-t / 0.3) * 0.12
+    return finish_level(echo(crackle + tear + chime + swell, taps=((0.11, 0.2),)), -22, fade_out=0.25)
 
 
 # Thread snaps: a harp pluck in a rising pentatonic run (C5 D5 E5 G5 A5), with a tiny snap transient.
@@ -206,21 +267,24 @@ def seam_mend():
     return finish(x + zipper * 1.5, fade_out=0.4)
 
 
-GROUPS = {
-    "seam": lambda: (
-        [("hairline", seam_hairline(), False), ("crack", seam_crack(), False)]
-        + [(f"thread_snap_{k + 1}", seam_thread_snap(k), False) for k in range(5)]
-        + [("hum", seam_hum(), True), ("ring_pulse", seam_ring_pulse(), False),
-           ("crossing", seam_crossing(), False), ("mend", seam_mend(), False)]
-    ),
-}
+SEAM = (
+    [("hairline", seam_hairline), ("crack", seam_crack)]
+    + [(f"thread_snap_{k + 1}", (lambda k=k: seam_thread_snap(k))) for k in range(5)]
+    + [("hum", seam_hum), ("ring_pulse", seam_ring_pulse), ("crossing", seam_crossing), ("mend", seam_mend)]
+)
+LOOPS = {"seam/hum"}
+GROUPS = {"seam": SEAM}
 
 
 def main(argv):
-    groups = argv or list(GROUPS)
-    for group in groups:
-        for name, data, loop in GROUPS[group]():
-            write(group, name, data, loop)
+    """With no arguments, writes every sound. Otherwise each argument is a group ("seam") or one sound ("seam/hum")."""
+    wanted = argv or list(GROUPS)
+    for group, recipes in GROUPS.items():
+        for name, recipe in recipes:
+            key = f"{group}/{name}"
+            if group in wanted or key in wanted:
+                seed_for(key)
+                write(group, name, recipe(), key in LOOPS)
 
 
 if __name__ == "__main__":

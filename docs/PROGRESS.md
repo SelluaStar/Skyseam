@@ -331,3 +331,23 @@ your eyes in motion.
 
 **Author's in-game test:** same as M1. Look at it from the side and up close to judge the depth, and watch the edge
 while it cracks for the glitch bursts and the fragments breaking loose.
+
+### M1 follow-up: gentler opening sounds (2026-10-08)
+
+The author said: "BETTER sfx for the beginning when it first spawns rather than that weird loud sound".
+
+**Cause:** the hairline tink was two slightly detuned bell tones at 2.6–3.2 kHz, the band the ear is most sensitive
+to, with overtones up past 20 kHz. Like every synthesized sound it was normalised to its peak, which made this short,
+bright sound the loudest of the set. The crack 1.5 s later had a heavy 58 Hz thump.
+
+**Changed** (`tools/audio/synth.py`, DECISIONS K43):
+- **`seam/hairline`:** a soft breath of air rising into a gentle, round glass chime (E6 over an E5 body, every
+  partial under 4 kHz), with a short echo and a few faint sparkles. It is 13 dB quieter: its loudest moment fell from
+  −10.9 to −24 dBFS, and its brightness (spectral centre) from 3.4 to 1.8 kHz.
+- **`seam/crack`:** eight small clusters of crisp glass crackles a quarter second apart, matching the eight crack steps
+  on screen, over a soft cloth-tearing swish, with a gentle C6 chime and a light low swell instead of the thump. It is
+  6 dB quieter (−16.1 to −22.4 dBFS), and its share of energy above 6 kHz fell from 28% to 9%.
+- The other nine Seam sounds are unchanged, byte for byte.
+
+**Verified:** `tools/audio/check.py` passes, and build and GameTests pass. **Needs your ears:** whether the new opening
+sounds right, and whether its level now sits well with the thread plucks and the hum.
