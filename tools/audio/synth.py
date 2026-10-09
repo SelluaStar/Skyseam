@@ -163,6 +163,47 @@ def saw(t, freq, top=6000):
     return out
 
 
+def reverb(x, seconds=2.2, wet=0.3, predelay=0.025, bright=7000, dark=900):
+    """Space: x convolved with a made-up hall (decaying noise that darkens as it fades, -60 dB at `seconds`), mixed
+    with the dry sound. Keeps x's length, so recipes leave room for the tail."""
+    n = int(seconds * RATE)
+    t = np.arange(n) / RATE
+    ir = one_pole_lowpass(rng.normal(0, 1, n), bright * (dark / bright) ** (t / seconds)) * np.exp(-6.9 * t / seconds)
+    ir[: int(predelay * RATE)] = 0
+    ir /= np.sqrt(np.sum(ir ** 2))
+    size = 1 << int(np.ceil(np.log2(len(x) + n)))
+    tail = np.fft.irfft(np.fft.rfft(x, size) * np.fft.rfft(ir, size), size)[: len(x)]
+    return x * (1 - wet) + tail * wet * 2.2
+
+
+def glide(t, start, end, settle):
+    """A tone that falls fast from `start` to `end` Hz (time constant `settle` s): the 'pew' of ice or glass
+    splitting, as a crack runs through it faster than the sound."""
+    freq = end + (start - end) * np.exp(-t / settle)
+    return np.sin(2 * np.pi * np.cumsum(freq) / RATE)
+
+
+def ice_crack(seconds, size, rng_pitch):
+    """One crack in ice or glass: a hard click, a few dispersive glides falling from high to low, and a short knock
+    of body. `size` from 0 (a tick) to 1 (the big one) scales length and depth."""
+    t = t_axis(seconds)
+    click = rng.normal(0, 1, len(t)) * np.exp(-t / 0.0012)
+    click = click - one_pole_lowpass(click, 1500)
+    pews = np.zeros(len(t))
+    for k in range(3):
+        top = rng_pitch * (1 + 0.35 * k) * rng.uniform(0.9, 1.1)
+        bottom = 180 + 220 * (1 - size) + 40 * k
+        pews += glide(t, top, bottom, 0.012 + 0.02 * size) * np.exp(-t / (0.05 + 0.12 * size)) / (1 + k)
+    knock = svf(rng.normal(0, 1, len(t)), 320 - 120 * size, 2.0) * np.exp(-t / (0.03 + 0.08 * size))
+    return click * 0.6 + pews * 0.7 + knock * 0.5
+
+
+def sub_boom(t, start=48, end=31, decay=0.6):
+    """A deep, soft boom felt more than heard: a falling sine with a gentle 5 ms attack."""
+    freq = end + (start - end) * np.exp(-t / 0.15)
+    return np.sin(2 * np.pi * np.cumsum(freq) / RATE) * np.minimum(1, t / 0.005) * np.exp(-t / decay)
+
+
 def write(group, name, x, loop=False):
     folder = SOUNDS / group
     folder.mkdir(parents=True, exist_ok=True)
@@ -174,48 +215,56 @@ def write(group, name, x, loop=False):
 # ---- The Seam (spec section 20: 11 sounds) ------------------------------------------------------------------------
 
 def seam_hairline():
-    """Beat 2, the Seam appears: a dark swell. A low, uneasy buzzing drone rises out of nothing under a crackle of static
-    that keeps thickening, as if the sky were straining, with a few deep pops, and tips straight into the crack."""
+    """Beat 2, the Seam appears (0 to 1.5 s, then the crack): the air goes tense. A shimmer of glass swells in
+    backwards (a reversed reverb tail) and peaks the instant the crack lands, over a low drone and a breath of rising
+    air. No static: it should feel like the sky drawing in a breath."""
     seconds = 2.0
     t = t_axis(seconds)
-    rise = np.clip(t / 1.4, 0, 1) ** 1.5
-    fade = 1 - np.clip((t - 1.55) / 0.45, 0, 1)
-    # Two low sawtooth voices a little apart (55 and 58 Hz) beat slowly; their filter opens as the swell grows.
-    voices = saw(t, 55) + 0.8 * saw(t, 58.3)
-    drone = one_pole_lowpass(voices, 140 + 360 * rise) * rise * fade
-    rumble = svf(rng.normal(0, 1, len(t)), 110, 0.8, mode="low") * rise * fade * 0.5
-    static = crackle(seconds, 6 + 90 * rise, centre=1400, q=1.0) * fade
-    pops = np.zeros(len(t))
-    pop_t = t_axis(0.09)
-    for _ in range(4):
-        n = int(rng.uniform(0.45, 1.7) * RATE)
-        pop = np.sin(2 * np.pi * rng.uniform(70, 110) * pop_t) * np.exp(-pop_t / 0.025)
-        pops[n:n + len(pop_t)] += pop[: len(t) - n] * rng.uniform(0.5, 0.9)
-    return finish_level(drone * 0.3 + rumble * 0.6 + static * 5.5 + pops * 0.8, -21, fade_in=0.02, fade_out=0.15)
+    peak = 1.5
+    # A soft glass chord, put through a long hall and reversed, so it swells up to `peak` and stops.
+    chord_t = t_axis(2.4)
+    chord = (bell(chord_t, 1046.5, decay=1.6) + 0.7 * bell(chord_t, 1568.0, decay=1.4) + 0.5 * bell(chord_t, 1318.5, decay=1.5))
+    swell = reverb(chord * 0.5, seconds=2.4, wet=0.85)[::-1]
+    swell = one_pole_lowpass(swell, 4500)
+    reverse = np.zeros(len(t))
+    n = int(peak * RATE)
+    reverse[max(0, n - len(swell)):n] = swell[-min(n, len(swell)):]
+    # A low drone (A1 with its fifth) that rises with the swell and lets go with it.
+    rise = np.clip(t / peak, 0, 1) ** 2
+    after = 1 - np.clip((t - peak) / 0.4, 0, 1)
+    drone = one_pole_lowpass(saw(t, 55) + 0.6 * saw(t, 82.4), 120 + 380 * rise) * rise * after
+    air = svf(rng.normal(0, 1, len(t)), 600 + 2400 * rise, 0.9) * rise * after
+    mix = reverse * 1.0 + drone * 0.22 + air * 0.25
+    return finish_level(reverb(mix, seconds=1.8, wet=0.25), -24, fade_in=0.05, fade_out=0.3)
 
 
 def seam_crack():
-    """Beat 3, the sky splits in eight steps a quarter second apart (as on screen): each step a sharp, dark crack (a
-    burst of crackle over a short low thud), static that never quite stops between steps, a low groan that sinks as the
-    crack widens, and a muted low bell as it gives."""
-    seconds = 2.8
+    """Beat 3, the sky splits (1.5 to 3.5 s, eight steps a quarter second apart, as on screen). One big crack lands
+    first: a hard snap, the falling 'pew' of ice splitting and a deep boom. Then eight smaller ice cracks, one per step,
+    rising a little in pitch, each with a faint glass tone, over a dark tone that opens up as the sky tears. The cracks
+    stay fairly dry so each one is heard; the tones and the tear sit in a wide hall. Kept below 9 kHz so it never
+    hisses."""
+    seconds = 3.6
     t = t_axis(seconds)
-    bed_shape = np.clip(t / 0.1, 0, 1) * (1 - np.clip((t - 2.0) / 0.8, 0, 1))
-    bed = crackle(seconds, 35 + 25 * np.sin(2 * np.pi * 1.3 * t) ** 2, centre=1200, q=1.0) * bed_shape * 0.5
-    steps = np.zeros(len(t))
-    burst_t = t_axis(0.16)
+    hits = np.zeros(len(t))
+    big = ice_crack(0.8, 1.0, 4200)
+    hits[: len(big)] += big * 2.2
+    tones = sub_boom(t, decay=0.45) * 0.5
+    glass_t = t_axis(1.2)
     for step in range(8):
-        n = int(step * 0.25 * RATE)
-        strength = 0.6 + 0.4 * step / 7
-        burst = crackle(0.16, 1100, centre=rng.uniform(900, 1700), q=1.3) * np.exp(-burst_t / 0.035)
-        thud = np.sin(2 * np.pi * (85 - 2 * step) * burst_t) * np.exp(-burst_t / 0.06) * 0.7
-        steps[n:n + len(burst_t)] += ((burst * 5.0 + thud * 0.8) * strength)[: len(t) - n]
-    groan_shape = np.clip(t / 0.3, 0, 1) * (1 - np.clip((t - 1.9) / 0.9, 0, 1))
-    groan = one_pole_lowpass(saw(t, 66 - 22 * np.clip(t / 2.2, 0, 1)), 320) * groan_shape * (1 + 0.15 * np.sin(2 * np.pi * 3 * t)) * 0.12
-    tb = np.maximum(0, t - 0.05)
-    bell_tone = bell(tb, 196, ratios=(1, 2.4, 3.9), amps=(1, 0.35, 0.12), decay=1.6) * (t >= 0.05) * 0.18
-    mix = bed + steps + groan + one_pole_lowpass(bell_tone, 1200)
-    return finish_level(echo(mix, taps=((0.09, 0.25), (0.21, 0.12)), tone=1500), -20, fade_out=0.3)
+        n = int((0.25 + step * 0.25) * RATE)
+        crack = ice_crack(0.3, 0.2 + 0.05 * step, 3200 + 250 * step) * (0.9 + 0.06 * step)
+        end = min(len(t), n + len(crack))
+        hits[n:end] += crack[: end - n]
+        tone = bell(glass_t, 880 * 2 ** ((step % 5) * 2 / 12), ratios=(1, 2.76), amps=(1, 0.3), decay=0.5) * 0.08
+        end = min(len(t), n + len(tone))
+        tones[n:end] += tone[: end - n]
+    # The tear: a dark two-voice tone whose filter opens as the crack widens, then lets go.
+    open_up = np.clip(t / 2.2, 0, 1)
+    tear_shape = np.clip(t / 0.4, 0, 1) * (1 - np.clip((t - 2.2) / 1.0, 0, 1))
+    tones += one_pole_lowpass(saw(t, 73.4) + 0.7 * saw(t, 110.0 * 1.003), 200 + 1100 * open_up ** 1.5) * tear_shape * 0.07
+    mix = reverb(hits, seconds=1.6, wet=0.15) + reverb(tones, seconds=2.6, wet=0.4)
+    return finish_level(one_pole_lowpass(mix, 9000), -17, fade_out=0.4)
 
 
 def seam_close():
@@ -243,13 +292,17 @@ THREAD_PITCHES = (523.25, 587.33, 659.26, 783.99, 880.0)
 
 
 def seam_thread_snap(k):
-    seconds = 1.8
+    """Beat 4: a golden thread snaps. A harp pluck with a soft snap transient and a small glass sparkle an octave and
+    a fifth up, in the same hall as the crack, so the five rising plucks ring out over it rather than poke out of it."""
+    seconds = 2.2
     t = t_axis(seconds)
     string = pluck(THREAD_PITCHES[k], seconds, brightness=0.35)
     octave = pluck(THREAD_PITCHES[k] * 2, seconds, brightness=0.2) * 0.25
     snap = rng.normal(0, 1, len(t)) * env_exp(t, 0.003)
     snap = snap - one_pole_lowpass(snap, 2500)
-    return finish(string + octave + 0.5 * snap, fade_out=0.2)
+    sparkle = bell(t, THREAD_PITCHES[k] * 3, ratios=(1, 2.76), amps=(1, 0.25), decay=0.6) * 0.15
+    mix = one_pole_lowpass(string + octave + 0.35 * snap + sparkle, 7000)
+    return finish_level(reverb(mix, seconds=2.0, wet=0.3), -22, fade_out=0.3)
 
 
 def seam_hum():
@@ -275,13 +328,14 @@ def seam_hum():
 
 
 def seam_ring_pulse():
-    """Beat 6, every 6 s: a soft low 'whum' that falls in pitch, under a glass-harmonica shimmer."""
+    """Beat 6, every 6 s: a soft low 'whum' that falls in pitch, under a glass-harmonica shimmer, in the same hall
+    as the rest of the opening."""
     seconds = 3.2
     t = t_axis(seconds)
     whum = np.sin(2 * np.pi * (200 * t - 30 * t * t)) * np.minimum(1, t / 0.05) * np.exp(-t / 0.9)
     shimmer_env = np.minimum(1, t / 0.4) * np.exp(-np.maximum(0, t - 0.4) / 1.1)
     shimmer = (np.sin(2 * np.pi * 880 * t) + 0.5 * np.sin(2 * np.pi * 1318.5 * t) + 0.3 * np.sin(2 * np.pi * 1760 * t * 1.003)) * shimmer_env
-    return finish(whum + 0.35 * shimmer, fade_out=0.3)
+    return finish_level(reverb(whum + 0.35 * shimmer, seconds=2.4, wet=0.3), -22, fade_out=0.3)
 
 
 def seam_crossing():
