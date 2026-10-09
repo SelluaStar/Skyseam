@@ -42,6 +42,11 @@ repositories {
             includeGroupAndSubgroups 'dev.engine-room'
         }
     }
+    maven {
+        name = 'FTB (optional FTB Teams support)'
+        url = 'https://maven.ftb.dev/releases'
+        content { includeGroupAndSubgroups 'dev.ftb' }
+    }
 }
 
 // Mods that ship nested jars (Create: Flywheel, Ponder, Registrate. Aeronautics: Simulated, Offroad.
@@ -62,6 +67,8 @@ dependencies {
     compileOnly("dev.ryanhcode.sable:sable-neoforge-${minecraft_version}:${sable_version}") { transitive = false }
     compileOnly("dev.ryanhcode.sable-companion:sable-companion-common-${minecraft_version}:${sable_companion_version}") { transitive = false }
     compileOnly files("libs/fealty-${fealty_version}+api.${fealty_api_version}-api.jar")
+    // Optional: Aperture teammates in packs that run FTB Teams. Never required, never shipped (compat/ftbteams).
+    compileOnly("dev.ftb.mods:ftb-teams-neoforge:${ftb_teams_version}") { transitive = false }
 
     runMods "maven.modrinth:create:${create_version}"
     runMods "maven.modrinth:create-aeronautics:${aeronautics_version}"
@@ -69,21 +76,24 @@ dependencies {
     runMods files("libs/fealty-${fealty_version}.jar")
 }
 
-// Aeronautics and Create keep the classes Skyseam compiles against (the balloon map, catnip's WorldAttached in
-// Ponder) inside nested jars. Extract just those for the compile classpath; at runtime they load from run/mods.
+// Aeronautics and Create keep the classes Skyseam compiles against (the balloon map, Simulated's ropes, catnip's
+// WorldAttached in Ponder) inside nested jars. Extract just those for the compile classpath; at runtime they load
+// from run/mods. Create itself is on the compile classpath too, because Simulated's rope holder is a Create behaviour.
 def nestedModsDir = layout.buildDirectory.dir('nested-mods')
 def extractNestedMods = tasks.register('extractNestedMods', Sync) {
-    description = 'Extracts the nested Aeronautics and Ponder jars that Skyseam compiles against.'
+    description = 'Extracts the nested Aeronautics, Simulated and Ponder jars that Skyseam compiles against.'
     from {
         configurations.runMods.filter { it.name.startsWith('create-') }.collect { zipTree(it) }
     }
-    include 'META-INF/jarjar/dev.eriksonn.aeronautics.aeronautics-*.jar', 'META-INF/jarjar/ponder-*.jar'
+    include 'META-INF/jarjar/dev.eriksonn.aeronautics.aeronautics-*.jar', 'META-INF/jarjar/dev.simulated_team.simulated.simulated-*.jar',
+            'META-INF/jarjar/ponder-*.jar'
     eachFile { path = name }
     includeEmptyDirs = false
     into nestedModsDir
 }
 dependencies {
     compileOnly files(nestedModsDir.map { it.asFileTree.matching { include '*.jar' } }).builtBy(extractNestedMods)
+    compileOnly("maven.modrinth:create:${create_version}") { transitive = false }
 }
 
 def syncRunMods = tasks.register('syncRunMods', Sync) {

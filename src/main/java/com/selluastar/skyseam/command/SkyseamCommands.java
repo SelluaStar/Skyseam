@@ -9,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.FloatArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -21,12 +22,17 @@ import com.selluastar.skyseam.seam.SeamEntity;
 import com.selluastar.skyseam.seam.SeamSavedData;
 import com.selluastar.skyseam.seam.SeamShape;
 import com.selluastar.skyseam.seam.Seams;
+import com.selluastar.skyseam.seam.site.SeamSite;
+import com.selluastar.skyseam.seam.site.SeamSites;
+import com.selluastar.skyseam.seam.site.SiteKeeper;
 import com.selluastar.skyseam.transfer.ShipTransfer;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.DimensionArgument;
+import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
 import net.minecraft.commands.arguments.coordinates.Vec3Argument;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -48,11 +54,19 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  * <li>{@code /skyseam seam list} and {@code /skyseam seam clearscars}.</li>
  * <li>{@code /skyseam ship info} and {@code /skyseam ship cross <dimension> [route_a|route_b]}: describe or move the
  * nearest ship, with everyone on it (replaces the M0 spike command, DECISIONS K22).</li>
+ * <li>{@code /skyseam ship assemble <from> <to>}: turn the blocks in a box into a Sable ship, for tests and filming.</li>
+ * <li>{@code /skyseam ship drive <vx> <vy> <vz> <seconds>}: carry the nearest ship along at that velocity (blocks per
+ * second), level and steady, as if it were flying, so a raft can open a Seam without propellers.</li>
+ * <li>{@code /skyseam site nearest}, {@code site list [<radius>]}, {@code site tp}: find the Seam sites (docs/DECISIONS.md
+ * K47). {@code site here} adds a temporary site where you stand, until the server stops, so the Aperture can be tried
+ * without a long flight. {@code site charge} plays a charge's heat shimmer at the nearest site, for filming.</li>
  * </ul>
  * Forcing a Tide, giving the Almanac and teleporting to landmarks join this tree with those features (M3, M4).
  */
 public final class SkyseamCommands {
     private static final double SHIP_SEARCH_RADIUS = 48;
+    /** The most blocks {@code ship assemble} turns into a ship (64 x 64 x 64, the crossing's size cap). */
+    private static final int MAX_ASSEMBLE = 64 * 64 * 64;
     private static final double SEAM_SEARCH_RADIUS = 256;
     private static final float DEFAULT_WIDTH = 24;
     private static final float DEFAULT_HEIGHT = 20;
@@ -69,7 +83,8 @@ public final class SkyseamCommands {
         dispatcher.register(Commands.literal("skyseam")
                 .requires(source -> source.hasPermission(2))
                 .then(seam())
-                .then(ship()));
+                .then(ship())
+                .then(site()));
     }
 
     // ---- /skyseam seam -----------------------------------------------------------------------------------------
@@ -120,6 +135,8 @@ public final class SkyseamCommands {
             return 0;
         }
         SeamEntity seam = result.seam();
+        // Filming: players keep a command-opened Seam open, as every Seam did before the Aperture (DECISIONS K29).
+        seam.holdWhilePlayersNear();
         String where = format(seam.position());
         source.sendSuccess(() -> Component.translatable("commands.skyseam.seam.opened", Mth.ceil(seam.seamWidth()),
                 Mth.ceil(seam.seamHeight()), where, SkyseamConfig.MEND_DELAY_SECONDS.get(), SkyseamConfig.HOLD_RADIUS.get(),
@@ -173,6 +190,19 @@ public final class SkyseamCommands {
     private static LiteralArgumentBuilder<CommandSourceStack> ship() {
         return Commands.literal("ship")
                 .then(Commands.literal("info").executes(SkyseamCommands::shipInfo))
+                .then(Commands.literal("drive")
+                        .then(Commands.argument("vx", FloatArgumentType.floatArg(-50, 50))
+                                .then(Commands.argument("vy", FloatArgumentType.floatArg(-50, 50))
+                                        .then(Commands.argument("vz", FloatArgumentType.floatArg(-50, 50))
+                                                .then(Commands.argument("seconds", IntegerArgumentType.integer(1, 600))
+                                                        .executes(context -> drive(context, new Vec3(FloatArgumentType.getFloat(context, "vx"),
+                                                                FloatArgumentType.getFloat(context, "vy"), FloatArgumentType.getFloat(context, "vz")),
+                                                                IntegerArgumentType.getInteger(context, "seconds"))))))))
+                .then(Commands.literal("assemble")
+                        .then(Commands.argument("from", BlockPosArgument.blockPos())
+                                .then(Commands.argument("to", BlockPosArgument.blockPos())
+                                        .executes(context -> assemble(context, BlockPosArgument.getLoadedBlockPos(context, "from"),
+                                                BlockPosArgument.getLoadedBlockPos(context, "to"))))))
                 .then(Commands.literal("cross")
                         .then(Commands.argument("dimension", DimensionArgument.dimension())
                                 .executes(context -> cross(context, null))
@@ -227,7 +257,7 @@ public final class SkyseamCommands {
                     : Component.empty();
             source.sendSuccess(() -> Component.translatable("commands.skyseam.ship.crossed", from.dimension().location().toString(),
                     to.dimension().location().toString(), result.route() == ShipTransfer.Route.SAVE_AND_LOAD ? "A" : "B", result.millis(),
-                    result.blocksAfter(), result.blocksBefore(), result.riders(), result.entities(), moved), true);
+                    result.blocksAfter(), result.blocksBefore(), result.riders(), result.entities(), moved, result.bodies().size()), true);
         });
         if (!finished[0]) {
             // Beat 7: the pearl-white flash hides the move, and the whoosh plays where the ship leaves.
@@ -235,6 +265,136 @@ public final class SkyseamCommands {
             from.playSound(null, shipPos.x, shipPos.y, shipPos.z, SkyseamSounds.SEAM_CROSSING.get(), SoundSource.AMBIENT, 1, 1);
             source.sendSuccess(() -> Component.translatable("commands.skyseam.ship.preparing"), false);
         }
+        return 1;
+    }
+
+    private static int drive(CommandContext<CommandSourceStack> context, Vec3 velocity, int seconds) {
+        CommandSourceStack source = context.getSource();
+        Optional<Ship> found = SableBridge.nearest(source.getLevel(), source.getPosition(), SHIP_SEARCH_RADIUS);
+        if (found.isEmpty()) {
+            source.sendFailure(Component.translatable("commands.skyseam.ship.none", (int) SHIP_SEARCH_RADIUS));
+            return 0;
+        }
+        ShipDrives.start(found.get(), velocity, seconds * 20);
+        source.sendSuccess(() -> Component.translatable("commands.skyseam.ship.driving", format(velocity), seconds), true);
+        return 1;
+    }
+
+    private static int assemble(CommandContext<CommandSourceStack> context, BlockPos from, BlockPos to) {
+        CommandSourceStack source = context.getSource();
+        BlockPos min = new BlockPos(Math.min(from.getX(), to.getX()), Math.min(from.getY(), to.getY()), Math.min(from.getZ(), to.getZ()));
+        BlockPos max = new BlockPos(Math.max(from.getX(), to.getX()), Math.max(from.getY(), to.getY()), Math.max(from.getZ(), to.getZ()));
+        List<BlockPos> blocks = new ArrayList<>();
+        for (BlockPos pos : BlockPos.betweenClosed(min, max)) {
+            if (!source.getLevel().getBlockState(pos).isAir()) {
+                blocks.add(pos.immutable());
+            }
+        }
+        if (blocks.isEmpty() || blocks.size() > MAX_ASSEMBLE) {
+            source.sendFailure(Component.translatable("commands.skyseam.ship.assemble_failed", blocks.size(), MAX_ASSEMBLE));
+            return 0;
+        }
+        BlockPos anchor = BlockPos.containing(Vec3.atCenterOf(min).add(Vec3.atCenterOf(max)).scale(0.5));
+        Ship ship = SableBridge.assemble(source.getLevel(), anchor, blocks);
+        if (ship == null) {
+            source.sendFailure(Component.translatable("commands.skyseam.ship.assemble_failed", blocks.size(), MAX_ASSEMBLE));
+            return 0;
+        }
+        int count = blocks.size();
+        source.sendSuccess(() -> Component.translatable("commands.skyseam.ship.assembled", count, ship.id().toString()), true);
+        return 1;
+    }
+
+    // ---- /skyseam site -----------------------------------------------------------------------------------------
+
+    private static LiteralArgumentBuilder<CommandSourceStack> site() {
+        return Commands.literal("site")
+                .then(Commands.literal("nearest").executes(SkyseamCommands::siteNearest))
+                .then(Commands.literal("list")
+                        .executes(context -> siteList(context, 4096))
+                        .then(Commands.argument("radius", IntegerArgumentType.integer(16, 65536))
+                                .executes(context -> siteList(context, IntegerArgumentType.getInteger(context, "radius")))))
+                .then(Commands.literal("tp").executes(SkyseamCommands::siteTeleport))
+                .then(Commands.literal("here").executes(SkyseamCommands::siteHere))
+                .then(Commands.literal("charge").executes(SkyseamCommands::siteCharge));
+    }
+
+    private static int siteNearest(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        ServerLevel level = source.getLevel();
+        Vec3 at = source.getPosition();
+        Optional<SeamSite> found = SeamSites.nearest(level, at.x, at.z);
+        if (found.isEmpty()) {
+            source.sendFailure(Component.translatable("commands.skyseam.site.none", level.dimension().location().toString()));
+            return 0;
+        }
+        SeamSite site = found.get();
+        source.sendSuccess(() -> describe(level, site, at), false);
+        return 1;
+    }
+
+    private static int siteList(CommandContext<CommandSourceStack> context, int radius) {
+        CommandSourceStack source = context.getSource();
+        ServerLevel level = source.getLevel();
+        Vec3 at = source.getPosition();
+        List<SeamSite> sites = SeamSites.within(level, at.x, at.z, radius);
+        if (sites.isEmpty()) {
+            source.sendFailure(Component.translatable("commands.skyseam.site.none_within", radius));
+            return 0;
+        }
+        for (SeamSite site : sites) {
+            source.sendSuccess(() -> describe(level, site, at), false);
+        }
+        return sites.size();
+    }
+
+    private static Component describe(ServerLevel level, SeamSite site, Vec3 from) {
+        int ground = SeamSites.groundY(level, site);
+        Component temporary = site.temporary() ? Component.translatable("commands.skyseam.site.temporary") : Component.empty();
+        return Component.translatable("commands.skyseam.site.entry", site.x(), site.z(), Mth.floor(site.distance(from.x, from.z)), ground,
+                ground + SkyseamConfig.MIN_ALTITUDE.get(), temporary);
+    }
+
+    private static int siteTeleport(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+        CommandSourceStack source = context.getSource();
+        ServerPlayer player = source.getPlayerOrException();
+        ServerLevel level = player.serverLevel();
+        Optional<SeamSite> found = SeamSites.nearest(level, player.getX(), player.getZ());
+        if (found.isEmpty()) {
+            source.sendFailure(Component.translatable("commands.skyseam.site.none", level.dimension().location().toString()));
+            return 0;
+        }
+        SeamSite site = found.get();
+        // Load the column first so the ground is the real one, not the generator's estimate.
+        level.getChunk(site.x() >> 4, site.z() >> 4);
+        double y = SeamSites.neededY(level, site) + 10;
+        // Stand back from the site, south of it, looking north at where the Seam hangs.
+        player.teleportTo(level, site.x() + 0.5, y, site.z() + 40.5, 180, 0);
+        source.sendSuccess(() -> describe(level, site, player.position()), false);
+        return 1;
+    }
+
+    private static int siteHere(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        ServerLevel level = source.getLevel();
+        BlockPos at = BlockPos.containing(source.getPosition());
+        SeamSite site = SeamSites.addTemporary(level, at.getX(), at.getZ());
+        source.sendSuccess(() -> Component.translatable("commands.skyseam.site.added", site.x(), site.z()), true);
+        return 1;
+    }
+
+    private static int siteCharge(CommandContext<CommandSourceStack> context) {
+        CommandSourceStack source = context.getSource();
+        ServerLevel level = source.getLevel();
+        Vec3 at = source.getPosition();
+        Optional<SeamSite> found = SeamSites.nearest(level, at.x, at.z).filter(site -> site.distance(at.x, at.z) <= SiteKeeper.RANGE);
+        Optional<SeamEntity> seam = found.flatMap(site -> Seams.placeClosed(level, site));
+        if (seam.isEmpty()) {
+            source.sendFailure(Component.translatable("commands.skyseam.site.charge_failed", (int) SiteKeeper.RANGE));
+            return 0;
+        }
+        SiteKeeper.showTestCharge(seam.get(), at.y, SkyseamConfig.CHARGE_SECONDS.get() * 20);
+        source.sendSuccess(() -> Component.translatable("commands.skyseam.site.charging"), true);
         return 1;
     }
 

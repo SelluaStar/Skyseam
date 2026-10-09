@@ -31,6 +31,21 @@ All paths are under `src/main/resources/`. The namespace is `skyseam`.
 | Seam sounds | `sounds/seam/<name>.ogg`, entries in `sounds.json` | 11 files, plus the closing crackle in `sounds/closing/close.ogg` (see `docs/CLOSING-AUDIO.md`). How far each carries is its `attenuation_distance` in `sounds.json` |
 | Seam outline, rim blocks, fragments, cracks, threads, god-rays, rings | none | Drawn by code (`client/seam/SeamRenderer`, layout in `SeamDecor`), no texture to swap. Colours and sizes are constants at the top of those classes. Sky shards and the hole's walls reuse `interior.png` |
 
+### Added in M2
+
+| Asset | Path under `assets/skyseam/` (or `data/skyseam/`) | Notes for a replacement |
+|---|---|---|
+| Harmonic Aperture model | `geo/block/harmonic_aperture.geo.json`, source `art/models/harmonic_aperture.bbmodel` | 64×64 box UV. **Keep the bone names**: `ring`, `core` and `gems` (animated); `gem_flying_lit`, `gem_altitude_lit`, `gem_site_lit` (shown while that rule holds); `needle` (turned by code to point at the site: its tip must lie along the model's −z, pivot on the needle's centre) |
+| Harmonic Aperture animations | `animations/block/harmonic_aperture.animation.json` | Clips `idle`, `spin_up`, `charged`, `cooldown` (looped by code). Written by `tools/models/export_animations.py` from the `.bbmodel` |
+| Harmonic Aperture textures | `textures/block/harmonic_aperture.png`, `harmonic_aperture_glowmask.png` (same size), `harmonic_aperture_particle.png` (break particles) | The glowmask lights the core, the ring's thread, the lit gems and the needle's tip |
+| Item icons | `textures/item/harmonic_aperture.png`, `textures/item/skychart.png` | 16×16. The Aperture's item model is 2D for now (`models/item/harmonic_aperture.json`) |
+| Aperture screen and HUD sheet | `textures/gui/aperture.png` (256×256) | Fixed layout read by code: the 176×206 panel at (0, 0), the chart slot at (151, 91); the three 9×9 tick icons unlit at (176, 0) and lit at (176, 9); the 9×9 arrow at (176, 18), pointing up; the 84×22 HUD frame at (0, 208) |
+| Skychart screen | `textures/gui/skychart.png` (256×256) | The round 200×200 chart at (0, 0), north up |
+| Aperture and Skychart sounds | `sounds/aperture/{charge,ready,mount}.ogg`, `sounds/skychart/unfold.ogg` | Mono. `charge` is a loop; its pitch rises with the charge |
+| Blockstate and models | `blockstates/harmonic_aperture.json`, `models/block/harmonic_aperture.json`, `models/item/{harmonic_aperture,skychart}.json` | The block model only gives the particle texture; GeckoLib draws the block |
+| Loot table | `data/skyseam/loot_table/blocks/harmonic_aperture.json` | Keeps the owner (`skyseam:owner`) on the dropped item |
+| Placeholder Halcyon | `data/skyseam/dimension_type/halcyon.json`, `data/skyseam/dimension/halcyon.json` | Replaced in M3 |
+
 Note that 1.21 data folders are **singular**: `recipe/`, `advancement/`, `loot_table/`, `structure/`.
 
 `data/skyseam/structure/gametest/` holds GameTest templates (`empty.nbt` from `tools/structures/make_gametest_empty.py`).

@@ -1,6 +1,7 @@
 package com.selluastar.skyseam.dev;
 
 import com.selluastar.skyseam.Skyseam;
+import com.selluastar.skyseam.world.HalcyonLayout;
 
 import net.minecraft.server.MinecraftServer;
 import net.neoforged.fml.ModList;
@@ -22,8 +23,13 @@ public final class DevBootCheck {
         if (!Boolean.getBoolean(PROPERTY) || !server.isDedicatedServer()) {
             return;
         }
-        Skyseam.LOGGER.info("{}: dedicated server started with {} mods loaded. Stopping because -D{}=true",
-                PASSED_MARKER, ModList.get().size(), PROPERTY);
+        // The placeholder Halcyon is a data-pack dimension: check it really loaded (docs/DECISIONS.md K52).
+        if (server.getLevel(HalcyonLayout.LEVEL) == null) {
+            Skyseam.LOGGER.error("Skyseam boot check failed: the dimension {} did not load", HalcyonLayout.LEVEL.location());
+        } else {
+            Skyseam.LOGGER.info("{}: dedicated server started with {} mods loaded and the dimension {}. Stopping because -D{}=true",
+                    PASSED_MARKER, ModList.get().size(), HalcyonLayout.LEVEL.location(), PROPERTY);
+        }
         server.halt(false);
     }
 }

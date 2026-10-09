@@ -415,3 +415,153 @@ the five thread plucks included, is unchanged.
 
 **Needs your ears:** whether the hit and bloom feel satisfying, and the bass on your speakers. The open hum is still
 about 7 dB louder than the opening before it.
+
+---
+
+## M2: the entry (2026-10-09)
+
+Spec §19: "Harmonic Aperture block and block entity, trigger rules, gauge HUD, Skychart, ship transfer. Done when: a
+GameTest per trigger rule, and a test ship crosses."
+
+The author changed the spec in two rounds:
+- **Before building:** many Seam sites instead of one (DECISIONS K47). Each site has a closed Seam that only an Aperture
+  opens (K48).
+- **After the first in-game test, before this commit:**
+  1. Bodies tied to the ship by ropes cross with it (K53).
+  2. The Aperture shows the way to the site itself (K55).
+  3. A ship starts charging further out the bigger it is, and too fast won't open (K54).
+  4. A ship only crosses if part of it really goes through the opening (K51). The first build counted 60 % of the
+     ship's box overlapping the opening, and carried the author's ship across without it going through.
+
+**Built**
+- **Seam sites** (`seam/site/`):
+  - Sites are on a grid of one per 2048 blocks, picked from the world seed, in the site dimension only.
+  - The nearest-site lookup and the ground height at a site (heightmap if the chunk is loaded, else the generator's
+    estimate).
+  - Temporary sites for tests and the `site here` command.
+- **Closed Seams:** a faint, flickering hairline at every site near a player (K48). While an Aperture charges, it shows
+  the heat shimmer at the ship's height.
+- **The Harmonic Aperture** (`aperture/`):
+  - **The block:** a GeckoLib block with the `idle`, `spin_up`, `charged` and `cooldown` animations, three status gems
+    that light per rule, and a needle that points to the nearest site.
+  - **Ownership:** soulbound to its owner and their teammates (K49).
+  - **Mounting:** it mounts on a Sable ship with a click, as it is placed or assembled.
+  - **The screen:** a charge ring, the three ticks, a compass with the distance, the ship's speed against the limit,
+    its entry radius, what it is waiting for, and a Skychart slot that adds the height to fly at.
+- **Trigger rules** (`TriggerRules`), each a check of its own:
+  - **Ship:** the Aperture is on a ship.
+  - **Pilot:** a player aboard who may use it (K50).
+  - **Dimension:** the ship is in the site dimension.
+  - **Radius:** the entry radius, which grows with the ship's size (K54).
+  - **Flying:** faster than 2 b/s and touching no ground or water.
+  - **Speed:** no faster than 10 b/s (K54).
+  - **Altitude:** at least 30 blocks above the ground at the site.
+  - **Clear site:** no scar there, and no Seam already open.
+
+  With every rule met, the charge fills in 5 s. Dropping a rule drains it; losing the pilot or the Aperture resets it.
+- **Opening:** a full charge opens the Seam at the site, at the ship's height.
+  - It faces along the line from the ship to the site.
+  - It is sized for the ship and everything tied to it.
+  - It stays open while an Aperture ship is within the entry radius plus 32 blocks.
+- **Crossing** (`transfer/SeamCrossing`, K51): a ship crosses only when one of its blocks passes through an open cell of
+  the Seam between two ticks. It counts from the moment the crack opens.
+  - Everyone aboard, and every body tied to the ship, crosses with it into the placeholder Halcyon (K52, K53).
+  - Ropes between the bodies come along. A rope to anything staying behind is cut.
+  - The Seam it left through mends.
+  - A rider who logged out aboard is put back on the ship's deck when they return.
+- **Skychart** (`skychart/`): held, a HUD box points the way to the nearest site. Used, it unfolds into a chart of the
+  sites within 4096 blocks.
+- **Gauge HUD:** the three ticks, the charge, and an arrow with the distance to the site, while you're aboard an
+  Aperture ship.
+- **Debug commands** (K56): `site nearest|list|tp|here|charge`, `ship assemble|drive`.
+- **First-pass assets:**
+  - **Textures:** the Aperture model texture and glowmask, both item icons, the screen and HUD sheet, and the chart
+    (`tools/textures/make_aperture_textures.py`).
+  - **Model:** the Aperture model (`art/models/harmonic_aperture.bbmodel`, headless Blockbench), its geometry, and the
+    animations (`tools/models/export_animations.py`).
+  - **Sounds:** four new ones: `aperture/charge` (a loop that rises with the charge), `aperture/ready`,
+    `aperture/mount` and `skychart/unfold`.
+
+**Verified (actually run)**
+- **The milestone check** (`tools/verify_milestone.py`): build ✓, runData ✓, **39/39 required GameTests** ✓, headless
+  server boot ✓ (the boot check also confirms the Halcyon dimension loads). The GameTests passed 3 runs in a row.
+- **The 18 new M2 GameTests:**
+  - **One test per trigger rule:**
+    - `rulesShipAndRadius`: the ship and radius rules. The radius is never below 48, grows with the ship, leaves room
+      at the speed limit, and is capped. A site just inside the radius counts and one just outside does not.
+    - `rulePilotIsAboard` and `rulePilotMayUseTheAperture`: the pilot rule. Someone on deck is aboard and someone
+      beside the ship isn't. Owner, teammate and stranger.
+    - `ruleFlying`: 1 b/s doesn't fly, 3 b/s does, a ship resting on stone doesn't, and over the speed limit the
+      charge stops with "too fast".
+    - `ruleAltitude`, `ruleDimension` and `ruleScar`: altitude ignores leaves; the End has no sites; a scar blocks
+      the site.
+  - **Crossing** (`CrossingGameTests`):
+    - `apertureOpensTheSeamAndTheShipCrosses`: a raft charges for 5 s and the closed Seam shimmers at its height. The
+      Seam opens over the site, facing the ship's course and sized for it. The raft sits in its plane for 1.5 s and is
+      **not** carried. Then it slides through and crosses with every block and the Aperture's owner, and the Seam
+      mends.
+    - `shipPassingBesideOrOverDoesNotCross`: a raft passes beside, over and under the open Seam and is **not**
+      carried. Its blocks crossed the Seam's plane outside the opening on 47 ticks.
+    - `ropedBodiesCrossTogether`: two rafts tied by a Simulated rope cross together, still 7 blocks apart. The rope is
+      back up in the new dimension with its points moved along. A second rope to a post in the ground is cut.
+    - `chargeDrainsAndCancels` and `seamMendsAfterTheShipLeaves`.
+  - **Sites and the rest** (`SiteGameTests`):
+    - `sitesAreFixedSpacedAndFound` and `closedSeamWaitsAtItsSite`.
+    - `crossingThroughAndFacing`: the "through" geometry, both ways; short of the plane, beside, over and before the
+      crack all don't count. Also the Seam's facing.
+    - `gaugePayloadRoundTrips` and `absentRidersFollowTheirShip`.
+  - **Files** (`AssetDefinitionTests`): every block and item has its blockstate, models and textures. Every sound has
+    its file and subtitle.
+- `tools/audio/check.py`: all 16 sounds pass. The charge loop joins smoothly.
+- **The real client** (`tools/capture/m2_entry.json`). A raft on a scripted drive at 3 b/s, with the player on deck:
+  1. The closed Seam waits at the site, then shimmers as the raft charges.
+  2. The Seam reveals, and the raft crosses 6 to 7 s after it opened, when it reached it, into the placeholder Halcyon
+     with the player on deck.
+  3. The Aperture's needle points at a site 200 blocks north-east, and on the raft at the site ahead.
+  4. The HUD arrow and the screen compass point at the site. In the Halcyon the needle drifts and the HUD shows "–".
+
+  Contact sheet: [`docs/previews/m2-entry.png`](previews/m2-entry.png). The scene played fully in 7 of 9 runs. In the
+  other 2 the Aperture was broken just after the raft was assembled, while the camera looked straight at it. I couldn't
+  catch it with a trace in the next 3 runs. The likeliest cause is a click on the capture window: the scene runs in
+  creative mode, where one click breaks a block. The capture client now ignores attack clicks. Logging every Aperture
+  removal showed none in the passing runs except the expected one during assembly.
+
+**Needs the author's eyes or ears** (`[FIRST PASS]`)
+- **A real Aeronautics ship:**
+  - Charging at speed from far out, the new radius and speed limit in practice, and flying through the opening.
+  - Towing a roped contraption across.
+  - None of this has been flown in game by me: the GameTests pin or drive simple rafts.
+- **The look:** the Aperture model and its animations, the needle, the closed Seam and the shimmer.
+- **The sounds:** the four new ones, which I can measure but not hear.
+- **Multiplayer:** the pilot and teammate rules with real players. FTB Teams is compiled against but never run.
+
+**Stubs and limits**
+- **The Halcyon** is an empty placeholder sky (K52). Its arrival title and real world are M3. Come back with
+  `/skyseam ship cross minecraft:overworld`.
+- **The Aperture's recipe** is M10 (K49). Get it from the creative tab or `/give`.
+- **Joints when a body changes plot slot:** bearings, springs and docking connectors may let go if a tied body has to
+  change plot slot in the new dimension (DEVIATIONS D21). It is untested. Ropes are handled.
+- **A boat parked on a deck** without a rope stays behind (K53).
+- **The Stargazer** pointing to a site is M10 (K47).
+
+**Author's in-game test (M2)**
+1. In a creative world with cheats, run `/skyseam site nearest`, then `/skyseam site tp` to stand near a site. You
+   should see a faint flickering line in the sky about 40 blocks up. `/skyseam site here` makes a site where you stand.
+2. Build an Aeronautics ship and place a Harmonic Aperture on it (creative tab). It clicks into place.
+   - Open it and check the compass.
+   - Check the needle on its plate: it should point at the site, also after you turn the ship.
+3. Fly away (more than 150 blocks), then fly back toward the site. Stay below 10 blocks a second and at least 30 above
+   the ground. The gauge's arrow should lead you.
+   - The three gems should light, the charge should fill over 5 s and the shimmer should appear ahead at your height.
+   - Then the Seam opens.
+   - Fly through the opening: you should cross with everyone aboard.
+4. **The fixes:**
+   - Fly past the open Seam beside it, or over it: nothing should happen.
+   - Fly at it above 10 b/s: the gauge should say "Too fast" and the charge should drain.
+   - Tie a second contraption to your ship with a rope (rope connectors and rope), fly through: both should arrive
+     still tied.
+5. Come back with `/skyseam ship cross minecraft:overworld`.
+6. Send `logs/latest.log`, and say what to change in:
+   - the radius and speed limit;
+   - the look and sounds of the Aperture and the shimmer;
+   - the needle and HUD.

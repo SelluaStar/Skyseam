@@ -43,3 +43,12 @@ where the spec is simply silent go in `DECISIONS.md` instead.
 | # | Expected (spec) | Reality | What Skyseam does |
 |---|---|---|---|
 | D17 | Spec §6: "Everyone within 256 blocks sees the animation" | Minecraft sends an entity to a player only within the smaller of the entity's tracking range and the server's view distance (10 chunks, 160 blocks, by default) | The Seam's tracking range is 16 chunks (256 blocks), so a server with view distance 16 or more shows it at 256 blocks. Its **sounds** reach 256 blocks whatever the view distance (fixed-range sound events, DECISIONS K33). The author can raise `view-distance` in `server.properties` |
+
+## Found in M2 (the entry)
+
+| # | Expected (spec) | Reality | What Skyseam does |
+|---|---|---|---|
+| D18 | Spec §6 "Flying": the ship has no ground contact | Sable 2.0.6 has no query for a body's contacts | The ship counts as grounded if any block just under its box has a collision shape or a fluid (water counts: a floating ship isn't flying). Only loaded chunks are read |
+| D19 | Spec §6 "Pilot": a pilot aboard | Create Aeronautics has no pilot: the steering wheel doesn't record who holds it | A player aboard the ship, or a body tied to it, who may use the Aperture (DECISIONS K50) |
+| D20 | GameTests can cross into the Halcyon | The GameTest server loads no data-pack dimensions, so `skyseam:halcyon` doesn't exist there | Crossing GameTests use the End as a stand-in (`SeamCrossing.destinationForTests`). The server boot check (`-PbootCheck`) checks that the real Halcyon loads |
+| D21 | Spec §6 moves "the ship" | Ropes and joints tie Sable bodies into groups, and Sable's save format keeps the links by body id and plot position. A rope's points are saved in world space. A body that lands in another plot slot moves its blocks, but positions stored inside other blocks' data don't move | The whole group moves together (DECISIONS K53). Skyseam moves rope points and rope ends itself (`SimulatedBridge`). Other joints (bearings, springs, docking connectors) keep their links when every body keeps its plot slot, which is the normal case. If a body has to change slot, those joints may let go: untested |

@@ -46,5 +46,21 @@
   "seam.mend": {
     "subtitle": "subtitles.skyseam.seam.mend",
     "sounds": [{"name": "skyseam:seam/mend", "attenuation_distance": 128}]
+  },
+  "aperture.charge": {
+    "subtitle": "subtitles.skyseam.aperture.charge",
+    "sounds": [{"name": "skyseam:aperture/charge", "volume": 0.7, "attenuation_distance": 24}]
+  },
+  "aperture.ready": {
+    "subtitle": "subtitles.skyseam.aperture.ready",
+    "sounds": [{"name": "skyseam:aperture/ready", "attenuation_distance": 48}]
+  },
+  "aperture.mount": {
+    "subtitle": "subtitles.skyseam.aperture.mount",
+    "sounds": [{"name": "skyseam:aperture/mount", "attenuation_distance": 16}]
+  },
+  "skychart.unfold": {
+    "subtitle": "subtitles.skyseam.skychart.unfold",
+    "sounds": [{"name": "skyseam:skychart/unfold", "attenuation_distance": 12}]
   }
 }

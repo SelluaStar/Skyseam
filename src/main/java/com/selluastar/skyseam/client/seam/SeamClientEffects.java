@@ -35,6 +35,8 @@ public final class SeamClientEffects {
     private static final double EFFECT_RANGE = 256;
     /** Camera shake reaches this far, or twice the Seam's size if that is more. */
     private static final double SHAKE_RANGE = 64;
+    /** A closed Seam's motes are only made this close, horizontally, matching how far its hairline shows. */
+    private static final double CLOSED_EFFECT_RANGE = 128;
 
     private static final Map<Integer, Float> LAST_AGE = new HashMap<>();
     private static final Map<Integer, SeamHumSound> HUMS = new HashMap<>();
@@ -83,9 +85,33 @@ public final class SeamClientEffects {
             case DECREASED -> 0.45f;
             case MINIMAL -> 0.15f;
         };
-        Spawner spawn = new Spawner(minecraft, level.random, seam, density);
         SeamShape shape = seam.shape();
         SeamState state = seam.state();
+        Vec3 origin = state == SeamState.CHARGING ? new Vec3(seam.getX(), seam.shownChargeY(0), seam.getZ()) : seam.position();
+        Spawner spawn = new Spawner(minecraft, level.random, seam, density, origin);
+
+        if (state.isClosed()) {
+            if (Math.hypot(viewer.getX() - seam.getX(), viewer.getZ() - seam.getZ()) > CLOSED_EFFECT_RANGE) {
+                return;
+            }
+            if (state == SeamState.DORMANT) {
+                // A closed Seam sheds a mote now and then from its faint hairline.
+                spawn.chance(0.08f * density, () -> {
+                    int j = Mth.clamp(Math.round(shape.rows / 2f + (level.random.nextFloat() * 2 - 1) * shape.rows * 0.22f), 0, shape.rows - 1);
+                    spawn.drift(SkyseamParticles.SEAM_MOTE.get(), shape.spineU(j), shape.rowCentreV(j), 0.015, PASTELS[3], 0.8f);
+                });
+            } else {
+                // Beat 1: motes rise through the heat shimmer, more as the charge fills.
+                float charge = seam.charge();
+                spawn.chance((0.5f + 3 * charge) * density, () -> {
+                    float u = (level.random.nextFloat() * 2 - 1) * shape.cols * 0.35f * (0.4f + 0.6f * charge);
+                    float v = (level.random.nextFloat() - 0.5f) * shape.rows * 0.9f * (0.35f + 0.65f * charge);
+                    spawn.at(SkyseamParticles.SEAM_MOTE.get(), u, v, (level.random.nextFloat() - 0.5f) * 2, 0, 0.02 + 0.04 * level.random.nextFloat(),
+                            PASTELS[level.random.nextInt(PASTELS.length)], 0.9f);
+                });
+            }
+            return;
+        }
 
         if (state == SeamState.SCAR) {
             if (level.random.nextFloat() < 0.35f * density) {
@@ -282,7 +308,7 @@ public final class SeamClientEffects {
     }
 
     /** Spawns particles at points in a Seam's plane. */
-    private record Spawner(Minecraft minecraft, RandomSource random, SeamEntity seam, float density) {
+    private record Spawner(Minecraft minecraft, RandomSource random, SeamEntity seam, float density, Vec3 origin) {
         /** Runs {@code action} on average {@code perTick} times this tick. */
         void chance(float perTick, Runnable action) {
             int whole = Mth.floor(perTick);
@@ -296,7 +322,7 @@ public final class SeamClientEffects {
 
         /** A particle at plane point (u, v), z blocks off the plane, moving along the normal at {@code speed}. */
         void at(ParticleOptions type, double u, double v, double z, double speed, double rise, float[] colour, float scale) {
-            Vec3 pos = SeamShape.toWorld(seam.position(), seam.getYRot(), u, v).add(SeamShape.normal(seam.getYRot()).scale(z));
+            Vec3 pos = SeamShape.toWorld(origin, seam.getYRot(), u, v).add(SeamShape.normal(seam.getYRot()).scale(z));
             Vec3 across = SeamShape.toWorld(Vec3.ZERO, seam.getYRot(), 1, 0);
             Vec3 velocity = across.scale(speed).add(0, rise, 0);
             make(type, pos, velocity, colour, scale);
@@ -306,14 +332,14 @@ public final class SeamClientEffects {
         void plane(ParticleOptions type, double u, double v, double z, double vu, double vv, double vz, float[] colour, float scale) {
             Vec3 normal = SeamShape.normal(seam.getYRot());
             Vec3 across = SeamShape.toWorld(Vec3.ZERO, seam.getYRot(), 1, 0);
-            Vec3 pos = SeamShape.toWorld(seam.position(), seam.getYRot(), u, v).add(normal.scale(z));
+            Vec3 pos = SeamShape.toWorld(origin, seam.getYRot(), u, v).add(normal.scale(z));
             Vec3 velocity = across.scale(vu).add(0, vv, 0).add(normal.scale(vz));
             make(type, pos, velocity, colour, scale);
         }
 
         /** A slow mote leaving the plane to either side. */
         void drift(ParticleOptions type, double u, double v, double speed, float[] colour, float scale) {
-            Vec3 pos = SeamShape.toWorld(seam.position(), seam.getYRot(), u, v);
+            Vec3 pos = SeamShape.toWorld(origin, seam.getYRot(), u, v);
             Vec3 normal = SeamShape.normal(seam.getYRot()).scale((random.nextBoolean() ? 1 : -1) * speed);
             Vec3 velocity = normal.add((random.nextFloat() - 0.5f) * speed, (random.nextFloat() - 0.3f) * speed, (random.nextFloat() - 0.5f) * speed);
             make(type, pos, velocity, colour, scale);
@@ -321,7 +347,7 @@ public final class SeamClientEffects {
 
         /** A quick particle flung in a random direction. */
         void burst(ParticleOptions type, double u, double v, double speed, float[] colour, float scale) {
-            Vec3 pos = SeamShape.toWorld(seam.position(), seam.getYRot(), u, v);
+            Vec3 pos = SeamShape.toWorld(origin, seam.getYRot(), u, v);
             Vec3 velocity = new Vec3(random.nextFloat() - 0.5f, random.nextFloat() - 0.4f, random.nextFloat() - 0.5f).normalize().scale(speed * (0.5 + random.nextFloat()));
             make(type, pos, velocity, colour, scale);
         }

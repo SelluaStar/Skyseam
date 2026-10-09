@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "skyseam:block/harmonic_aperture"
+    },
+    "facing=south": {
+      "model": "skyseam:block/harmonic_aperture"
+    },
+    "facing=east": {
+      "model": "skyseam:block/harmonic_aperture"
+    },
+    "facing=west": {
+      "model": "skyseam:block/harmonic_aperture"
+    }
+  }
+}

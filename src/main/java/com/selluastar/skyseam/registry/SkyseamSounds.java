@@ -36,10 +36,24 @@ public final class SkyseamSounds {
     /** The closing chime, as the crack seals. */
     public static final DeferredHolder<SoundEvent, SoundEvent> SEAM_MEND = seam("mend");
 
+    // The Harmonic Aperture and the Skychart (spec section 21: "Aperture (charge loop, ready chime, mount click)",
+    // "Skychart unfold"). Ordinary sounds that fade with distance.
+    /** Beat 1: the core spinning up with a rising hum. A loop, played by the client while the Aperture charges. */
+    public static final DeferredHolder<SoundEvent, SoundEvent> APERTURE_CHARGE = local("aperture.charge");
+    /** The charge is full and the Seam opens. */
+    public static final DeferredHolder<SoundEvent, SoundEvent> APERTURE_READY = local("aperture.ready");
+    /** The Aperture is placed on, or assembled into, a ship. */
+    public static final DeferredHolder<SoundEvent, SoundEvent> APERTURE_MOUNT = local("aperture.mount");
+    public static final DeferredHolder<SoundEvent, SoundEvent> SKYCHART_UNFOLD = local("skychart.unfold");
+
     private SkyseamSounds() {}
 
     public static void register(IEventBus modBus) {
         SOUNDS.register(modBus);
+    }
+
+    private static DeferredHolder<SoundEvent, SoundEvent> local(String path) {
+        return SOUNDS.register(path, () -> SoundEvent.createVariableRangeEvent(Skyseam.id(path)));
     }
 
     private static DeferredHolder<SoundEvent, SoundEvent> seam(String name) {

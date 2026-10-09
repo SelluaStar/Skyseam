@@ -5,9 +5,12 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import com.selluastar.skyseam.Skyseam;
+import com.selluastar.skyseam.aperture.ApertureBlockEntity;
 import com.selluastar.skyseam.external.ExternalIds;
 import com.selluastar.skyseam.external.SableBridge;
 import com.selluastar.skyseam.external.Ship;
+import com.selluastar.skyseam.external.ShipPose;
+import com.selluastar.skyseam.registry.SkyseamBlocks;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -95,6 +98,39 @@ final class TestShips {
             for (int dz = -1; dz <= 1; dz++) {
                 level.setChunkForced(center.x + dx, center.z + dz, load);
             }
+        }
+    }
+
+    /** A ship with a Harmonic Aperture on it, and where the Aperture is in the ship's plot. */
+    record ApertureShip(Ship ship, BlockPos aperture) {
+        ApertureBlockEntity apertureEntity() {
+            return require(ship.level().getBlockEntity(aperture) instanceof ApertureBlockEntity found ? found : null,
+                    "The Aperture's block entity is missing from the ship");
+        }
+    }
+
+    /** A 3 by 3 plank raft centred on {@code centre} with a Harmonic Aperture on its middle, assembled into a ship. */
+    static ApertureShip raftWithAperture(ServerLevel level, BlockPos centre) {
+        List<BlockPos> blocks = new ArrayList<>();
+        for (BlockPos pos : BlockPos.betweenClosed(centre.offset(-1, 0, -1), centre.offset(1, 0, 1))) {
+            level.setBlockAndUpdate(pos, Blocks.OAK_PLANKS.defaultBlockState());
+            blocks.add(pos.immutable());
+        }
+        level.setBlockAndUpdate(centre.above(), SkyseamBlocks.HARMONIC_APERTURE.get().defaultBlockState());
+        blocks.add(centre.above());
+        Ship ship = require(SableBridge.assemble(level, centre, blocks), "Could not assemble the Aperture raft");
+        BlockPos aperture = SableBridge.blocks(ship).stream()
+                .filter(pos -> ship.level().getBlockState(pos).is(SkyseamBlocks.HARMONIC_APERTURE.get()))
+                .findFirst()
+                .orElseThrow(() -> new GameTestAssertException("The Aperture did not go into the ship"));
+        return new ApertureShip(ship, aperture);
+    }
+
+    /** Holds the ship where it is, moving at {@code velocity} blocks per second: "flying" without going anywhere. */
+    static void fly(Ship ship, ShipPose pose, Vec3 velocity) {
+        if (!ship.isRemoved()) {
+            SableBridge.pin(ship, pose);
+            SableBridge.addVelocity(ship, velocity);
         }
     }
 

@@ -66,6 +66,12 @@ public class SeamRenderer extends EntityRenderer<SeamEntity> {
     /** Only steps in the hole at least this deep catch a line of light. */
     private static final float STEP_LINE = 0.75f;
     private static final int RAYS = 12;
+    /** A closed Seam's hairline, as a share of a Seam's full height, and the distances it fades out over. */
+    private static final float DORMANT_LENGTH = 0.5f;
+    private static final float DORMANT_FADE_FROM = 96;
+    private static final float DORMANT_FADE_TO = 128;
+    /** About how wide one pixel is, per block of distance, so far lines can be kept a few pixels wide. */
+    private static final float PIXEL_WIDTH = 0.0035f;
     private static final float[][] RAY_COLOURS = {{1f, 0.78f, 0.88f}, {1f, 0.86f, 0.7f}, {0.72f, 0.95f, 0.92f}};
 
     public SeamRenderer(EntityRendererProvider.Context context) {
@@ -88,9 +94,14 @@ public class SeamRenderer extends EntityRenderer<SeamEntity> {
         long gameTime = seam.level().getGameTime();
         float seconds = (gameTime % 24000L + partialTick) / 20f;
         float size = Math.max(shape.cols, shape.rows);
-        float yaw = seam.getYRot();
+        // A closed Seam has no facing yet (the ship's course decides it), so its scar and shimmer turn to the viewer.
+        float yaw = state.isClosed() ? facingCamera(seam, partialTick) : seam.getYRot();
 
         poseStack.pushPose();
+        if (state.isClosed()) {
+            // Beat 1: a charging Seam's shimmer hangs where the Seam will open, at the ship's height.
+            poseStack.translate(0, seam.shownChargeY(partialTick) - seam.getPosition(partialTick).y, 0);
+        }
         poseStack.mulPose(Axis.YP.rotationDegrees(-yaw));
         PoseStack.Pose pose = poseStack.last();
         Vec3 offset = entityRenderDispatcher.camera.getPosition().subtract(seam.getPosition(partialTick));
@@ -100,6 +111,22 @@ public class SeamRenderer extends EntityRenderer<SeamEntity> {
         Vector3f cam = new Vector3f((float) (offset.x * cos + offset.z * sin), (float) offset.y, (float) (-offset.x * sin + offset.z * cos));
         // The hole recedes away from the camera, whichever side it is on.
         float away = cam.z < 0 ? 1 : -1;
+
+        if (state.isClosed()) {
+            Vec3 seen = entityRenderDispatcher.camera.getPosition();
+            double horizontal = Math.hypot(seen.x - seam.getX(), seen.z - seam.getZ());
+            float near = 1 - smoothStep(DORMANT_FADE_FROM, DORMANT_FADE_TO, (float) horizontal);
+            // A line a few pixels wide at any distance: a fixed width would vanish against a bright sky far away.
+            float width = Math.max(0.06f, cam.length() * PIXEL_WIDTH);
+            VertexConsumer glow = buffers.getBuffer(SkyseamRenderTypes.glow());
+            if (state == SeamState.CHARGING) {
+                drawCharging(glow, pose, shape, seam.charge(), seconds, width);
+            } else if (near > 0) {
+                drawDormant(glow, pose, shape, seconds, near, width, decor);
+            }
+            poseStack.popPose();
+            return;
+        }
 
         if (state == SeamState.SCAR) {
             float fade = 1 - stateTicks / scarTicks();
@@ -161,6 +188,83 @@ public class SeamRenderer extends EntityRenderer<SeamEntity> {
             }
         }
         poseStack.popPose();
+    }
+
+    // ---- A closed Seam ----------------------------------------------------------------------------------------------
+
+    /**
+     * A closed Seam at its site (the author's choice, docs/DECISIONS.md K48): a faint, flickering hairline in the sky,
+     * with a few loose voxel glints along it now and then. It fades out between 96 and 128 blocks away.
+     */
+    private static void drawDormant(VertexConsumer glow, PoseStack.Pose pose, SeamShape shape, float seconds, float near, float width,
+            SeamDecor decor) {
+        float flicker = 0.7f + 0.3f * Mth.sin(seconds * 7.3f) * Mth.sin(seconds * 2.9f + 1.3f);
+        drawScarLine(glow, pose, shape, DORMANT_LENGTH, 0.5f * flicker * near, width, seconds);
+        // Three glints that blink along the line, each at a spot that moves every second or so.
+        long slot = (long) (seconds * 1.3f);
+        for (int k = 0; k < 3; k++) {
+            float blink = Mth.sin((seconds * 1.3f - slot) * Mth.PI);
+            float h = decor.hash((int) slot, k, 31);
+            float v = (h - 0.5f) * shape.rows * 0.44f * 2 * DORMANT_LENGTH;
+            int row = Mth.clamp(Mth.floor(v + shape.rows / 2f), 0, shape.rows - 1);
+            float u = shape.spineU(row) + (decor.hash((int) slot, k, 32) - 0.5f) * 1.2f;
+            float size = width * (1.2f + 1.2f * decor.hash((int) slot, k, 33));
+            float a = 0.8f * blink * blink * near;
+            quad(glow, pose, u - size, v - size, 0, u + size, v - size, 0, u + size, v + size, 0, u - size, v + size, 0,
+                    1f, 0.95f, 1f, a, a, a, a);
+        }
+    }
+
+    /**
+     * Beat 1, heat shimmer (spec section 6): wavering, faintly prismatic ribbons of air where the Seam will open,
+     * growing as the Aperture's charge fills, and the hairline brightening towards the moment it opens.
+     */
+    private static void drawCharging(VertexConsumer glow, PoseStack.Pose pose, SeamShape shape, float charge, float seconds, float lineWidth) {
+        float height = shape.rows * 0.9f * (0.35f + 0.65f * charge);
+        float spread = shape.cols * 0.35f * (0.4f + 0.6f * charge);
+        int ribbons = 9;
+        int steps = 16;
+        for (int k = 0; k < ribbons; k++) {
+            float base = ((k + 0.5f) / ribbons - 0.5f) * 2 * spread;
+            float phase = hash(k, 41) * Mth.TWO_PI;
+            float width = 0.5f + 0.9f * hash(k, 42);
+            float[] colour = RAY_COLOURS[k % RAY_COLOURS.length];
+            float alpha = (0.06f + 0.12f * charge) * (1 - Math.abs(base) / (spread + 1));
+            for (int n = 0; n < steps; n++) {
+                float v0 = -height / 2 + height * n / steps;
+                float v1 = -height / 2 + height * (n + 1) / steps;
+                float u0 = base + 0.6f * Mth.sin(v0 * 0.45f + seconds * 2.2f + phase);
+                float u1 = base + 0.6f * Mth.sin(v1 * 0.45f + seconds * 2.2f + phase);
+                // Soft at both ends, strongest in the middle.
+                float a0 = alpha * Mth.sin(Mth.PI * n / steps);
+                float a1 = alpha * Mth.sin(Mth.PI * (n + 1) / steps);
+                quad(glow, pose, u0 - width, v0, 0, u1 - width, v1, 0, u1 + width, v1, 0, u0 + width, v0, 0,
+                        colour[0], colour[1], colour[2], a0, a1, a1, a0);
+            }
+        }
+        float flicker = 0.8f + 0.2f * Mth.sin(seconds * 11f);
+        drawScarLine(glow, pose, shape, DORMANT_LENGTH + (1 - DORMANT_LENGTH) * charge * 0.6f, (0.5f + 0.5f * charge) * flicker,
+                lineWidth * (1 + 0.5f * charge), seconds);
+    }
+
+    /**
+     * A closed Seam's line: the hairline, with faint pink and teal ghosts either side that drift a little, the same
+     * colour split as the open Seam's outline.
+     */
+    private static void drawScarLine(VertexConsumer glow, PoseStack.Pose pose, SeamShape shape, float length, float alpha, float width,
+            float seconds) {
+        float drift = width * (1.2f + 0.6f * Mth.sin(seconds * 3.7f));
+        float half = shape.rows * 0.44f * length;
+        float u = shape.spineU(shape.rows / 2);
+        line(glow, pose, u - drift, -half * 0.9f, u - drift, half * 0.9f, width, GHOST_PINK[0], GHOST_PINK[1], GHOST_PINK[2], alpha * 0.45f);
+        line(glow, pose, u + drift, -half * 0.9f, u + drift, half * 0.9f, width, GHOST_TEAL[0], GHOST_TEAL[1], GHOST_TEAL[2], alpha * 0.45f);
+        drawHairline(glow, pose, shape, length, alpha, width);
+    }
+
+    /** The yaw at which a Seam's face looks straight at the camera. */
+    private float facingCamera(SeamEntity seam, float partialTick) {
+        Vec3 toCamera = entityRenderDispatcher.camera.getPosition().subtract(seam.getPosition(partialTick));
+        return (float) (Mth.atan2(-toCamera.x, toCamera.z) * Mth.RAD_TO_DEG);
     }
 
     private static float scarTicks() {
@@ -578,7 +682,7 @@ public class SeamRenderer extends EntityRenderer<SeamEntity> {
                 case OPENING -> age >= SeamTimeline.CRACK_AT ? 0.3f : 0;
                 case OPEN -> 0.06f;
                 case MENDING -> 0.25f;
-                case SCAR -> 0;
+                case SCAR, DORMANT, CHARGING -> 0;
             };
             int slot = (int) (gameTime / SLOT);
             if (chance <= 0 || decor.hash(slot, 0, 21) >= chance) {
