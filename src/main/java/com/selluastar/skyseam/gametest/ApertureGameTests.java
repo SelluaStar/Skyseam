@@ -14,7 +14,6 @@ import com.selluastar.skyseam.external.ShipPose;
 import com.selluastar.skyseam.registry.SkyseamBlocks;
 import com.selluastar.skyseam.seam.SeamEntity;
 import com.selluastar.skyseam.seam.SeamSavedData;
-import com.selluastar.skyseam.seam.SeamTimeline;
 import com.selluastar.skyseam.seam.Seams;
 import com.selluastar.skyseam.seam.site.SeamSite;
 import com.selluastar.skyseam.seam.site.SeamSites;
@@ -52,8 +51,8 @@ public final class ApertureGameTests {
 
     /**
      * Ship and radius: an Aperture on the ground never qualifies; on a ship, the site must be within the ship's entry
-     * radius. The radius is never under the spec's 48 blocks, grows with the ship's length, leaves room for a ship at
-     * the speed limit, and stops at its cap (K54).
+     * radius of its nearest part. The radius is never under the spec's 48 blocks, grows with the ship's length and its
+     * speed, and stops at its cap (K58).
      */
     @GameTest(template = EMPTY, batch = "m2_rule_radius", timeoutTicks = 200)
     public static void rulesShipAndRadius(GameTestHelper helper) {
@@ -63,32 +62,37 @@ public final class ApertureGameTests {
         TriggerRules.Status onGround = TriggerRules.evaluate(level, ground, null);
         helper.assertFalse(onGround.onShip() || onGround.allMet(), "An Aperture on the ground counts as on a ship");
 
-        double small = TriggerRules.entryRadius(3);
-        double big = TriggerRules.entryRadius(40);
-        double opening = SkyseamConfig.CHARGE_SECONDS.get() + SeamTimeline.CRACK_END / 20.0;
+        double small = TriggerRules.entryRadius(3, 0);
+        double big = TriggerRules.entryRadius(40, 0);
+        double fast = TriggerRules.entryRadius(3, 8);
         helper.assertTrue(small >= SkyseamConfig.ENTRY_RADIUS.get(), "A small ship's entry radius " + small + " is under the spec's");
-        helper.assertTrue(small >= SkyseamConfig.MAX_SPEED.get() * opening, "A ship at the speed limit would reach the site before it opens: "
-                + small + " blocks");
         helper.assertTrue(big > small, "A 40-block ship's entry radius " + big + " is not bigger than a 3-block one's " + small);
-        helper.assertTrue(TriggerRules.entryRadius(1000) == SkyseamConfig.MAX_ENTRY_RADIUS.get(), "The entry radius is not capped");
+        helper.assertTrue(Math.abs(fast - small - 8 * TriggerRules.leadSeconds()) < 1.0e-6,
+                "At 8 b/s the radius " + fast + " should be what the ship flies while the Seam opens beyond " + small);
+        helper.assertTrue(TriggerRules.entryRadius(1000, 0) == SkyseamConfig.MAX_ENTRY_RADIUS.get(), "The entry radius is not capped");
 
         TestShips.ApertureShip raft = TestShips.raftWithAperture(level, helper.absolutePos(HIGH));
-        Vec3 at = SableBridge.position(raft.ship());
-        double radius = TriggerRules.entryRadius(SableBridge.length(raft.ship()));
-        SeamSite near = SeamSites.addTemporary(level, (int) Math.floor(at.x + radius) - 1, (int) Math.floor(at.z));
+        Ship ship = raft.ship();
+        Vec3 at = SableBridge.position(ship);
+        // The raft is 3 blocks across: its east edge is 1.5 blocks from its centre, and distances run from that edge.
+        double edge = SableBridge.horizontalDistance(ship, at.x + 10, at.z);
+        helper.assertTrue(Math.abs(edge - 8.5) < 0.1, "A point 10 blocks east of the raft's centre is " + edge + " from its nearest part, not 8.5");
+        helper.assertTrue(SableBridge.horizontalDistance(ship, at.x + 0.5, at.z) < 1.0e-6, "A point over the raft is not at distance 0");
+        double radius = TriggerRules.entryRadius(SableBridge.length(ship), SableBridge.linearVelocity(ship).length());
+        SeamSite near = SeamSites.addTemporary(level, (int) Math.floor(at.x + 1.5 + radius - 1.5), (int) Math.floor(at.z));
         TriggerRules.Status inside = TriggerRules.evaluate(level, raft.aperture(), null);
         helper.assertTrue(inside.onShip(), "An Aperture on a ship does not count as on one");
         helper.assertTrue(near.equals(inside.site()), "The nearest site is not the one just inside the radius");
-        helper.assertTrue(inside.entryRadius() == radius, "The rules used an entry radius of " + inside.entryRadius() + ", not " + radius);
-        helper.assertTrue(inside.radius(), "A site " + inside.distance() + " blocks away is outside the entry radius " + radius);
+        helper.assertTrue(Math.abs(inside.entryRadius() - radius) < 0.5, "The rules used an entry radius of " + inside.entryRadius() + ", not " + radius);
+        helper.assertTrue(inside.radius(), "A site " + inside.distance() + " blocks from the raft's edge is outside the entry radius " + radius);
         SeamSites.removeTemporary(level, near);
-        SeamSite far = SeamSites.addTemporary(level, (int) Math.ceil(at.x + radius) + 1, (int) Math.floor(at.z));
+        SeamSite far = SeamSites.addTemporary(level, (int) Math.ceil(at.x + 1.5 + radius) + 1, (int) Math.floor(at.z));
         TriggerRules.Status outside = TriggerRules.evaluate(level, raft.aperture(), null);
         helper.assertFalse(outside.radius(), "A site " + outside.distance() + " blocks away is inside the entry radius");
         helper.assertFalse(outside.allMet(), "Every rule held with the site out of range");
 
         SeamSites.removeTemporary(level, far);
-        SableBridge.remove(raft.ship());
+        SableBridge.remove(ship);
         helper.succeed();
     }
 

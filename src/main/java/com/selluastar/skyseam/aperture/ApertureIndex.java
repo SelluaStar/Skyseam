@@ -60,9 +60,9 @@ public final class ApertureIndex {
         return ships;
     }
 
-    /** True if a ship carrying an Aperture has its centre within {@code radius} blocks of {@code pos}. */
+    /** True if some part of a ship carrying an Aperture is within {@code radius} blocks of {@code pos}, horizontally. */
     public static boolean anyShipWithin(ServerLevel level, Vec3 pos, double radius) {
-        return ships(level).values().stream().anyMatch(entry -> SableBridge.position(entry.ship()).distanceToSqr(pos) <= radius * radius);
+        return ships(level).values().stream().anyMatch(entry -> SableBridge.horizontalDistance(entry.ship(), pos.x, pos.z) <= radius);
     }
 
     /** True if this ship carries an Aperture. */
