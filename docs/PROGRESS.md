@@ -371,3 +371,27 @@ Changed (DECISIONS K44, `tools/audio/synth.py`):
 **Verified:** `tools/audio/check.py` passes (12 files). Build and GameTests pass, and the asset test now covers 12
 sounds. **Needs your ears:** the new character. The bright harp plucks of the five thread snaps and the closing chime
 are unchanged and may now feel out of place next to the darker cues.
+
+### M1 follow-up: a new crack and a better opening (2026-10-09)
+
+The author said: "replace the cracking sound in the opening with something completely better because it sounds so
+bad, and also make the opening sound better in general, but don't remove sounds already in there". All 12 sound events
+stay. Rebuilt (DECISIONS K45): `seam/crack` (completely new), `seam/hairline`, `seam/thread_snap_1`…`_5` and
+`seam/ring_pulse`. The hum, crossing, closing chime and closing sound are byte-for-byte unchanged.
+
+**Measured** (I can't hear them):
+
+| Sound | Loudest 50 ms | Brightness (spectral centre) | Energy above 6 kHz |
+|---|---|---|---|
+| crack | −20.4 → −17.0 dBFS | 1064 Hz → spread evenly: 15% below 150 Hz, 35% 150–600, 29% 600–2k, 19% 2–5k | 3.6% → 1% |
+| hairline | −21.0 → −24.0 dBFS | 992 → 1477 Hz (glass swell instead of low static) | 3.8% → 0.3% |
+| thread snap 1 | −15.8 → −22.0 dBFS | 4393 → 1764 Hz | 22.7% → 2.4% |
+| ring pulse | −7.2 → −21.9 dBFS | about the same | 0% |
+
+- **The crack's shape:** the first, big crack is its loudest moment, and each of the eight step cracks stands
+  5–7 dB above the gaps between them, so they line up with the eight steps on screen.
+- **The hairline:** it swells from −37 to −24 dBFS, peaks just before 1.5 s and falls away as the crack lands.
+- **Checks:** `tools/audio/check.py` passes all 12 files. Build and all 21 GameTests pass.
+
+**Needs your ears:** all of it, above all whether the new crack sounds good, and whether the hum (unchanged and now
+louder than the opening around it) should come down.
