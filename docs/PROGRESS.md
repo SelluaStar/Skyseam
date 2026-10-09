@@ -395,3 +395,23 @@ stay. Rebuilt (DECISIONS K45): `seam/crack` (completely new), `seam/hairline`, `
 
 **Needs your ears:** all of it, above all whether the new crack sounds good, and whether the hum (unchanged and now
 louder than the opening around it) should come down.
+
+### M1 follow-up: one satisfying hit and a bass line (2026-10-09)
+
+The author said: "remove the sequential burst sounds at the beginning. just make the beginning sound more satisfying.
+also add a low hum/bass to the opening." Changed (DECISIONS K46): `seam/crack` and `seam/hairline`. Every other sound,
+the five thread plucks included, is unchanged.
+- **`seam/crack`:** the eight small cracks are gone. It is now one heavy hit (a hard snap, the falling 'pew' of ice
+  splitting and a deep sub boom) that blooms into a warm A-major chord in a wide hall.
+- **The bass line:** a clean A1 at 55 Hz, the open hum's note. It swells under the glass shimmer of `seam/hairline`,
+  lands with the hit and holds until the open hum takes over.
+
+**Measured:**
+- The crack has a single peak (−17 dBFS at the hit), then a smooth −22 to −24 bloom with no repeated spikes. 41% of
+  its energy is below 80 Hz.
+- Mixed as heard in game, the low end runs −48 → −34 dB through the appearance, −25 at the hit, about −30 through the
+  bloom, and −22 once the hum is in.
+- `tools/audio/check.py`, build and all 21 GameTests pass.
+
+**Needs your ears:** whether the hit and bloom feel satisfying, and the bass on your speakers. The open hum is still
+about 7 dB louder than the opening before it.

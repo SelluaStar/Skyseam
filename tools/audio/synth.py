@@ -216,8 +216,8 @@ def write(group, name, x, loop=False):
 
 def seam_hairline():
     """Beat 2, the Seam appears (0 to 1.5 s, then the crack): the air goes tense. A shimmer of glass swells in
-    backwards (a reversed reverb tail) and peaks the instant the crack lands, over a low drone and a breath of rising
-    air. No static: it should feel like the sky drawing in a breath."""
+    backwards (a reversed reverb tail) and peaks the instant the crack lands, over the opening's low A bass building
+    up and a breath of rising air. No static: it should feel like the sky drawing in a breath."""
     seconds = 2.0
     t = t_axis(seconds)
     peak = 1.5
@@ -232,39 +232,43 @@ def seam_hairline():
     # A low drone (A1 with its fifth) that rises with the swell and lets go with it.
     rise = np.clip(t / peak, 0, 1) ** 2
     after = 1 - np.clip((t - peak) / 0.4, 0, 1)
-    drone = one_pole_lowpass(saw(t, 55) + 0.6 * saw(t, 82.4), 120 + 380 * rise) * rise * after
+    # The opening's low A bass, building from nothing into the crack's hit.
+    low = bass(t, np.clip(t / peak, 0, 1) ** 1.2 * after)
     air = svf(rng.normal(0, 1, len(t)), 600 + 2400 * rise, 0.9) * rise * after
-    mix = reverse * 1.0 + drone * 0.22 + air * 0.25
+    mix = reverse * 1.0 + low * 0.9 + air * 0.25
     return finish_level(reverb(mix, seconds=1.8, wet=0.25), -24, fade_in=0.05, fade_out=0.3)
 
 
+def bass(t, shape, root=55.0):
+    """The opening's low hum: a clean A1 (55 Hz, the open hum's note) with a soft octave and a slow sway, shaped by
+    `shape` (one value per sample). Sines only, so it is felt as warmth rather than heard as buzz."""
+    sway = 1 + 0.08 * np.sin(2 * np.pi * 0.7 * t)
+    tone = np.sin(2 * np.pi * root * t) + 0.35 * np.sin(2 * np.pi * 2 * root * t + 0.5) + 0.12 * np.sin(2 * np.pi * 3 * root * t)
+    return tone * shape * sway
+
+
 def seam_crack():
-    """Beat 3, the sky splits (1.5 to 3.5 s, eight steps a quarter second apart, as on screen). One big crack lands
-    first: a hard snap, the falling 'pew' of ice splitting and a deep boom. Then eight smaller ice cracks, one per step,
-    rising a little in pitch, each with a faint glass tone, over a dark tone that opens up as the sky tears. The cracks
-    stay fairly dry so each one is heard; the tones and the tear sit in a wide hall. Kept below 9 kHz so it never
-    hisses."""
+    """Beat 3, the sky splits open (1.5 s on): one clean, heavy hit, then it blooms. A hard snap with the falling
+    'pew' of ice splitting and a deep sub boom, then a warm A-major chord (with an added ninth) swelling open in a wide
+    hall as the crack spreads, over the opening's low A bass, which carries on into the open Seam's hum. No run of
+    small cracks: just the one moment."""
     seconds = 3.6
     t = t_axis(seconds)
-    hits = np.zeros(len(t))
+    hit = np.zeros(len(t))
     big = ice_crack(0.8, 1.0, 4200)
-    hits[: len(big)] += big * 2.2
-    tones = sub_boom(t, decay=0.45) * 0.5
-    glass_t = t_axis(1.2)
-    for step in range(8):
-        n = int((0.25 + step * 0.25) * RATE)
-        crack = ice_crack(0.3, 0.2 + 0.05 * step, 3200 + 250 * step) * (0.9 + 0.06 * step)
-        end = min(len(t), n + len(crack))
-        hits[n:end] += crack[: end - n]
-        tone = bell(glass_t, 880 * 2 ** ((step % 5) * 2 / 12), ratios=(1, 2.76), amps=(1, 0.3), decay=0.5) * 0.08
-        end = min(len(t), n + len(tone))
-        tones[n:end] += tone[: end - n]
-    # The tear: a dark two-voice tone whose filter opens as the crack widens, then lets go.
-    open_up = np.clip(t / 2.2, 0, 1)
-    tear_shape = np.clip(t / 0.4, 0, 1) * (1 - np.clip((t - 2.2) / 1.0, 0, 1))
-    tones += one_pole_lowpass(saw(t, 73.4) + 0.7 * saw(t, 110.0 * 1.003), 200 + 1100 * open_up ** 1.5) * tear_shape * 0.07
-    mix = reverb(hits, seconds=1.6, wet=0.15) + reverb(tones, seconds=2.6, wet=0.4)
-    return finish_level(one_pole_lowpass(mix, 9000), -17, fade_out=0.4)
+    hit[: len(big)] += big * 2.2
+    boom = sub_boom(t, start=52, end=33, decay=0.8)
+    # The bloom: soft detuned sines with a little glass on top, swelling in after the hit and fading at the end.
+    bloom_shape = np.clip(t / 0.9, 0, 1) ** 1.5 * (1 - np.clip((t - 2.4) / 1.2, 0, 1))
+    chord = np.zeros(len(t))
+    for freq, amp in ((220.0, 1.0), (329.63, 0.8), (440.0, 0.7), (493.88, 0.45), (554.37, 0.55)):
+        chord += amp * 0.5 * (np.sin(2 * np.pi * freq * t) + np.sin(2 * np.pi * freq * 1.004 * t + 1.0))
+    glass = bell(np.maximum(0, t - 0.08), 1760, ratios=(1, 2.76), amps=(1, 0.25), decay=1.2) * (t >= 0.08) * 0.25
+    bloom = one_pole_lowpass(chord * bloom_shape, 2500) * 0.35 + glass
+    # Held right to the end, so it hands over to the open Seam's hum (same note) as that fades in.
+    low = bass(t, np.minimum(1, 0.6 + t / 0.15) * (1 - np.clip((t - 3.3) / 0.3, 0, 1)))
+    mix = reverb(hit, seconds=1.6, wet=0.2) + boom * 0.9 + reverb(bloom, seconds=2.8, wet=0.45) + low * 0.5
+    return finish_level(one_pole_lowpass(mix, 9000), -16, fade_out=0.4)
 
 
 def seam_close():
