@@ -41,7 +41,7 @@
   },
   "seam.close": {
     "subtitle": "subtitles.skyseam.seam.close",
-    "sounds": [{"name": "skyseam:seam/close", "attenuation_distance": 128}]
+    "sounds": [{"name": "skyseam:closing/close", "attenuation_distance": 128}]
   },
   "seam.mend": {
     "subtitle": "subtitles.skyseam.seam.mend",

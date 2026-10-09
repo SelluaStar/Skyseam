@@ -362,7 +362,7 @@ Changed (DECISIONS K44, `tools/audio/synth.py`):
 - **`seam/crack`**: eight sharp, dark cracks a quarter second apart, matching the eight crack steps on screen. Each is
   a burst of crackle over a short low thud, standing 10–19 dB above the static between them. Under them, a low groan
   sinks as the crack widens, and a muted low bell sounds as it gives.
-- **New `seam/close`** (`seam.close`), played the moment mending starts: air drawn back in, crackle thickening and
+- **New `closing/close`** (`seam.close`, in its own folder `sounds/closing/`, see `docs/CLOSING-AUDIO.md`), played the moment mending starts: air drawn back in, crackle thickening and
   tightening, and a sinking drone, all cut off at 3 s by a deep, soft thump as the crack seals. On a full mend the
   existing closing chime plays at that same moment. Subtitle: "Seam crackles shut".
 - Measured: about 20–30% of each new sound's energy is in the 500–4000 Hz band, so the crackle still carries on small
