@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/slab",
+  "textures": {
+    "bottom": "skyseam:block/stillstone_bricks",
+    "side": "skyseam:block/stillstone_bricks",
+    "top": "skyseam:block/stillstone_bricks"
+  }
+}

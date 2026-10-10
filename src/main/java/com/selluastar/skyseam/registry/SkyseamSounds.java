@@ -45,6 +45,9 @@ public final class SkyseamSounds {
     /** The Aperture is placed on, or assembled into, a ship. */
     public static final DeferredHolder<SoundEvent, SoundEvent> APERTURE_MOUNT = local("aperture.mount");
     public static final DeferredHolder<SoundEvent, SoundEvent> SKYCHART_UNFOLD = local("skychart.unfold");
+    /** Rebound (spec section 8): the splash into the Mirror Sea (a pitched vanilla stand-in) and the throw back up. */
+    public static final DeferredHolder<SoundEvent, SoundEvent> MIRROR_SEA_SPLASH = local("mirror_sea.splash");
+    public static final DeferredHolder<SoundEvent, SoundEvent> MIRROR_SEA_REBOUND = local("mirror_sea.rebound");
 
     private SkyseamSounds() {}
 

@@ -12,6 +12,7 @@ import org.jetbrains.annotations.Nullable;
 import com.selluastar.skyseam.Skyseam;
 import com.selluastar.skyseam.aperture.ApertureIndex;
 import com.selluastar.skyseam.external.SableBridge;
+import com.selluastar.skyseam.halcyon.Arrival;
 import com.selluastar.skyseam.external.Ship;
 import com.selluastar.skyseam.external.ShipFrame;
 import com.selluastar.skyseam.network.SkyseamNetwork;
@@ -201,6 +202,10 @@ public final class SeamCrossing {
             }
             Vec3 arrival = result.arrival();
             target.playSound(null, arrival.x, arrival.y, arrival.z, SkyseamSounds.SEAM_CROSSING.get(), SoundSource.AMBIENT, 1, 1);
+            // Beat 7: the arrival title, and every rider turned towards the Obelisk.
+            if (target.dimension() == HalcyonLayout.LEVEL) {
+                aboard.stream().filter(player -> player.level() == target).forEach(Arrival::welcome);
+            }
             AbsentRiders riders = AbsentRiders.get(level.getServer());
             result.bodies().forEach(body -> riders.shipCrossed(body.oldId(), body.ship(), body.move().offset(), target));
             // Spec section 6, "Moving the ship", step 4: mend the Overworld Seam.

@@ -25,6 +25,7 @@ import dev.ryanhcode.sable.api.block.BlockEntitySubLevelActor;
 import dev.ryanhcode.sable.api.physics.PhysicsPipeline;
 import dev.ryanhcode.sable.api.sublevel.ServerSubLevelContainer;
 import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
+import dev.ryanhcode.sable.physics.config.dimension_physics.DimensionPhysicsData;
 import dev.ryanhcode.sable.companion.SableCompanion;
 import dev.ryanhcode.sable.companion.SubLevelAccess;
 import dev.ryanhcode.sable.companion.math.BoundingBox3d;
@@ -148,6 +149,15 @@ public final class SableBridge {
                 .map(Ship::new)
                 .filter(ship -> position(ship).distanceTo(pos) <= maxDistance)
                 .min(Comparator.comparingDouble(ship -> position(ship).distanceToSqr(pos)));
+    }
+
+    /** Every live ship in the level. */
+    public static List<Ship> allShips(ServerLevel level) {
+        ServerSubLevelContainer container = SubLevelContainer.getContainer(level);
+        if (container == null) {
+            return List.of();
+        }
+        return container.getAllSubLevels().stream().filter(subLevel -> !subLevel.isRemoved()).map(Ship::new).toList();
     }
 
     /** Every live ship whose centre is within {@code radius} blocks of {@code pos}. */
@@ -294,6 +304,19 @@ public final class SableBridge {
             }
         }
         return found;
+    }
+
+    // ---- A level's physics (Sable's dimension_physics data) -----------------------------------------------------
+
+    /** The gravity Sable applies to ships in this level, in blocks per second squared. */
+    public static Vec3 gravity(Level level) {
+        Vector3d g = DimensionPhysicsData.getGravity(level);
+        return new Vec3(g.x, g.y, g.z);
+    }
+
+    /** The air pressure Sable uses at a point in this level (base pressure times its curve at that height). */
+    public static double airPressure(Level level, Vec3 at) {
+        return DimensionPhysicsData.getAirPressure(level, new Vector3d(at.x, at.y, at.z));
     }
 
     // ---- Velocity ---------------------------------------------------------------------------------------------

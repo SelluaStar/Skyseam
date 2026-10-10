@@ -1,0 +1,33 @@
+{
+  "dimension": "skyseam:halcyon",
+  "priority": 0,
+  "base_gravity": [
+    0.0,
+    -9.0,
+    0.0
+  ],
+  "base_pressure": 1.2,
+  "pressure_function": [
+    {
+      "altitude": 0.0,
+      "value": 1.0,
+      "slope": 0.0
+    },
+    {
+      "altitude": 320.0,
+      "value": 1.0,
+      "slope": 0.0
+    },
+    {
+      "altitude": 420.0,
+      "value": 0.3,
+      "slope": -0.004
+    },
+    {
+      "altitude": 520.0,
+      "value": 0.0,
+      "slope": 0.0
+    }
+  ],
+  "universal_drag": 0.07
+}

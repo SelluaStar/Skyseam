@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "skyseam:block/stillstone_pillar_horizontal",
+      "x": 90,
+      "y": 90
+    },
+    "axis=y": {
+      "model": "skyseam:block/stillstone_pillar"
+    },
+    "axis=z": {
+      "model": "skyseam:block/stillstone_pillar_horizontal",
+      "x": 90
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "variants": {
+    "facing=down": {
+      "model": "skyseam:block/prismite_cluster",
+      "x": 180
+    },
+    "facing=east": {
+      "model": "skyseam:block/prismite_cluster",
+      "x": 90,
+      "y": 90
+    },
+    "facing=north": {
+      "model": "skyseam:block/prismite_cluster",
+      "x": 90
+    },
+    "facing=south": {
+      "model": "skyseam:block/prismite_cluster",
+      "x": 90,
+      "y": 180
+    },
+    "facing=up": {
+      "model": "skyseam:block/prismite_cluster"
+    },
+    "facing=west": {
+      "model": "skyseam:block/prismite_cluster",
+      "x": 90,
+      "y": 270
+    }
+  }
+}

@@ -1,13 +1,16 @@
 {
   "type": "skyseam:halcyon",
   "generator": {
-    "type": "minecraft:flat",
-    "settings": {
-      "biome": "minecraft:the_void",
-      "layers": [],
-      "lakes": false,
-      "features": false,
-      "structure_overrides": []
+    "type": "skyseam:halcyon",
+    "biome_source": {
+      "type": "skyseam:halcyon",
+      "the_spindle": "skyseam:the_spindle",
+      "the_hush": "skyseam:the_hush",
+      "cirrus_reefs": "skyseam:cirrus_reefs",
+      "petalwash_meadows": "skyseam:petalwash_meadows",
+      "mirror_shoals": "skyseam:mirror_shoals",
+      "wreckfields": "skyseam:wreckfields",
+      "underbloom": "skyseam:underbloom"
     }
   }
 }

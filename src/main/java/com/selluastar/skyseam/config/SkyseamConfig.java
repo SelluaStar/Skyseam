@@ -34,6 +34,17 @@ public final class SkyseamConfig {
     public static final ModConfigSpec.DoubleValue ENTRY_RADIUS_PER_BLOCK;
     public static final ModConfigSpec.IntValue MAX_ENTRY_RADIUS;
 
+    // Spec section 7, the Halcyon (docs/DECISIONS.md K59 to K66).
+    public static final ModConfigSpec.DoubleValue ISLAND_DENSITY_SMALL;
+    public static final ModConfigSpec.DoubleValue ISLAND_DENSITY_MEDIUM;
+    public static final ModConfigSpec.DoubleValue ISLAND_DENSITY_LARGE;
+    public static final ModConfigSpec.DoubleValue VEIL_PLAYER_PUSH;
+    public static final ModConfigSpec.DoubleValue VEIL_SHIP_PUSH;
+    public static final ModConfigSpec.IntValue REBOUND_HEIGHT;
+    public static final ModConfigSpec.IntValue REBOUND_COOLDOWN_SECONDS;
+    public static final ModConfigSpec.IntValue REBOUND_SLOW_FALLING_SECONDS;
+    public static final ModConfigSpec.IntValue REBOUND_WEAKNESS_SECONDS;
+
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
         b.push("seam");
@@ -94,6 +105,31 @@ public final class SkyseamConfig {
         MAX_ENTRY_RADIUS = b.comment("The entry radius never grows past this many blocks, however big or fast the ship. A Seam",
                         "further away than the server's view distance can't be seen until the ship comes closer.")
                 .defineInRange("max_entry_radius", 256, 16, 512);
+        b.pop();
+
+        b.push("halcyon");
+        ISLAND_DENSITY_SMALL = b.comment("How many small islands (20 to 40 blocks across) the Halcyon makes: 1 is the default, 0 none.",
+                        "Only chunks generated after a change are affected.")
+                .defineInRange("island_density_small", 1.0, 0.0, 1.8);
+        ISLAND_DENSITY_MEDIUM = b.comment("How many medium islands (60 to 120 blocks across) the Halcyon makes.")
+                .defineInRange("island_density_medium", 1.0, 0.0, 1.6);
+        ISLAND_DENSITY_LARGE = b.comment("How many large islands (150 to 300 blocks across) the Halcyon makes.")
+                .defineInRange("island_density_large", 1.0, 0.0, 2.0);
+        VEIL_PLAYER_PUSH = b.comment("How hard the Veil pushes a player back towards the centre at the very rim, in blocks per tick",
+                        "of speed added each second. It grows from nothing where the Veil begins.")
+                .defineInRange("veil_player_push", 0.6, 0.0, 4.0);
+        VEIL_SHIP_PUSH = b.comment("How hard the Veil pushes a ship back towards the centre at the very rim, in blocks per second",
+                        "squared. Past the rim a ship flying outward is turned back as well.")
+                .defineInRange("veil_ship_push", 4.0, 0.0, 40.0);
+        REBOUND_HEIGHT = b.comment("How far above the Mirror Sea Rebound throws whoever falls into it, in blocks. At most 60: the game",
+                        "cannot send a player a faster launch than that takes.")
+                .defineInRange("rebound_height", 24, 4, 60);
+        REBOUND_COOLDOWN_SECONDS = b.comment("Rebound throws the same creature at most once in this many seconds.")
+                .defineInRange("rebound_cooldown_seconds", 30, 0, 600);
+        REBOUND_SLOW_FALLING_SECONDS = b.comment("Seconds of Slow Falling after a Rebound.")
+                .defineInRange("rebound_slow_falling_seconds", 8, 0, 120);
+        REBOUND_WEAKNESS_SECONDS = b.comment("Seconds of Weakness once the Slow Falling ends.")
+                .defineInRange("rebound_weakness_seconds", 10, 0, 120);
         b.pop();
         SPEC = b.build();
     }

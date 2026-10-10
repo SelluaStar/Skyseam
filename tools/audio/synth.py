@@ -441,7 +441,38 @@ def skychart_unfold():
     return finish_level(x + sparkle, -24, fade_out=0.1)
 
 
+def mirror_sea_rebound():
+    """Rebound (spec section 8): the Mirror Sea throws you back up. A watery whoosh that rises, a few bubbles, and a
+    quick glass glissando climbing C5, E5, G5, C6, so it sounds like being sent back up rather than hurt."""
+    seconds = 1.6
+    t = t_axis(seconds)
+    sweep_centre = 350 + 2200 * np.clip(t / 0.7, 0, 1) ** 1.5
+    whoosh = np.zeros(len(t))
+    noise = np.random.default_rng(7).standard_normal(len(t))
+    # A band of noise whose centre slides up: filter in short blocks.
+    block = 512
+    for start in range(0, len(t), block):
+        stop = min(len(t), start + block)
+        whoosh[start:stop] = svf(noise[max(0, start - 2048):stop], sweep_centre[start], 2.0)[-(stop - start):]
+    whoosh *= np.sin(np.pi * np.clip(t / 0.9, 0, 1)) ** 2 * 0.8
+    bubbles = np.zeros(len(t))
+    rng = np.random.default_rng(11)
+    for _ in range(9):
+        start = rng.uniform(0.0, 0.5)
+        f = rng.uniform(500, 1200)
+        n = int(start * RATE)
+        local = t[: len(t) - n]
+        pop = np.sin(2 * np.pi * (f + 900 * local) * local) * np.exp(-local / 0.03) * 0.25
+        bubbles[n:] += pop
+    chime = np.zeros(len(t))
+    for k, f0 in enumerate((523.25, 659.26, 783.99, 1046.5)):
+        n = int((0.18 + 0.07 * k) * RATE)
+        chime[n:] += (bell(t, f0, decay=0.9) * (0.45 + 0.1 * k))[: len(t) - n]
+    return finish_level(reverb(whoosh + bubbles + chime * 0.5, seconds=1.4, wet=0.28), -20, fade_out=0.25)
+
+
 APERTURE = [("charge", aperture_charge), ("ready", aperture_ready), ("mount", aperture_mount)]
+MIRROR_SEA = [("rebound", mirror_sea_rebound)]
 SKYCHART = [("unfold", skychart_unfold)]
 
 
@@ -453,7 +484,7 @@ SEAM = (
 LOOPS = {"seam/hum", "aperture/charge"}
 # The Seam's closing crackle has its own folder (sounds/closing/), see docs/CLOSING-AUDIO.md.
 CLOSING = [("close", seam_close)]
-GROUPS = {"seam": SEAM, "closing": CLOSING, "aperture": APERTURE, "skychart": SKYCHART}
+GROUPS = {"seam": SEAM, "closing": CLOSING, "aperture": APERTURE, "skychart": SKYCHART, "mirror_sea": MIRROR_SEA}
 
 
 def main(argv):

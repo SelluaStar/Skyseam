@@ -10,8 +10,12 @@ import com.selluastar.skyseam.command.SkyseamCommands;
 import com.selluastar.skyseam.compat.fealty.FealtyCompat;
 import com.selluastar.skyseam.config.SkyseamClientConfig;
 import com.selluastar.skyseam.config.SkyseamConfig;
+import com.selluastar.skyseam.datagen.SkyseamDataGen;
 import com.selluastar.skyseam.dev.DevBootCheck;
 import com.selluastar.skyseam.external.ExternalIds;
+import com.selluastar.skyseam.halcyon.LanternSun;
+import com.selluastar.skyseam.halcyon.Rebound;
+import com.selluastar.skyseam.halcyon.Veil;
 import com.selluastar.skyseam.network.SkyseamNetwork;
 import com.selluastar.skyseam.registry.SkyseamBlockEntities;
 import com.selluastar.skyseam.registry.SkyseamBlocks;
@@ -22,6 +26,7 @@ import com.selluastar.skyseam.registry.SkyseamItems;
 import com.selluastar.skyseam.registry.SkyseamMenus;
 import com.selluastar.skyseam.registry.SkyseamParticles;
 import com.selluastar.skyseam.registry.SkyseamSounds;
+import com.selluastar.skyseam.registry.SkyseamWorldgen;
 import com.selluastar.skyseam.seam.Seams;
 import com.selluastar.skyseam.seam.site.SeamSites;
 import com.selluastar.skyseam.seam.site.SiteKeeper;
@@ -55,8 +60,10 @@ public final class Skyseam {
         SkyseamBlockEntities.register(modBus);
         SkyseamMenus.register(modBus);
         SkyseamCreativeTabs.register(modBus);
+        SkyseamWorldgen.register(modBus);
         modBus.addListener(SkyseamNetwork::register);
         modBus.addListener(Skyseam::commonSetup);
+        modBus.addListener(SkyseamDataGen::gatherData);
 
         NeoForge.EVENT_BUS.addListener(DevBootCheck::onServerStarted);
         NeoForge.EVENT_BUS.addListener(Seams::onServerStarted);
@@ -73,6 +80,11 @@ public final class Skyseam {
         NeoForge.EVENT_BUS.addListener(AbsentRiders::onLoggedOut);
         NeoForge.EVENT_BUS.addListener(AbsentRiders::onLoggedIn);
         NeoForge.EVENT_BUS.addListener(ApertureOwnership::onItemCrafted);
+        NeoForge.EVENT_BUS.addListener(LanternSun::onLoggedIn);
+        NeoForge.EVENT_BUS.addListener(Veil::onLevelTick);
+        NeoForge.EVENT_BUS.addListener(Rebound::onEntityTick);
+        NeoForge.EVENT_BUS.addListener(Rebound::onLevelTick);
+        NeoForge.EVENT_BUS.addListener(Rebound::onServerStopped);
     }
 
     private static void commonSetup(FMLCommonSetupEvent event) {

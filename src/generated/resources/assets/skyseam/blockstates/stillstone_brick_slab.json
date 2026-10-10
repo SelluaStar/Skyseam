@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "skyseam:block/stillstone_brick_slab"
+    },
+    "type=double": {
+      "model": "skyseam:block/stillstone_bricks"
+    },
+    "type=top": {
+      "model": "skyseam:block/stillstone_brick_slab_top"
+    }
+  }
+}

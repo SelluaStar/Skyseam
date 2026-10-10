@@ -18,6 +18,7 @@ public final class SkyseamCreativeTabs {
             .displayItems((parameters, output) -> {
                 output.accept(SkyseamItems.HARMONIC_APERTURE.get());
                 output.accept(SkyseamItems.SKYCHART.get());
+                SkyseamBlocks.halcyonBlocks().forEach(block -> output.accept(block.get()));
             })
             .build());
 

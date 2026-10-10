@@ -1,0 +1,16 @@
+{
+  "values": [
+    "skyseam:harmonic_aperture",
+    "skyseam:stillstone",
+    "skyseam:stillstone_bricks",
+    "skyseam:mossy_stillstone_bricks",
+    "skyseam:chiseled_stillstone_bricks",
+    "skyseam:stillstone_pillar",
+    "skyseam:stillstone_brick_slab",
+    "skyseam:stillstone_brick_stairs",
+    "skyseam:stillstone_brick_wall",
+    "skyseam:small_prismite_bud",
+    "skyseam:large_prismite_bud",
+    "skyseam:prismite_cluster"
+  ]
+}
