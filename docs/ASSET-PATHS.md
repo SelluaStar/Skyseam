@@ -4,7 +4,8 @@
 found **by name** at the paths below. Replacing a file with another file of the same name must work with **no code
 change**. If it doesn't, that is a bug: report it.
 
-All paths are under `src/main/resources/`. The namespace is `skyseam`.
+All paths are under `src/main/resources/`, except the block files `runData` writes into `src/generated/resources/`
+(see "Added in M3"). The namespace is `skyseam`.
 
 | Kind | Folder | Naming | How to replace |
 |---|---|---|---|
@@ -44,7 +45,22 @@ All paths are under `src/main/resources/`. The namespace is `skyseam`.
 | Aperture and Skychart sounds | `sounds/aperture/{charge,ready,mount}.ogg`, `sounds/skychart/unfold.ogg` | Mono. `charge` is a loop; its pitch rises with the charge |
 | Blockstate and models | `blockstates/harmonic_aperture.json`, `models/block/harmonic_aperture.json`, `models/item/{harmonic_aperture,skychart}.json` | The block model only gives the particle texture; GeckoLib draws the block |
 | Loot table | `data/skyseam/loot_table/blocks/harmonic_aperture.json` | Keeps the owner (`skyseam:owner`) on the dropped item |
-| Placeholder Halcyon | `data/skyseam/dimension_type/halcyon.json`, `data/skyseam/dimension/halcyon.json` | Replaced in M3 |
+| Placeholder Halcyon | `data/skyseam/dimension_type/halcyon.json`, `data/skyseam/dimension/halcyon.json` | Replaced in M3 (below) |
+
+### Added in M3
+
+| Asset | Path under `assets/skyseam/` (or `data/skyseam/`) | Notes for a replacement |
+|---|---|---|
+| Halcyon block textures | `textures/block/{stillstone,stillstone_bricks,mossy_stillstone_bricks,chiseled_stillstone_bricks,stillstone_pillar,stillstone_pillar_top,stillstone_glass,cloud,rose_cloud,dusk_cloud,petal_carpet,cloudmoss,glow_moss,lantern_vine,lantern_vine_tip,small_prismite_bud,large_prismite_bud,prismite_cluster}.png` | 16×16. `stillstone_glass` and the cloud blocks are drawn translucent, so their alpha counts. The slab, stairs and wall use `stillstone_bricks` |
+| Halcyon block files | `src/generated/resources/assets/skyseam/{blockstates,models/block,models/item}/<block>.json`, `src/generated/resources/data/skyseam/loot_table/blocks/<block>.json`, block tags under `src/generated/resources/data/{minecraft,skyseam}/tags/block/` | Written by `gradlew runData` from `src/main/java/com/selluastar/skyseam/datagen/`. Replace textures freely. To change a model, a loot table or a tag, edit the datagen class and run `runData`: a hand-written file at the same path would be a second copy of it |
+| The Lantern-Sun | `textures/environment/lantern_sun.png` | A soft orb on transparent, drawn facing the camera. Its bright core must span the middle 9 of every 32 pixels of half-width: the code sizes the orb from that. Tinted white-gold to ember by code |
+| Cloud layer | `textures/environment/halcyon_clouds.png` | Tiles in both directions. Drawn white and tinted by the light, at Y 384, fading with distance |
+| Sky, fog, the Veil, the Hush's dusk | none | Drawn by code (`client/halcyon/HalcyonSky`, `HalcyonFog`). The phase palettes are at the top of `HalcyonSky` |
+| Biome colours | `data/skyseam/worldgen/biome/<biome>.json` (`the_spindle`, `the_hush`, `cirrus_reefs`, `petalwash_meadows`, `mirror_shoals`, `wreckfields`, `underbloom`) | Sky, fog, water, water fog, grass and foliage colours. Written by `tools/worldgen/make_halcyon_data.py` |
+| The dimension | `data/skyseam/dimension_type/halcyon.json`, `data/skyseam/dimension/halcyon.json` | Written by `tools/worldgen/make_halcyon_data.py`. The generator and biome source are code (`skyseam:halcyon`) |
+| Physics pack | `data/skyseam/dimension_physics/halcyon.json` | Sable's format (DEVIATIONS D22). Gravity, pressure curve and drag are the numbers to tune |
+| Sundered Obelisk | `data/skyseam/structure/sundered_obelisk.nbt` | At most 48 on every side. Keep the markers and see where it is placed in `docs/STRUCTURE-MARKERS.md`. Made by `tools/structures/make_sundered_obelisk.py` |
+| Mirror Sea sounds | `sounds/mirror_sea/rebound.ogg`; `mirror_sea.splash` names a vanilla event in `sounds.json` | Mono. To give the splash its own file, change its `sounds.json` entry to name `skyseam:mirror_sea/splash` and add the `.ogg` |
 
 Note that 1.21 data folders are **singular**: `recipe/`, `advancement/`, `loot_table/`, `structure/`.
 
@@ -58,7 +74,9 @@ They are test scaffolding, not world structures. Structure checks skip them, and
 | Blockbench sources | `art/models/<name>.bbmodel` | `geckolib_model` format. Edit here, then export the geo and animation JSON over the resources files |
 | Texture generators | `tools/textures/` | Pillow + numpy scripts that share one palette file. Run with `tools/.venv/Scripts/python.exe` |
 | Sound generators | `tools/audio/` | `synth.py` (writes mono OGG) and `check.py` (validates files and `sounds.json`) |
-| Structure generators | `tools/structures/` | Write `.nbt` files plus isometric previews (`preview.py`) |
+| Structure generators | `tools/structures/` | Write `.nbt` files plus isometric previews (`preview.py`). `structure_lib.py` writes the same bytes for the same structure |
+| World data generator | `tools/worldgen/make_halcyon_data.py` | Writes the Halcyon's biome, dimension and physics JSON |
+| Block datagen | `src/main/java/com/selluastar/skyseam/datagen/` | Run by `gradlew runData`; writes `src/generated/resources/` |
 | Reference images | `reference/` | Style references only (spec §3) |
 
 Folders are created by the milestone that first needs them. This file is the contract they follow.

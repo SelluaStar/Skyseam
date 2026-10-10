@@ -84,7 +84,8 @@ public final class SkyseamCommands {
                 .requires(source -> source.hasPermission(2))
                 .then(seam())
                 .then(ship())
-                .then(site()));
+                .then(site())
+                .then(HalcyonCommands.build()));
     }
 
     // ---- /skyseam seam -----------------------------------------------------------------------------------------

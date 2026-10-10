@@ -1,0 +1,30 @@
+{
+  "variants": {
+    "facing=down": {
+      "model": "skyseam:block/small_prismite_bud",
+      "x": 180
+    },
+    "facing=east": {
+      "model": "skyseam:block/small_prismite_bud",
+      "x": 90,
+      "y": 90
+    },
+    "facing=north": {
+      "model": "skyseam:block/small_prismite_bud",
+      "x": 90
+    },
+    "facing=south": {
+      "model": "skyseam:block/small_prismite_bud",
+      "x": 90,
+      "y": 180
+    },
+    "facing=up": {
+      "model": "skyseam:block/small_prismite_bud"
+    },
+    "facing=west": {
+      "model": "skyseam:block/small_prismite_bud",
+      "x": 90,
+      "y": 270
+    }
+  }
+}

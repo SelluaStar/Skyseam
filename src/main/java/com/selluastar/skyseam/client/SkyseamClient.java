@@ -10,6 +10,9 @@ import com.selluastar.skyseam.client.aperture.SeamGaugeHud;
 import com.selluastar.skyseam.client.skychart.ClientSkychart;
 import com.selluastar.skyseam.client.skychart.SkychartHud;
 import com.selluastar.skyseam.client.dev.DevSceneCapture;
+import com.selluastar.skyseam.client.halcyon.HalcyonFog;
+import com.selluastar.skyseam.client.halcyon.HalcyonSky;
+import com.selluastar.skyseam.client.halcyon.VeilMuffle;
 import com.selluastar.skyseam.client.particle.GlowParticle;
 import com.selluastar.skyseam.client.seam.SeamClientEffects;
 import com.selluastar.skyseam.client.seam.SeamRenderer;
@@ -25,6 +28,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterDimensionSpecialEffectsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
@@ -42,6 +46,9 @@ public final class SkyseamClient {
     public static void onClientSetup(FMLClientSetupEvent event) {
         NeoForge.EVENT_BUS.addListener(SeamClientEffects::onClientTick);
         NeoForge.EVENT_BUS.addListener(SeamClientEffects::onComputeCameraAngles);
+        NeoForge.EVENT_BUS.addListener(HalcyonFog::onFogColour);
+        NeoForge.EVENT_BUS.addListener(HalcyonFog::onRenderFog);
+        NeoForge.EVENT_BUS.addListener(VeilMuffle::onPlaySound);
         // The in-game config screen (Mods > Skyseam > Config), for the shake and flash strength among others.
         ModList.get().getModContainerById(Skyseam.MOD_ID)
                 .ifPresent(container -> container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new));
@@ -57,6 +64,11 @@ public final class SkyseamClient {
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(SkyseamEntities.SEAM.get(), SeamRenderer::new);
         event.registerBlockEntityRenderer(SkyseamBlockEntities.APERTURE.get(), ApertureRenderer::new);
+    }
+
+    @SubscribeEvent
+    public static void registerSkies(RegisterDimensionSpecialEffectsEvent event) {
+        event.register(HalcyonSky.ID, new HalcyonSky());
     }
 
     @SubscribeEvent

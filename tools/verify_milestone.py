@@ -5,6 +5,7 @@ Steps, in order:
   data           gradlew runData                     -> data gatherer ran for skyseam
   gametest       gradlew runGameTestServer           -> "All N required tests passed"
   server         gradlew runServer -PbootCheck       -> "Done (" and the Skyseam boot-check marker
+                 (the dev server's Halcyon is deleted first, so the boot check always generates it fresh)
 
 Every step also fails on an ERROR line or a stack frame from Skyseam's own code, or on a crash report.
 Logs are written to build/verify/<step>.log. Gradle can report success when the game-test server never
@@ -14,6 +15,7 @@ Run: tools/.venv/Scripts/python.exe tools/verify_milestone.py [step ...]
 """
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -86,8 +88,17 @@ def without_project_path(line):
     return line
 
 
+def fresh_halcyon():
+    """Delete the dev server's Halcyon, so the boot check generates it with the current generator."""
+    halcyon = ROOT / "run" / "world" / "dimensions" / "skyseam" / "halcyon"
+    if halcyon.is_dir():
+        shutil.rmtree(halcyon)
+
+
 def run_step(name):
     args, check = STEPS[name]
+    if name == "server":
+        fresh_halcyon()
     log_path = LOG_DIR / f"{name}.log"
     started = time.time()
     with open(log_path, "w", encoding="utf-8", errors="replace") as out:

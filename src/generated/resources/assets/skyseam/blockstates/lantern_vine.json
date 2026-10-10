@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "tip=false": {
+      "model": "skyseam:block/lantern_vine"
+    },
+    "tip=true": {
+      "model": "skyseam:block/lantern_vine_tip"
+    }
+  }
+}

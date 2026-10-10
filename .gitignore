@@ -10,6 +10,9 @@ bin/
 # Minecraft run folders (dev worlds, logs, copied runtime mods)
 run/
 
+# runData's record of what it last wrote (the generated files themselves are committed)
+src/generated/resources/.cache/
+
 # Python
 tools/.venv/
 __pycache__/

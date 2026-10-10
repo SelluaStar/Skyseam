@@ -21,6 +21,11 @@ public final class SkyseamItems {
 
     private SkyseamItems() {}
 
+    static {
+        // A plain block item for every Halcyon block.
+        SkyseamBlocks.halcyonBlocks().forEach(ITEMS::registerSimpleBlockItem);
+    }
+
     public static void register(IEventBus modBus) {
         ITEMS.register(modBus);
     }

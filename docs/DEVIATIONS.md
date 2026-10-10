@@ -20,7 +20,7 @@ where the spec is simply silent go in `DECISIONS.md` instead.
 
 ## Still to confirm at the milestone that needs it
 - Whether the Pneumatic Coupler (a renamed `simulated:creative_physics_staff`) really works for a survival player. The static scan found no creative check; M5 adds a GameTest and the author checks it in game.
-- The exact JSON shape of `base_gravity` and `pressure_function` (M3).
+- ~~The exact JSON shape of `base_gravity` and `pressure_function` (M3).~~ Answered in M3 (D22).
 - ~~Cross-dimension ship transfer through `toData`/`fullyLoad` and through `assembleBlocks`.~~ Answered in M0: both work, route A with corrections (D12, DECISIONS K19).
 
 ## Found in M0 (ship crossing spike)
@@ -52,3 +52,9 @@ where the spec is simply silent go in `DECISIONS.md` instead.
 | D19 | Spec §6 "Pilot": a pilot aboard | Create Aeronautics has no pilot: the steering wheel doesn't record who holds it | A player aboard the ship, or a body tied to it, who may use the Aperture (DECISIONS K50) |
 | D20 | GameTests can cross into the Halcyon | The GameTest server loads no data-pack dimensions, so `skyseam:halcyon` doesn't exist there | Crossing GameTests use the End as a stand-in (`SeamCrossing.destinationForTests`). The server boot check (`-PbootCheck`) checks that the real Halcyon loads |
 | D21 | Spec §6 moves "the ship" | Ropes and joints tie Sable bodies into groups, and Sable's save format keeps the links by body id and plot position. A rope's points are saved in world space. A body that lands in another plot slot moves its blocks, but positions stored inside other blocks' data don't move | The whole group moves together (DECISIONS K53). Skyseam moves rope points and rope ends itself (`SimulatedBridge`). Other joints (bearings, springs, docking connectors) keep their links when every body keeps its plot slot, which is the normal case. If a body has to change slot, those joints may let go: untested |
+
+## Found in M3 (the shell)
+
+| # | Expected (spec) | Reality (Sable 2.0.6) | What Skyseam does |
+|---|---|---|---|
+| D22 | Spec §7 physics pack: "`data/skyseam/dimension_physics/halcyon.json` … gravity -9, base pressure 1.2 with the curve staying flat to Y 320, universal drag 0.07. Confirm the folder name and the fields" | The folder is right. Sable also needs `dimension` (the level it applies to) and `priority`. Gravity is a vector, `base_gravity: [x, y, z]` (Sable's default is [0, −11, 0]). The pressure at a height is `base_pressure` times a curve, `pressure_function`: a list of `{altitude, value, slope}` points it joins smoothly. `universal_drag` is a plain number (default 0.09). Also read: `magnetic_north` and `ignore_chunks` | The file sets `dimension` `skyseam:halcyon`, gravity [0, −9, 0], pressure 1.2 times a curve that stays at 1.0 to Y 320 and falls to 0.3 at the lid (Y 420) and 0 at Y 520, and drag 0.07. The server boot check reads Sable's gravity and pressure back for the Halcyon (−9 and 1.2 at Y 200) |

@@ -597,3 +597,173 @@ bigger and when it's going faster … use the closest part of the ship, not the 
 **Needs the author:** whether the new ranges feel right on a real ship. They're config: `entry_radius_per_block`,
 `max_entry_radius` and `max_speed`. Beyond the server's view distance (160 blocks by default) the shimmer can't be
 seen until you come closer, but the gauge and the charge work.
+
+## M3: the shell (2026-10-09)
+
+Spec §19: "Dimension, sky, physics pack, Arrival Lane, Veil, Mirror Sea Rebound, biomes, the structure generator tools
+and the Sundered Obelisk. Done when: a ship arrives and the Obelisk is in view."
+
+The author's answers before building:
+- **Blocks:** a core custom block set now; Glassreed and Lumen Lily come in M4 with the wind (DECISIONS K62).
+- **The Obelisk:** it fits in 48 blocks, so one structure block can save a hand-built replacement (K64).
+
+**Built**
+- **The world** (`world/halcyon/`, K59–K61): a custom chunk generator.
+  - **Islands:** three size classes of floating islands between Y 140 and 320, nothing above the sky lid at Y 420.
+  - **The Mirror Sea:** water at Y 96 over a shallow pale floor, out to radius 2,000.
+  - **Shapes follow the ring:**
+    - low pale reefs standing in the sea in the Mirror Shoals;
+    - wide meadows in Petalwash;
+    - stacked cloud reefs in the Cirrus Reefs;
+    - needle spires with deep hollows in the Hush;
+    - small wrecks in the Wreckfields;
+    - a ring of islands round the Spindle.
+  - **The Arrival Lane:** at (−848.5, 240, 848.5) on the south-west rim, in 96×110×96 blocks of clear air, with nothing
+    tall between it and the Anchorage.
+  - **The Anchorage:** a fixed island 160 blocks ahead of the lane, flat at Y 199, where the Sundered Obelisk stands.
+  - **Flora:** petals, grass, cloudmoss and Prismite on top; glow moss, lantern vines and hanging roots under every
+    island.
+- **Biomes** (K60): seven, in rings with wavy borders, plus Wreckfield patches and the Underbloom band below Y 140.
+  Each has its own sky, fog and water colours. No vanilla features or spawns.
+- **The dimension:** Y 0 to 512, always noon to the game (`fixed_time`, K66), sky effects `skyseam:halcyon`.
+- **The physics pack** (`dimension_physics/halcyon.json`, DEVIATIONS D22): gravity −9; pressure 1.2, flat to Y 320,
+  thinning to 0.3 at the lid; drag 0.07.
+- **The Lantern-Sun** (`halcyon/LanternSun`, K66–K67): a 40-minute cycle of four phases (Dawn-Glass, Noon-Bloom,
+  Dusk-Prism, the Hush), kept in world data and synced to players. The orb circles the Spindle at Y 360.
+- **The sky** (`client/halcyon/HalcyonSky`, `[FIRST PASS]`):
+  - a pastel dome for each phase;
+  - a glow round the Lantern-Sun, and the orb drawn where it really is;
+  - a faint ring on the horizon;
+  - stars and aurora in the Hush;
+  - a slow cloud layer at Y 384;
+  - dimmer light in the Hush.
+
+  The sky and the fog share one colour, so distant islands and the far sea fade into the sky without a seam (K70).
+- **The Hush ring** keeps a standing dusk whatever the phase: violet sky, stars, dimmer light and quieter sound (K69).
+- **The Veil** (`halcyon/Veil`, K71), over the outer 200 blocks and under the lid:
+  - the fog closes in and the whole sky washes to pearl white, and sound muffles;
+  - players are pushed back in, and carried back past the rim;
+  - ships are turned in, and past the rim their outward speed is reflected;
+  - nothing is ever damaged.
+- **Rebound** (`halcyon/Rebound`, K72):
+  - Falling into the sea throws you 24 blocks up with 8 s of Slow Falling, then 10 s of Weakness, at most once every
+    30 s.
+  - A ship that dips into the sea is sprung back up.
+  - Two new sounds: `mirror_sea/rebound` (synthesized) and `mirror_sea.splash` (a pitched vanilla stand-in).
+- **Arrival** (K68): riders crossing into the Halcyon face the Obelisk and see the title "The Halcyon".
+- **Blocks** (K62, `[FIRST PASS]` textures from `tools/textures/make_halcyon_blocks.py`):
+  - the Stillstone set: stone, bricks, mossy and chiseled bricks, pillar, glass, slab, stairs and wall;
+  - three cloud blocks, which soften falls;
+  - Petal Carpet, Cloudmoss and glow moss;
+  - the lantern vine;
+  - three Prismite stages.
+
+  Their block files come from datagen (K63).
+- **Structure tools** (`tools/structures/`): a byte-for-byte repeatable structure writer, an isometric preview, and
+  the Sundered Obelisk's generator (K64). The Obelisk is a split mossy monolith with a glowing orb in the gap, over a
+  gateway plaza, 31×48×31. The motto is carved over the gate.
+- **Markers** (K65): data markers are swapped for their blocks after placement. The list is in
+  `docs/STRUCTURE-MARKERS.md`.
+- **Commands** (K73): `/skyseam halcyon tp <arrival|anchorage|spindle|hush|cirrus|petalwash|shoals|veil>` and
+  `/skyseam halcyon phase <dawn|noon|dusk|hush>`.
+- **Config** section `halcyon`: island density per size class, the Veil's pushes, and Rebound's height (4 to 60),
+  cooldown and effect lengths.
+
+**Verified (actually run)**
+- **The milestone check** (`tools/verify_milestone.py`): build ✓, runData ✓, **45/45 GameTests** ✓ (3 runs in a row),
+  server boot ✓.
+- **The 6 new GameTests** (`HalcyonGameTests`):
+  - `islandsFollowTheLayout`:
+    - 810 islands for the test seed, in all three sizes and every kind; the same seed gives the same islands;
+    - no block in the lane's clearance, and nothing tall in the view to the Obelisk;
+    - the Anchorage flat under the whole plaza;
+    - nothing above the lid, and no floating island dipping into the sea;
+    - the sea's surface at Y 96, and no sea past radius 2,000.
+  - `biomesFormRings`:
+    - each ring at its sample point: the Anchorage in Petalwash, the lane over the Shoals;
+    - the Underbloom below Y 140, and Wreckfield patches;
+    - the Hush's dusk full inside the ring and absent outside it.
+  - `veilPushesBack`: how deep each point is; push direction and carry-back for players; a ship's reflection past
+    the rim and at the lid.
+  - `reboundThrowsBackUp`:
+    - the launch rises exactly 24 blocks under the game's own gravity and drag;
+    - Slow Falling, and the 30 s cooldown;
+    - a real server player with a connection is caught by the fall their client reported, and is lifted out of the
+      water before the launch.
+  - `lanternSunKeepsTime`: the phases, the brightness, and the phase command.
+  - `structuresFitAndHaveTheirMarkers`: every structure file is at most 48 per side, with its markers and only
+    palette blocks. Placed, its motto marker becomes the carved sign.
+- **The server boot check:** a real dedicated server with the real Halcyon, generated fresh on every run. It checks:
+  - the lane's clearance is empty, with sea under it;
+  - the Obelisk's blocks match its file, and its motto is carved;
+  - the Anchorage is in Petalwash;
+  - Sable reads gravity −9 and pressure 1.2 for the Halcyon.
+
+  Generating the lane and the Anchorage took about 1 s.
+- **Sounds:** `tools/audio/check.py`: all 18 pass.
+- **The real client** (`tools/capture/m3_shell.json`):
+  - **Arrival:** the raft crosses as in M2 and arrives at the lane with the title, the Obelisk on its island ahead.
+  - **Shots:** the four phases, the Hush sky, the Obelisk's gate, plaza and motto, each ring, under the Anchorage,
+    and both directions inside the Veil.
+  - **Rebound:** a survival player dropped from 40 blocks into the sea was thrown back up. A traced run measured the
+    top of the throw at 24.2 blocks above the sea.
+
+  Contact sheet: [`docs/previews/m3-shell.png`](previews/m3-shell.png). The Obelisk:
+  [`docs/previews/m3-obelisk.png`](previews/m3-obelisk.png). The blocks:
+  [`docs/previews/m3-blocks.png`](previews/m3-blocks.png).
+- **Fixed from the capture runs, before this commit:**
+  - **Rebound never threw a player.** The server moved the player without telling their client, and the launch
+    assumed Slow Falling on the way up. The game only applies it on the way down. Now the client is moved to the
+    surface first, and the climb uses full gravity.
+  - **The Veil barely showed.** The sky ignored the fog; now it washes out with it.
+  - **The far sea had edges.** Flying low it ended in a pale rim; from high up the sea was a hard-edged disc. Fixed by
+    K70.
+  - **The Hush's spires were egg-shaped.** Now they are needles.
+  - **The Halcyon's fog replaced underwater and blindness fog.** Now those are left as vanilla makes them.
+- **Seen but not mine:** Sable sometimes logs "Received a sub-level movement packet for a non-existent sub-level" on
+  the client when the capture assembles the raft. It came up in 5 of today's 20 capture runs with a raft, and the
+  raft crossed in every one of them.
+
+**Needs the author's eyes or ears** (`[FIRST PASS]`)
+- **The look:** the phase palettes, the Lantern-Sun, the clouds, the fog and haze, the Hush's dusk, the Veil's white
+  and the biome colours.
+- **The blocks and the Obelisk:** generated first passes. You can rebuild the Obelisk by hand
+  (`docs/STRUCTURE-MARKERS.md`).
+- **The terrain:** how many islands, their shapes in each ring, and the shallow sea. Density is config.
+- **A real Aeronautics ship in the Halcyon:** the lighter gravity, the thicker air, the Veil turning it back, and
+  Rebound springing it out of the sea. I only flew the scripted raft.
+- **The two new sounds.**
+- **Performance on real hardware** while flying across the islands.
+
+**Stubs and limits**
+- **Markers without a block yet become air:** `mooring_post` and `almanac_pages` until M4, the two
+  `wrightling_stall` until the Wrightling (M5).
+- **Not yet:** ambience, Tides and wind lanes (M4), creatures (M5 on), and the arenas and other structures (M6–M9).
+- **Glassreed and Lumen Lily** come in M4 (K62). Prismite drops itself until Prism Dust (M5).
+- **The way home** is M8's Stitches. Until then: `/skyseam ship cross minecraft:overworld`.
+- **Beds** set your spawn but you can't sleep: the game always sees noon (K66). Respawning at a Mooring Post is M4.
+- **Old worlds:** Halcyon chunks made by M2's empty placeholder stay empty (K74). Use a new world, or delete
+  `<world>/dimensions/skyseam/halcyon`.
+
+**Author's in-game test (M3)**
+1. Use a **new** world, or delete `<world>/dimensions/skyseam/halcyon` in your M2 test world.
+2. Cross into the Halcyon with an Aeronautics ship, as in M2.
+   - You should arrive over the sea at the Arrival Lane, see the title "The Halcyon", and face the Sundered Obelisk on
+     its island ahead.
+   - Spend half a minute just looking round.
+3. Fly to the Anchorage and land. Walk through the gate and read the motto over it.
+4. Try `/skyseam halcyon phase dawn`, then `noon`, `dusk` and `hush`, and look at the sky in each. A full cycle takes
+   40 minutes.
+5. Visit the rings with `/skyseam halcyon tp hush`, then `cirrus`, `petalwash`, `shoals` and `spindle`.
+   - In the Hush the sky should stay dusky with stars, and sounds should be quieter.
+   - Fly under an island to see the Underbloom.
+6. Fly your ship out towards the rim (`/skyseam halcyon tp veil` puts you inside the Veil).
+   - The fog and sky should whiten and sound should muffle.
+   - Past radius 1,500 your ship should be turned back. On foot, or flying in creative, you should be pushed back.
+7. In survival, jump off an island into the sea.
+   - Rebound should throw you back up about 24 blocks, with Slow Falling, then Weakness.
+   - Fall in again within 30 s: it's just water.
+8. Fly a ship down until it touches the sea: it should be sprung back up.
+9. Come back with `/skyseam ship cross minecraft:overworld`.
+10. Send `logs/latest.log` (it has a line for each crossing and each Rebound throw), and say what to change in the
+    look, the terrain, the Veil and Rebound.

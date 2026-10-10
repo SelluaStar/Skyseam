@@ -62,5 +62,13 @@
   "skychart.unfold": {
     "subtitle": "subtitles.skyseam.skychart.unfold",
     "sounds": [{"name": "skyseam:skychart/unfold", "attenuation_distance": 12}]
+  },
+  "mirror_sea.splash": {
+    "subtitle": "subtitles.skyseam.mirror_sea.splash",
+    "sounds": [{"name": "minecraft:entity.generic.splash", "type": "event", "pitch": 0.8, "volume": 0.9}]
+  },
+  "mirror_sea.rebound": {
+    "subtitle": "subtitles.skyseam.mirror_sea.rebound",
+    "sounds": [{"name": "skyseam:mirror_sea/rebound", "attenuation_distance": 32}]
   }
 }
