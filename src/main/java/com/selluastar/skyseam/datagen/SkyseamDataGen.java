@@ -14,7 +14,7 @@ import net.neoforged.neoforge.data.event.GatherDataEvent;
 
 /**
  * Data generation ({@code gradlew runData}, docs/DECISIONS.md K61): writes the blockstates, block and item models, loot
- * tables and block tags of the Halcyon's blocks into {@code src/generated/resources}. Files that predate it (the
+ * tables, block tags and recipes of the Halcyon's blocks into {@code src/generated/resources}. Files that predate it (the
  * Harmonic Aperture's) stay hand-written in {@code src/main/resources}; the lang file stays hand-written too.
  */
 public final class SkyseamDataGen {
@@ -30,5 +30,6 @@ public final class SkyseamDataGen {
         generator.addProvider(event.includeServer(), new LootTableProvider(output, Set.of(),
                 List.of(new LootTableProvider.SubProviderEntry(SkyseamBlockLoot::new, LootContextParamSets.BLOCK)), registries));
         generator.addProvider(event.includeServer(), new SkyseamBlockTags(output, registries, files));
+        generator.addProvider(event.includeServer(), new SkyseamRecipes(output, registries));
     }
 }

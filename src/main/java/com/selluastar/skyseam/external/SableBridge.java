@@ -371,9 +371,13 @@ public final class SableBridge {
         return bounds == null ? null : wrap(SubLevelAssemblyHelper.assembleBlocks(level, anchor, blocks, bounds));
     }
 
-    /** Deletes a ship and everything on it. */
+    /** Deletes a ship and everything on it; a ship already gone is left be. */
     public static void remove(Ship ship) {
-        SubLevelContainer.getContainer(ship.level()).removeSubLevel(ship.subLevel, SubLevelRemovalReason.REMOVED);
+        SubLevelContainer container = SubLevelContainer.getContainer(ship.level());
+        if (container == null || ship.subLevel.isRemoved() || container.getSubLevel(ship.subLevel.getUniqueId()) != ship.subLevel) {
+            return;
+        }
+        container.removeSubLevel(ship.subLevel, SubLevelRemovalReason.REMOVED);
     }
 
     // ---- Moving a ship to another dimension (spec section 6) --------------------------------------------------

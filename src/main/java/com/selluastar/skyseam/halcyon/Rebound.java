@@ -51,7 +51,7 @@ public final class Rebound {
     /** True if this entity is falling into the Mirror Sea here and now. */
     public static boolean isFallingIn(Entity entity) {
         return entity.isInWater() && fallingSpeed(entity) < FALLING && entity.getY() < HalcyonLayout.SEA_LEVEL + 0.5
-                && entity.getY() > HalcyonLayout.SEA_FLOOR;
+                && entity.getY() > HalcyonLayout.SEA_LEVEL - 16;
     }
 
     /**

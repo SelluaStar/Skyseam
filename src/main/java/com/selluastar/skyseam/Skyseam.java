@@ -13,6 +13,7 @@ import com.selluastar.skyseam.config.SkyseamConfig;
 import com.selluastar.skyseam.datagen.SkyseamDataGen;
 import com.selluastar.skyseam.dev.DevBootCheck;
 import com.selluastar.skyseam.external.ExternalIds;
+import com.selluastar.skyseam.halcyon.HalcyonTime;
 import com.selluastar.skyseam.halcyon.LanternSun;
 import com.selluastar.skyseam.halcyon.Rebound;
 import com.selluastar.skyseam.halcyon.Veil;
@@ -81,6 +82,10 @@ public final class Skyseam {
         NeoForge.EVENT_BUS.addListener(AbsentRiders::onLoggedIn);
         NeoForge.EVENT_BUS.addListener(ApertureOwnership::onItemCrafted);
         NeoForge.EVENT_BUS.addListener(LanternSun::onLoggedIn);
+        NeoForge.EVENT_BUS.addListener(LanternSun::onServerStarted);
+        NeoForge.EVENT_BUS.addListener(LanternSun::onServerStopped);
+        NeoForge.EVENT_BUS.addListener(HalcyonTime::onCommand);
+        NeoForge.EVENT_BUS.addListener(HalcyonTime::onSleep);
         NeoForge.EVENT_BUS.addListener(Veil::onLevelTick);
         NeoForge.EVENT_BUS.addListener(Rebound::onEntityTick);
         NeoForge.EVENT_BUS.addListener(Rebound::onLevelTick);

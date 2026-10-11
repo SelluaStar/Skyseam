@@ -3,8 +3,8 @@
     tools/.venv/Scripts/python.exe tools/structures/preview.py <file.nbt> <out.png> [--scale 6]
 
 Draws every block as a small shaded cube, back to front, from the south-east and from the north-west side by side,
-in a flat colour per block (COLOURS below, a guess from the block's name otherwise). Data markers show as bright
-magenta so they are easy to check.
+in a flat colour per block: a Skyseam block's own texture, averaged; otherwise COLOURS below, or grey. Data markers
+show as bright magenta so they are easy to check.
 """
 import argparse
 import sys
@@ -38,10 +38,37 @@ COLOURS = {
     "minecraft:waxed_oxidized_cut_copper": (90, 180, 160),
     "minecraft:gold_block": (250, 210, 80),
     "minecraft:structure_block": (255, 0, 255),
+    "skyseam:duskstone": (88, 76, 104),
+    "skyseam:cobbled_duskstone": (84, 72, 98),
+    "skyseam:duskstone_bricks": (86, 74, 102),
+    "skyseam:polished_duskstone": (98, 86, 114),
+    "skyseam:duskstone_pillar": (92, 80, 108),
+    "skyseam:prismite_lamp": (196, 130, 255),
+    "skyseam:shoalrock": (230, 214, 192),
+    "skyseam:smooth_shoalrock": (242, 232, 216),
+    "minecraft:purple_stained_glass": (126, 62, 190),
+    "minecraft:vine": (80, 132, 64),
+    "minecraft:calcite": (224, 224, 220),
+    "minecraft:chain": (60, 64, 76),
 }
 
 
+TEXTURES = Path(__file__).resolve().parents[2] / "src" / "main" / "resources" / "assets" / "skyseam" / "textures" / "block"
+_averaged = {}
+
+
 def colour(name):
+    if name.startswith("skyseam:"):
+        if name not in _averaged:
+            path = TEXTURES / (name.split(":")[1].replace("_slab", "s").replace("_stairs", "s").replace("_wall", "s") + ".png")
+            _averaged[name] = None
+            if path.exists():
+                img = Image.open(path).convert("RGBA").crop((0, 0, 16, 16))
+                pixels = [p for p in img.getdata() if p[3] > 128]
+                if pixels:
+                    _averaged[name] = tuple(sum(p[k] for p in pixels) // len(pixels) for k in range(3))
+        if _averaged[name] is not None:
+            return _averaged[name]
     if name in COLOURS:
         return COLOURS[name]
     return (180, 180, 180)

@@ -63,6 +63,8 @@ public final class DevSceneCapture {
     private static int waiting;
     private static boolean showGui;
     private static boolean keepScreen;
+    /** The capture world's seed; a scene may set its own ({@code "seed": 123}) to show another world. */
+    private static long worldSeed = 20261008L;
 
     private DevSceneCapture() {}
 
@@ -74,6 +76,7 @@ public final class DevSceneCapture {
         try (Reader reader = Files.newBufferedReader(Path.of(scene), StandardCharsets.UTF_8)) {
             JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
             settleTicks = root.has("settle") ? root.get("settle").getAsInt() : settleTicks;
+            worldSeed = root.has("seed") ? root.get("seed").getAsLong() : worldSeed;
             for (JsonElement element : root.getAsJsonArray("steps")) {
                 JsonObject step = element.getAsJsonObject();
                 if (step.has("command")) {
@@ -101,6 +104,8 @@ public final class DevSceneCapture {
         minecraft.options.pauseOnLostFocus = false;
         minecraft.options.onboardAccessibility = false;
         minecraft.options.tutorialStep = net.minecraft.client.tutorial.TutorialSteps.NONE;
+        // A common setting for players who fly: far enough to show the archipelago.
+        minecraft.options.renderDistance().set(16);
         NeoForge.EVENT_BUS.addListener(DevSceneCapture::onClientTick);
         NeoForge.EVENT_BUS.addListener(DevSceneCapture::onInteractionKey);
     }
@@ -219,7 +224,7 @@ public final class DevSceneCapture {
         rules.getRule(GameRules.RULE_DOMOBSPAWNING).set(false, null);
         LevelSettings settings = new LevelSettings(WORLD, GameType.CREATIVE, false, Difficulty.PEACEFUL, true, rules, WorldDataConfiguration.DEFAULT);
         Skyseam.LOGGER.info("Skyseam capture: creating world {}", WORLD);
-        minecraft.createWorldOpenFlows().createFreshLevel(WORLD, settings, new WorldOptions(20261008L, false, false),
+        minecraft.createWorldOpenFlows().createFreshLevel(WORLD, settings, new WorldOptions(worldSeed, false, false),
                 registries -> registries.registryOrThrow(Registries.WORLD_PRESET).getHolderOrThrow(WorldPresets.FLAT).value().createWorldDimensions(),
                 new TitleScreen());
     }

@@ -24,6 +24,8 @@ public final class SkyseamParticles {
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> THREAD_SNAP = simple("thread_snap");
     /** The faint particles that hang at a mended Seam's scar. */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> SCAR = simple("scar");
+    /** The Halcyon's night glow: fireflies near the ground, drifting lanterns higher up (biome ambient particles). */
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> WISP = PARTICLES.register("wisp", () -> new SimpleParticleType(false));
 
     private SkyseamParticles() {}
 

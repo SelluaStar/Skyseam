@@ -1,0 +1,23 @@
+{
+ "settle": 120,
+ "seed": 4242,
+ "steps": [
+  {"command": "gamemode spectator"},
+  {"command": "gamerule sendCommandFeedback false"},
+  {"command": "skyseam halcyon phase noon"},
+  {"command": "skyseam halcyon tp arrival"},
+  {"wait": 260},
+  {"shot": "w2_arrival"},
+  {"command": "skyseam halcyon find main_island_terraced 180 300"},
+  {"wait": 260},
+  {"shot": "w2_aerial_day"},
+  {"command": "skyseam halcyon tp spindle"},
+  {"wait": 240},
+  {"shot": "w2_spindle"},
+  {"command": "skyseam halcyon phase dusk"},
+  {"command": "skyseam halcyon tp hush"},
+  {"wait": 220},
+  {"shot": "w2_hush_dusk"},
+  {"quit": true}
+ ]
+}

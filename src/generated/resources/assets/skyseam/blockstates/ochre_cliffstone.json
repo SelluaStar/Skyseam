@@ -1,0 +1,15 @@
+{
+  "variants": {
+    "": [
+      {
+        "model": "skyseam:block/ochre_cliffstone"
+      },
+      {
+        "model": "skyseam:block/ochre_cliffstone_1"
+      },
+      {
+        "model": "skyseam:block/ochre_cliffstone_2"
+      }
+    ]
+  }
+}

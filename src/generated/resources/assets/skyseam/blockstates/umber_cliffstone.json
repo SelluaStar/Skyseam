@@ -1,0 +1,15 @@
+{
+  "variants": {
+    "": [
+      {
+        "model": "skyseam:block/umber_cliffstone"
+      },
+      {
+        "model": "skyseam:block/umber_cliffstone_1"
+      },
+      {
+        "model": "skyseam:block/umber_cliffstone_2"
+      }
+    ]
+  }
+}

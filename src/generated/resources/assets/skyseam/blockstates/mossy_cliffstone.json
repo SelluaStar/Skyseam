@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "": [
+      {
+        "model": "skyseam:block/mossy_cliffstone"
+      },
+      {
+        "model": "skyseam:block/mossy_cliffstone_1"
+      }
+    ]
+  }
+}

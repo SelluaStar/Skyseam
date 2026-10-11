@@ -1,6 +1,5 @@
 package com.selluastar.skyseam.client.halcyon;
 
-import com.mojang.blaze3d.shaders.FogShape;
 import com.selluastar.skyseam.halcyon.Veil;
 import com.selluastar.skyseam.world.HalcyonLayout;
 
@@ -17,10 +16,9 @@ import net.neoforged.neoforge.client.event.ViewportEvent;
 /**
  * The Halcyon's fog (spec section 7): mostly the sky's own horizon colour for the phase, so fogged islands and sea fade
  * into the sky without a seam, with a share of the biome's fog colour (which vanilla blends) by day; high above the
- * Mirror Sea it leans to the sea's teal, so the far sea, all haze from the air, still reads as sea. The haze is round
- * and starts a little nearer than vanilla's, so the sea seen from high above fades away softly instead of ending in a
- * hard-edged disc. In the Veil it thickens and washes out to pearl white, so the world's edge reads as a soft glow
- * rather than a wall. Underwater and blindness fog are left as vanilla makes them.
+ * Mirror Sea it leans to the sea's blue, so the far sea, all haze from the air, still reads as sea. The haze starts a
+ * little nearer than vanilla's. In the Veil it thickens and washes out to pearl white, so the world's edge reads as a
+ * soft glow rather than a wall. Underwater and blindness fog are left as vanilla makes them.
  */
 public final class HalcyonFog {
     private static final float[] PEARL = {0.97f, 0.95f, 1f};
@@ -58,10 +56,27 @@ public final class HalcyonFog {
             g = Mth.lerp(overSea, g, sea[1]);
             b = Mth.lerp(overSea, b, sea[2]);
         }
+        // The Elderwood's valley mist (image 8): blue-grey, paler by day.
+        float mist = valleyMist(at);
+        if (mist > 0) {
+            float day = 1 - HalcyonSky.night(clock, at);
+            r = Mth.lerp(mist * 0.45f, r, Mth.lerp(day, 0.36f, 0.62f));
+            g = Mth.lerp(mist * 0.45f, g, Mth.lerp(day, 0.4f, 0.68f));
+            b = Mth.lerp(mist * 0.45f, b, Mth.lerp(day, 0.52f, 0.8f));
+        }
         float veil = Veil.thickness(at.x, at.y, at.z);
         event.setRed(Mth.lerp(veil, r, PEARL[0]));
         event.setGreen(Mth.lerp(veil, g, PEARL[1]));
         event.setBlue(Mth.lerp(veil, b, PEARL[2]));
+    }
+
+    /** How thick the Elderwood's mist is round the camera: the biome's share, thickest low in its valleys. */
+    private static float valleyMist(Vec3 at) {
+        float elder = ClientHush.mist(at.x, at.y, at.z);
+        if (elder <= 0) {
+            return 0;
+        }
+        return elder * (float) Mth.clamp(1 - (at.y - (HalcyonLayout.SEA_LEVEL + 60)) / 120, 0.25, 1);
     }
 
     private static boolean isBlinded(Camera camera) {
@@ -75,9 +90,11 @@ public final class HalcyonFog {
         Vec3 at = event.getCamera().getPosition();
         float veil = Veil.thickness(at.x, at.y, at.z);
         float far = event.getFarPlaneDistance();
-        event.setFogShape(FogShape.SPHERE);
-        event.setFarPlaneDistance(Mth.lerp(veil * veil, far, VEIL_FAR));
-        event.setNearPlaneDistance(Mth.lerp(veil, far * HAZE_START, 0));
+        // The Elderwood's mist closes in to a third of the view in its valleys, the haze starting close.
+        float mist = valleyMist(at);
+        float misty = Mth.lerp(mist, far, far * 0.6f);
+        event.setFarPlaneDistance(Mth.lerp(veil * veil, misty, VEIL_FAR));
+        event.setNearPlaneDistance(Mth.lerp(veil, Mth.lerp(mist, far * HAZE_START, far * 0.15f), 0));
         // NeoForge only uses the new distances when the event is cancelled.
         event.setCanceled(true);
     }

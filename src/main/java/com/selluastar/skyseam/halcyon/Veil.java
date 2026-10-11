@@ -19,6 +19,9 @@ import net.neoforged.neoforge.event.tick.LevelTickEvent;
  * client), players feel a growing prismatic push back towards the middle, and ships are turned gently inward. Past
  * the rim, anyone heading out is carried back, and a ship flying outward is deflected like light off glass: the
  * outward part of its velocity is reflected.
+ *
+ * <p>For now the Veil is off ({@code veil_enabled}, docs/DECISIONS.md K81): the author asked for the Halcyon without
+ * an edge until later, so nothing is pushed and no fog thickens. Its maths stay, tested, for when it returns.
  */
 public final class Veil {
     /** Players are pushed every few ticks, so their clients are not flooded with motion updates. */
@@ -30,6 +33,15 @@ public final class Veil {
     private static final int LID_WIDTH = 40;
 
     private Veil() {}
+
+    /** True if the Veil is on (the server's config, synced to clients; off by default). */
+    public static boolean enabled() {
+        try {
+            return SkyseamConfig.VEIL_ENABLED.get();
+        } catch (IllegalStateException notLoaded) {
+            return SkyseamConfig.VEIL_ENABLED.getDefault();
+        }
+    }
 
     /** How deep into the Veil a point is: 0 inside the clear world, 1 at the rim or the lid, more beyond. */
     public static double depth(double x, double y, double z) {
@@ -90,7 +102,7 @@ public final class Veil {
     }
 
     public static void onLevelTick(LevelTickEvent.Post event) {
-        if (!(event.getLevel() instanceof ServerLevel level) || level.dimension() != HalcyonLayout.LEVEL) {
+        if (!enabled() || !(event.getLevel() instanceof ServerLevel level) || level.dimension() != HalcyonLayout.LEVEL) {
             return;
         }
         if (level.getGameTime() % PLAYER_PERIOD == 0) {
@@ -122,13 +134,13 @@ public final class Veil {
         }
     }
 
-    /** True if a point is anywhere in the Veil, for sounds and fog. */
+    /** True if a point is anywhere in the Veil (while it is on), for sounds and fog. */
     public static boolean isIn(double x, double y, double z) {
-        return depth(x, y, z) > 0;
+        return enabled() && depth(x, y, z) > 0;
     }
 
-    /** {@link #depth} clamped to 0 to 1, for how thick the fog is. */
+    /** {@link #depth} clamped to 0 to 1, for how thick the fog is; 0 while the Veil is off. */
     public static float thickness(double x, double y, double z) {
-        return (float) Mth.clamp(depth(x, y, z), 0, 1);
+        return enabled() ? (float) Mth.clamp(depth(x, y, z), 0, 1) : 0;
     }
 }

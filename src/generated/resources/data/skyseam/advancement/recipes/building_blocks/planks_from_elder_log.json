@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_elder_log": {
+      "conditions": {
+        "items": [
+          {
+            "items": "skyseam:elder_log"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "skyseam:planks_from_elder_log"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_elder_log"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "skyseam:planks_from_elder_log"
+    ]
+  }
+}

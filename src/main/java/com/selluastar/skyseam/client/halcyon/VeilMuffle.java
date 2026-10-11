@@ -4,7 +4,6 @@ import org.jetbrains.annotations.Nullable;
 
 import com.selluastar.skyseam.halcyon.Veil;
 import com.selluastar.skyseam.world.HalcyonLayout;
-import com.selluastar.skyseam.world.halcyon.HalcyonRegion;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.Sound;
@@ -38,7 +37,7 @@ public final class VeilMuffle {
         }
         Vec3 at = minecraft.gameRenderer.getMainCamera().getPosition();
         float veil = Veil.thickness(at.x, at.y, at.z);
-        float hush = (float) HalcyonRegion.hushness(at.x, at.z);
+        float hush = ClientHush.at(at.x, at.y, at.z);
         float factor = (1 - (1 - DEEPEST) * veil) * (1 - HUSH_MUTE * hush);
         if (factor < 0.999f) {
             event.setSound(new Muffled(sound, factor));

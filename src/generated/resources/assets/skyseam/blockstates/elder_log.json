@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "skyseam:block/elder_log",
+      "x": 90,
+      "y": 90
+    },
+    "axis=y": {
+      "model": "skyseam:block/elder_log"
+    },
+    "axis=z": {
+      "model": "skyseam:block/elder_log",
+      "x": 90
+    }
+  }
+}

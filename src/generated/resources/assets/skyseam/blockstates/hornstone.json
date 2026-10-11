@@ -1,0 +1,15 @@
+{
+  "variants": {
+    "": [
+      {
+        "model": "skyseam:block/hornstone"
+      },
+      {
+        "model": "skyseam:block/hornstone_1"
+      },
+      {
+        "model": "skyseam:block/hornstone_2"
+      }
+    ]
+  }
+}

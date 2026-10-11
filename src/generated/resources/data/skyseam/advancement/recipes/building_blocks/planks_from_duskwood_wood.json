@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_duskwood_wood": {
+      "conditions": {
+        "items": [
+          {
+            "items": "skyseam:duskwood_wood"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "skyseam:planks_from_duskwood_wood"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_duskwood_wood"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "skyseam:planks_from_duskwood_wood"
+    ]
+  }
+}

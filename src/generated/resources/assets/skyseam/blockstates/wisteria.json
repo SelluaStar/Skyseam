@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "tip=false": {
+      "model": "skyseam:block/wisteria"
+    },
+    "tip=true": {
+      "model": "skyseam:block/wisteria_tip"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "variants": {
+    "": [
+      {
+        "model": "skyseam:block/shoalrock"
+      },
+      {
+        "model": "skyseam:block/shoalrock_1"
+      },
+      {
+        "model": "skyseam:block/shoalrock_2"
+      }
+    ]
+  }
+}
