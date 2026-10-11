@@ -17,11 +17,11 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  */
 public final class SkyseamSounds {
     /**
-     * Seam sounds are sent to everyone within 512 blocks: twice the 256 within which the reveal is seen (spec section
-     * 6), so a Seam opening is heard before it is seen (the author asked for them to carry further). How fast each
-     * fades is its {@code attenuation_distance} in {@code sounds.json}.
+     * Seam sounds are sent to everyone within 1,024 blocks: four times the 256 within which the reveal is seen (spec
+     * section 6), so a Seam opening is heard across the sky long before it is seen (the author asked for them to carry
+     * further). How fast each fades is its {@code attenuation_distance} in {@code sounds.json}.
      */
-    public static final float SEAM_RANGE = 512;
+    public static final float SEAM_RANGE = 1024;
 
     public static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(Registries.SOUND_EVENT, Skyseam.MOD_ID);
 
