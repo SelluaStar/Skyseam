@@ -7,6 +7,7 @@ import com.selluastar.skyseam.client.aperture.ApertureRenderer;
 import com.selluastar.skyseam.client.aperture.ApertureScreen;
 import com.selluastar.skyseam.client.aperture.ClientGauge;
 import com.selluastar.skyseam.client.aperture.SeamGaugeHud;
+import com.selluastar.skyseam.client.compat.DistantHorizonsBlocks;
 import com.selluastar.skyseam.client.skychart.ClientSkychart;
 import com.selluastar.skyseam.client.skychart.SkychartHud;
 import com.selluastar.skyseam.client.dev.DevSceneCapture;
@@ -46,6 +47,7 @@ public final class SkyseamClient {
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
         NeoForge.EVENT_BUS.addListener(SeamClientEffects::onClientTick);
+        NeoForge.EVENT_BUS.addListener(DistantHorizonsBlocks::onClientTick);
         NeoForge.EVENT_BUS.addListener(SeamClientEffects::onComputeCameraAngles);
         NeoForge.EVENT_BUS.addListener(HalcyonFog::onFogColour);
         NeoForge.EVENT_BUS.addListener(HalcyonFog::onRenderFog);
