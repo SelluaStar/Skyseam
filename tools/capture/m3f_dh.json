@@ -1,0 +1,19 @@
+{
+ "settle": 200,
+ "steps": [
+  {"command": "gamemode spectator"},
+  {"command": "gamerule sendCommandFeedback false"},
+  {"command": "skyseam halcyon time set midnight"},
+  {"command": "skyseam halcyon tp hush"},
+  {"wait": 60},
+  {"command": "tp @s ~ ~140 ~ 45 40"},
+  {"wait": 2400},
+  {"shot": "dh_hush_night"},
+  {"command": "skyseam halcyon tp highlands"},
+  {"wait": 60},
+  {"command": "tp @s ~ ~120 ~ 135 40"},
+  {"wait": 2400},
+  {"shot": "dh_highlands_night"},
+  {"quit": true}
+ ]
+}

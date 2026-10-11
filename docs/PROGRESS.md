@@ -1098,3 +1098,52 @@ night aerial view with glowing specks on every far island, and the night sky wit
 5. `/skyseam halcyon find giant_elder_lumen` at night: the veins should run unbroken up the trunk, mostly one thick
    line, sometimes splitting and merging.
 6. Send screenshots and `logs/latest.log`.
+
+### M3 follow-up, part 2: Distant Horizons' ignored blocks, set by the mod (2026-10-11)
+
+The author: "the way to fix the glowing blocks is to remove them from LODs" (Distant Horizons' ignored-blocks list),
+"just make the mod do it automatically… only leave on things like the glowing mushrooms".
+
+**Built** (DECISIONS K95)
+- **`client/compat/DistantHorizonsBlocks`:** once Distant Horizons has loaded, Skyseam adds its small glowing
+  decorations to Distant Horizons' `ignoredRenderBlockCsv`.
+  - **What's kept:** the existing entries.
+  - **How it's set:** through Distant Horizons' own config entry, as its settings screen does, so the change is saved
+    to `config/DistantHorizons.toml` and applied at once. Distant Horizons has no public API for this list, and
+    editing its file directly could be overwritten by its own copy.
+  - **Distant Horizons stays optional:** it's reached by reflection.
+- **The default list** (`distant_horizons_hidden_blocks` in `config/skyseam-client.toml`):
+  - **On it:** Prismite buds and clusters, Prismite lamps, glow moss, lantern vines and the small glow shrooms.
+  - **Left off:** the giant Glowcaps, to stand out. The Elder logs and Runed Duskstone, which Distant Horizons draws
+    as wood and stone, not as glowing.
+  - **To switch it off:** `distant_horizons_hide_glow_blocks = false`.
+- **Why the collision change alone wasn't enough:** Distant Horizons passes a skipped plant's colour and glow to the
+  block under it ("tint with avoided blocks"), so the glow moss and glow shrooms still freckled the rock.
+- **Development only:** `gradlew runCaptureClient -Pdh` adds Distant Horizons 3.3.3 to the screenshot client (K88).
+
+**Verified (actually run)**
+- **The milestone check:** build ✓, runData ✓, 46/46 GameTests ✓, server boot ✓.
+- **With Distant Horizons 3.3.3 and Complementary Reimagined** (`tools/capture/m3f_dh.json`: 140 blocks up at night
+  over the Hush and 120 up over the Highlands, two minutes for Distant Horizons to build far terrain each). Same
+  world and spot each time:
+
+  | Highlands at night | Bright specks far away | Bright specks near |
+  |---|---|---|
+  | Setting off | 761 | 2,707 |
+  | Setting on, without the glow shrooms | 163 | 889 |
+  | Setting on, with them (the default) | 154 | 174 |
+
+  - **The last run's framing:** slightly shifted, so its near count is approximate.
+  - **What's left:** mostly the wisps and sky lanterns drifting in the air.
+  - **The config:** `config/DistantHorizons.toml` holds Distant Horizons' defaults followed by Skyseam's blocks, and a
+    second launch adds nothing twice.
+  - **Contact sheet:** [`docs/previews/m3f-distant-horizons.png`](previews/m3f-distant-horizons.png).
+- **Correction:** the previous section's "Distant Horizons was never run" no longer holds.
+
+**Author's in-game test**
+1. Update Skyseam and launch once with Distant Horizons. Its ignored blocks (Advanced → Graphics → Culling) should
+   now end with the `skyseam:` blocks.
+2. In a **new** world, fly high at night with Complementary on: the far islands should be free of glowing specks,
+   with the giant Glowcaps still glowing.
+3. If you'd like the small glow shrooms (or anything else) back in the far terrain, remove them from
+   `distant_horizons_hidden_blocks` in `config/skyseam-client.toml` *and* from Distant Horizons' list.
