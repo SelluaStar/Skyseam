@@ -47,7 +47,9 @@ import net.minecraft.world.phys.Vec3;
  *
  * The world's day follows the Lantern-Sun (mixin/LevelTimeMixin), so the land darkens at night by itself and shader
  * packs light it from the Lantern-Sun; this adds moonlight and twilight tints to the light. Everything is drawn with
- * vanilla's shaders inside the sky and cloud hooks, so a shader pack routes it through its own sky programs.
+ * vanilla's shaders inside the sky and cloud hooks, so a shader pack routes it through its own sky programs, and drawn
+ * so it survives them ({@link SkyDraw}): under a shader pack the pack paints the sky's colour, and everything in it
+ * keeps its look.
  */
 public final class HalcyonSky extends DimensionSpecialEffects {
     public static final ResourceLocation ID = Skyseam.id("halcyon");
@@ -163,6 +165,7 @@ public final class HalcyonSky extends DimensionSpecialEffects {
     @Override
     public boolean renderSky(ClientLevel level, int ticks, float partialTick, Matrix4f modelView, Camera camera, Matrix4f projection,
             boolean foggy, Runnable setupFog) {
+        SkyDraw.begin();
         double clock = ClientLanternSun.clock(level, partialTick);
         float sunAngle = level.getTimeOfDay(partialTick) * Mth.TWO_PI;
         double day = (level.getGameTime() + LanternSun.offset(true) + partialTick) / (double) LanternSun.CYCLE_TICKS;

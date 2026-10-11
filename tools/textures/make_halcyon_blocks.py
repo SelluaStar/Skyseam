@@ -4,11 +4,10 @@ Writes, under src/main/resources/assets/skyseam/textures/:
   block/stillstone_glass.png                         the Wrights' pale glass
   block/cloud.png, rose_cloud.png, dusk_cloud.png    soft cloud blocks, slightly see-through
   block/petal_carpet.png, cloudmoss.png              carpets, with gaps (drawn cut out)
-  block/glow_moss.png                                glowing teal strands, like glow lichen
   block/lantern_vine.png, lantern_vine_tip.png       a hanging vine and its glowing lantern-bud
-  block/small_prismite_bud.png, large_prismite_bud.png, prismite_cluster.png   violet crystal, three sizes
 and a scaled-up contact sheet in build/previews/halcyon_blocks.png. The rest of the Stillstone set is painted by
-make_halcyon_terrain_blocks.py, and the sky's textures by make_sky_textures.py.
+make_halcyon_terrain_blocks.py, glow moss and Prismite by make_halcyon_glow_blocks.py, and the sky's textures by
+make_sky_textures.py.
 
 Deterministic: the same script always writes the same files. Run with tools/.venv/Scripts/python.exe.
 Every colour comes from palette.py or the few material tones below. Replace any file by name (docs/ASSET-PATHS.md).
@@ -40,8 +39,6 @@ VINE = (88, 148, 118)
 VINE_DARK = (62, 112, 94)
 PETALS = [(214, 150, 226), (184, 120, 214), (238, 182, 236), (166, 112, 200)]
 CLOUDMOSS = [(206, 238, 216), (184, 226, 202), (226, 248, 232)]
-GLOW_MOSS = [(120, 232, 212), (164, 246, 228), (96, 206, 196)]
-PRISMITE = [(150, 100, 214), (186, 136, 240), (220, 186, 255), (120, 80, 186)]
 
 
 def shade(c, f):
@@ -145,19 +142,6 @@ def cloudmoss():
     return scattered(CLOUDMOSS, 51, 22, (1, 2))
 
 
-def glow_moss():
-    rng = random.Random(61)
-    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    px = img.load()
-    for _ in range(9):
-        x, y = rng.randrange(16), rng.randrange(16)
-        for _ in range(rng.randint(4, 9)):
-            px[x % 16, y % 16] = GLOW_MOSS[rng.randrange(3)] + (255,)
-            x += rng.choice((-1, 0, 1))
-            y += rng.choice((0, 1))
-    return img
-
-
 def lantern_vine(tip):
     rng = random.Random(71)
     img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
@@ -183,25 +167,6 @@ def lantern_vine(tip):
     return img
 
 
-def prismite(stage):
-    """Crystals for a cross model: taller and more of them as the cluster grows."""
-    img = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
-    px = img.load()
-    shards = {0: [(7, 5, 2)], 1: [(5, 8, 2), (9, 10, 2)], 2: [(3, 9, 2), (7, 13, 2), (11, 10, 2)]}[stage]
-    for cx, height, half in shards:
-        for y in range(16 - height, 16):
-            t = (16 - y) / height
-            w = max(0, int(round(half * min(1.0, (1 - t) * 3))))
-            for x in range(cx - w, cx + w + 1):
-                if 0 <= x < 16:
-                    edge = x == cx - w
-                    c = PRISMITE[2] if edge else PRISMITE[1] if x <= cx else PRISMITE[0]
-                    if y == 16 - height:
-                        c = P.PEARL
-                    px[x, y] = c + (255,)
-    return img
-
-
 # ---- Sky ----------------------------------------------------------------------------------------------------------
 
 
@@ -220,12 +185,8 @@ def main():
         "dusk_cloud": cloud((204, 202, 238), 3),
         "petal_carpet": petal_carpet(),
         "cloudmoss": cloudmoss(),
-        "glow_moss": glow_moss(),
         "lantern_vine": lantern_vine(False),
         "lantern_vine_tip": lantern_vine(True),
-        "small_prismite_bud": prismite(0),
-        "large_prismite_bud": prismite(1),
-        "prismite_cluster": prismite(2),
     }
     for name, img in blocks.items():
         save(img, TEXTURES / "block" / f"{name}.png")

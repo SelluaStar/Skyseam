@@ -17,10 +17,17 @@ import com.selluastar.skyseam.world.halcyon.plan.Landmarks;
 import com.selluastar.skyseam.world.structure.StructureMarkers;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.SectionPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.MultifaceBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
@@ -176,7 +183,88 @@ public final class DevBootCheck {
         if (Math.max(spindle, Math.max(archipelago, highlands)) > 40) {
             problems.add("the Halcyon generates too slowly: " + Math.round(Math.max(spindle, Math.max(archipelago, highlands))) + " ms a chunk");
         }
+        glowCensus(level, "by the Spindle", 14, -6, problems);
+        glowCensus(level, "in the archipelago", (int) (-plan.landmarks.outZ * 1000) >> 4, (int) (plan.landmarks.outX * 1000) >> 4, problems);
+        glowCensus(level, "in the Highlands", (int) (plan.landmarks.outX * 3000) >> 4, (int) (plan.landmarks.outZ * 3000) >> 4, problems);
         return problems;
+    }
+
+    /**
+     * Counts the glowing decoration in the middle 10 by 10 of the chunks {@link #timeChunks} made from
+     * {@code (cx0, cz0)} (their edges may wait on neighbours for decoration): Prismite crystals, which should be rare
+     * now, Prismite lamps, and glow moss, every face of which must cling to a whole block.
+     */
+    private static void glowCensus(ServerLevel level, String where, int cx0, int cz0, List<String> problems) {
+        int crystals = 0;
+        int lamps = 0;
+        int openLamps = 0;
+        int moss = 0;
+        int badMoss = 0;
+        String firstBad = null;
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        for (int cx = cx0 + 1; cx < cx0 + 11; cx++) {
+            for (int cz = cz0 + 1; cz < cz0 + 11; cz++) {
+                LevelChunk chunk = level.getChunk(cx, cz);
+                LevelChunkSection[] sections = chunk.getSections();
+                for (int s = 0; s < sections.length; s++) {
+                    LevelChunkSection section = sections[s];
+                    if (section.hasOnlyAir() || !section.getStates().maybeHas(DevBootCheck::glowing)) {
+                        continue;
+                    }
+                    int y0 = SectionPos.sectionToBlockCoord(chunk.getSectionYFromSectionIndex(s));
+                    for (int y = 0; y < 16; y++) {
+                        for (int z = 0; z < 16; z++) {
+                            for (int x = 0; x < 16; x++) {
+                                BlockState state = section.getBlockState(x, y, z);
+                                if (!glowing(state)) {
+                                    continue;
+                                }
+                                pos.set(chunk.getPos().getMinBlockX() + x, y0 + y, chunk.getPos().getMinBlockZ() + z);
+                                if (state.is(SkyseamBlocks.PRISMITE_LAMP.get())) {
+                                    lamps++;
+                                    // Most lamps are set deep in the rock; only those open to the air can be seen.
+                                    for (Direction side : Direction.values()) {
+                                        if (level.getBlockState(pos.relative(side)).isAir()) {
+                                            openLamps++;
+                                            break;
+                                        }
+                                    }
+                                } else if (state.is(SkyseamBlocks.GLOW_MOSS.get())) {
+                                    moss++;
+                                    for (Direction side : Direction.values()) {
+                                        if (!state.getValue(MultifaceBlock.getFaceProperty(side))) {
+                                            continue;
+                                        }
+                                        BlockPos held = pos.relative(side);
+                                        BlockState holder = level.getBlockState(held);
+                                        if (holder.is(BlockTags.LEAVES) || !holder.isCollisionShapeFullBlock(level, held)) {
+                                            badMoss++;
+                                            if (firstBad == null) {
+                                                firstBad = pos.toShortString() + " on " + holder;
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    crystals++;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Skyseam.LOGGER.info("Skyseam boot check: in 100 chunks {}, {} Prismite crystals ({} per chunk), {} Prismite lamps ({} open to the air) "
+                + "and {} glow moss, {} of it on less than a whole block", where, crystals, String.format("%.2f", crystals / 100.0), lamps, openLamps,
+                moss, badMoss);
+        if (badMoss > 0) {
+            problems.add(badMoss + " glow moss faces " + where + " cling to less than a whole block, the first at " + firstBad);
+        }
+    }
+
+    private static boolean glowing(BlockState state) {
+        return state.is(SkyseamBlocks.SMALL_PRISMITE_BUD.get()) || state.is(SkyseamBlocks.LARGE_PRISMITE_BUD.get())
+                || state.is(SkyseamBlocks.PRISMITE_CLUSTER.get()) || state.is(SkyseamBlocks.PRISMITE_LAMP.get())
+                || state.is(SkyseamBlocks.GLOW_MOSS.get());
     }
 
     /** Generates 12 by 12 fresh chunks from {@code (cx, cz)} and returns the milliseconds each took. */

@@ -9,15 +9,15 @@
         },
         "east": {
           "cullface": "east",
-          "texture": "#side"
+          "texture": "#side1"
         },
         "north": {
           "cullface": "north",
-          "texture": "#side"
+          "texture": "#side0"
         },
         "south": {
           "cullface": "south",
-          "texture": "#side"
+          "texture": "#side2"
         },
         "up": {
           "cullface": "up",
@@ -25,7 +25,7 @@
         },
         "west": {
           "cullface": "west",
-          "texture": "#side"
+          "texture": "#side3"
         }
       },
       "from": [
@@ -43,19 +43,19 @@
       "faces": {
         "east": {
           "cullface": "east",
-          "texture": "#glow"
+          "texture": "#vein1"
         },
         "north": {
           "cullface": "north",
-          "texture": "#glow"
+          "texture": "#vein0"
         },
         "south": {
           "cullface": "south",
-          "texture": "#glow"
+          "texture": "#vein2"
         },
         "west": {
           "cullface": "west",
-          "texture": "#glow"
+          "texture": "#vein3"
         }
       },
       "from": [
@@ -78,8 +78,15 @@
   "render_type": "minecraft:cutout",
   "textures": {
     "end": "skyseam:block/elder_log_top",
-    "glow": "skyseam:block/elder_log_glow",
     "particle": "skyseam:block/elder_log",
-    "side": "skyseam:block/elder_log"
+    "side0": "skyseam:block/elder_log",
+    "side1": "skyseam:block/elder_log_1",
+    "side2": "skyseam:block/elder_log",
+    "side3": "skyseam:block/elder_log_1",
+    "vein0": "skyseam:block/elder_log_glow",
+    "vein1": "skyseam:block/elder_log_glow_2",
+    "vein2": "skyseam:block/elder_log_glow_5",
+    "vein3": "skyseam:block/elder_log_glow_1",
+    "vein_end": "skyseam:block/elder_log_glow_1"
   }
 }

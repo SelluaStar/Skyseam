@@ -11,7 +11,6 @@ block, picked per position by its blockstate):
   hornstone[_1, _2]                              pale horn-grained rock of the Horncrown isles (image 9)
   stillstone[_1, _2], stillstone_bricks, mossy_stillstone_bricks, chiseled_stillstone_bricks, stillstone_pillar(_top)
                                                  the pale lavender limestone of Wright ruins
-  prismite_lamp                                  a glowing faceted violet crystal block
 and build/previews/halcyon_terrain_blocks.png, every texture tiled 3 x 3 so seams show.
 
 Colours come from the author's reference images: tools/reference/palette.json (images 5-7) and the hand-sampled
@@ -58,7 +57,6 @@ HORN_WARM = R("#CFC6C4", dark=0.38, light=0.10, cool=20, warm=6, shadow_chroma=1
 STILL = R("#C6BDDB", dark=0.32, light=0.12, cool=18, warm=10)
 STILL_ROSE = R("#CFC0D4", dark=0.32, light=0.12, cool=18, warm=10)
 
-LAMP = R("#9A68F2", n=7, dark=0.26, light=0.34, cool=12, warm=0, light_chroma=0.45)
 
 
 def by_label(tone, labels, ramps, weights, rng, alpha=None):
@@ -290,22 +288,6 @@ def stillstone_pillar_top(seed):
     return px.paint(px.rings(rng, base=4.4, rim=1, step=2.4, rim_tone=3.0, wobble=0), STILL)
 
 
-# ---- Prismite lamp ---------------------------------------------------------------------------------------------------
-
-def prismite_lamp(seed):
-    """Faceted glowing crystal: bright facets with white glints, deep violet seams, a darker frame."""
-    rng = np.random.default_rng(seed)
-    labels, d1, d2, _ = px.voronoi(rng, 7, 1.0, 1.0)
-    tone = rng.uniform(3.6, 5.4, 7)[labels]
-    tone += px.bevel(labels, 1.2, 1.1, 0.4)
-    tone = np.where((d2 - d1) < 0.5, 1.2, tone)
-    tone[0, :] = tone[N - 1, :] = 0.8
-    tone[:, 0] = tone[:, N - 1] = 0.8
-    tone[1, 1:N - 1] = np.maximum(tone[1, 1:N - 1], 5.0)
-    img = px.paint(np.clip(tone, 0, 6), LAMP)
-    return px.dots(img, rng, [(255, 255, 255), (230, 250, 255)], 5, avoid=no_edge(labels))
-
-
 # ---- Main ------------------------------------------------------------------------------------------------------------
 
 def main():
@@ -353,7 +335,6 @@ def main():
     add("chiseled_stillstone_bricks", chiseled_stillstone(133))
     add("stillstone_pillar", stillstone_pillar(135))
     add("stillstone_pillar_top", stillstone_pillar_top(137))
-    add("prismite_lamp", prismite_lamp(141))
 
     BLOCKS.mkdir(parents=True, exist_ok=True)
     for name, img in made.items():

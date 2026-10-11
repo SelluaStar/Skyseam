@@ -1,0 +1,92 @@
+{
+  "parent": "minecraft:block/block",
+  "elements": [
+    {
+      "faces": {
+        "down": {
+          "cullface": "down",
+          "texture": "#end"
+        },
+        "east": {
+          "cullface": "east",
+          "texture": "#side1"
+        },
+        "north": {
+          "cullface": "north",
+          "texture": "#side0"
+        },
+        "south": {
+          "cullface": "south",
+          "texture": "#side2"
+        },
+        "up": {
+          "cullface": "up",
+          "texture": "#end"
+        },
+        "west": {
+          "cullface": "west",
+          "texture": "#side3"
+        }
+      },
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ]
+    },
+    {
+      "faces": {
+        "east": {
+          "cullface": "east",
+          "texture": "#vein1"
+        },
+        "north": {
+          "cullface": "north",
+          "texture": "#vein0"
+        },
+        "south": {
+          "cullface": "south",
+          "texture": "#vein2"
+        },
+        "west": {
+          "cullface": "west",
+          "texture": "#vein3"
+        }
+      },
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "neoforge_data": {
+        "ambient_occlusion": false,
+        "block_light": 15,
+        "sky_light": 15
+      },
+      "to": [
+        16,
+        16,
+        16
+      ]
+    }
+  ],
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "end": "skyseam:block/elder_log_top",
+    "particle": "skyseam:block/elder_log",
+    "side0": "skyseam:block/elder_log_1",
+    "side1": "skyseam:block/elder_log",
+    "side2": "skyseam:block/elder_log_1",
+    "side3": "skyseam:block/elder_log",
+    "vein0": "skyseam:block/elder_log_glow_3",
+    "vein1": "skyseam:block/elder_log_glow_5",
+    "vein2": "skyseam:block/elder_log_glow_2",
+    "vein3": "skyseam:block/elder_log_glow_4",
+    "vein_end": "skyseam:block/elder_log_glow_4"
+  }
+}

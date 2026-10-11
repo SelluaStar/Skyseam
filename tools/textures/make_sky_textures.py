@@ -19,7 +19,19 @@ Writes, under src/main/resources/assets/skyseam/textures/:
   environment/nebula.png           512x128 a violet and magenta star-cloud band, tiling left to right
   environment/nebula_teal.png      512x128 a second, teal and rose band that drifts against the first
   environment/swirl.png            256x256 swirling cloud streaks round a centre (image 14), turned over the zenith
-  particle/wisp.png                8x8     a soft glowing mote, the night's fireflies and drifting lanterns
+  environment/aurora.png           64x128  one strip of the Hush's aurora: teal at its foot through violet to rose,
+                                           fading out at the top, streaked with rays; tiles left to right
+  environment/star_dust.png        4x4     a small soft dot for the faint stars
+  environment/<body>_mask.png              a white cut-out of each solid body (planet, planet_shadow, pale_moon,
+                                           ringed_moon, shard_moon, moon_debris, ember_moon): its colour is its
+                                           opacity. The sky darkens the sky behind a body with it before adding the
+                                           body's light, which keeps the bodies right under shader packs
+                                           (client/halcyon/sky/SkyDraw)
+  environment/<glow>.png.mcmeta            "blur" for the soft glows (halo, sun_corona, swirl, nebula, nebula_teal,
+                                           aurora, meteor), so they stay smooth stretched across the sky rather than
+                                           showing their pixels; the bodies keep their crisp pixels
+  particle/wisp.png                32x32   a soft glowing mote, the night's fireflies and drifting lanterns: a small
+                                           bright core in a faint glow, fine enough not to show its pixels up close
 and build/previews/sky_textures.png. Colours from the author's reference images (palette.json and images 8 to 14).
 Deterministic.
 """
@@ -414,12 +426,49 @@ def swirl():
     return rgba(rgb, alpha)
 
 
+def aurora():
+    """One strip of aurora curtain: brightest just above its foot, teal there, violet higher, rose and fading at the
+    top; vertical rays of different strengths across it, tiling left to right."""
+    w, h = 64, 128
+    xs, ys = grid(h, w)
+    v = ys / h
+    rays = fbm(1, w, 91, octaves=4, base=8)[0]
+    rays = 0.35 + 0.65 * np.clip((rays - 0.25) / 0.5, 0, 1) ** 1.3
+    shimmer = 0.85 + 0.15 * fbm(h, w, 92, octaves=3, base=4)
+    rise = smoothstep(0.0, 0.85, v) ** 1.4
+    foot = 1 - smoothstep(0.9, 1.0, v)
+    alpha = 255 * rise * foot * rays[None, :] * shimmer
+    teal, violet, rose = hexc("#4CFFD8"), hexc("#9A72FF"), hexc("#FF80C8")
+    to_violet = smoothstep(0.2, 0.55, v)[..., None]
+    to_teal = smoothstep(0.55, 0.85, v)[..., None]
+    rgb = (rose * (1 - to_violet) + violet * to_violet) * (1 - to_teal) + teal * to_teal
+    return rgba(rgb, alpha)
+
+
+def star_dust():
+    shape = np.array([[0, 0.5, 0.5, 0], [0.5, 1, 1, 0.5], [0.5, 1, 1, 0.5], [0, 0.5, 0.5, 0]])
+    return rgba(np.full((4, 4, 3), 255.0), 255 * shape)
+
+
+def mask(img):
+    """A solid body's cut-out: white where it is opaque, its colour (as well as its alpha) its opacity."""
+    a = np.array(img)[..., 3].astype(float)
+    return rgba(np.dstack([a, a, a]), a)
+
+
+# The bodies drawn solid (SkyDraw.solid) and the glows smoothed when stretched.
+SOLID = ("planet", "planet_shadow", "pale_moon", "ringed_moon", "shard_moon", "moon_debris", "ember_moon")
+BLURRED = ("halo", "sun_corona", "swirl", "nebula", "nebula_teal", "aurora", "meteor")
+
+
 def wisp():
-    size = 8
+    size = 32
     xs, ys = grid(size)
-    r = np.hypot(xs - 4, ys - 4) / 4
-    alpha = 255 * np.clip(1 - r, 0, 1) ** 1.6
-    rgb = hexc("#F4FFD8") * (1 - r[..., None] * 0.3)
+    r = np.hypot(xs - size / 2, ys - size / 2) / (size / 2)
+    core = np.clip(1 - r / 0.32, 0, 1) ** 1.5
+    glow = np.clip(1 - r, 0, 1) ** 2.6
+    alpha = 255 * np.clip(0.75 * core + 0.55 * glow, 0, 1)
+    rgb = hexc("#F4FFD8") * (1 - r[..., None] * 0.25)
     return rgba(rgb, alpha)
 
 
@@ -442,10 +491,19 @@ def main():
         "nebula": nebula(7, [hexc("#9A5AE0"), hexc("#E260D6"), hexc("#E6C0FF")]),
         "nebula_teal": nebula(53, [hexc("#3AB0C0"), hexc("#E890B0"), hexc("#D8FFF8")]),
         "swirl": swirl(),
+        "aurora": aurora(),
+        "star_dust": star_dust(),
     }
+    for name in SOLID:
+        made[f"{name}_mask"] = mask(made[name])
     for name, img in made.items():
         img.save(OUT / f"{name}.png")
         print("wrote", (OUT / f"{name}.png").relative_to(ROOT))
+    for name in BLURRED:
+        meta = OUT / f"{name}.png.mcmeta"
+        meta.write_text(json.dumps({"texture": {"blur": True, "clamp": not name.startswith("nebula") and name != "aurora"}}, indent=1) + "\n",
+                        encoding="utf-8")
+        print("wrote", meta.relative_to(ROOT))
     (TEX / "particle").mkdir(parents=True, exist_ok=True)
     wisp().save(TEX / "particle" / "wisp.png")
     print("wrote", (TEX / "particle" / "wisp.png").relative_to(ROOT))
@@ -465,7 +523,7 @@ def main():
         draw.text((x, y + 130), name, fill=(220, 220, 230))
         x += 134
     x, y = 20, 600
-    for name in ("moon_debris", "ember_moon", "star_glint", "swirl"):
+    for name in ("moon_debris", "ember_moon", "star_glint", "swirl", "aurora"):
         sheet.alpha_composite(made[name].resize((128, 128), Image.NEAREST), (x, y))
         draw.text((x, y + 130), name, fill=(220, 220, 230))
         x += 134

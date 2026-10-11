@@ -85,7 +85,11 @@ public final class SkyseamBlocks {
             () -> new LanternVineBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_YELLOW).noCollission().instabreak()
                     .sound(SoundType.CAVE_VINES).lightLevel(LanternVineBlock::lightLevel).pushReaction(PushReaction.DESTROY)));
 
-    /** Prismite: violet crystal growing from Stillstone, in three sizes, mined for Prism Dust (from M5). */
+    /**
+     * Prismite: violet crystal growing from Stillstone, in three sizes, mined for Prism Dust (from M5). It has no
+     * collision, like a flower: you walk through it, and Distant Horizons leaves it out of its far terrain (it skips
+     * blocks without collision), so far islands aren't freckled with glowing specks under shaders.
+     */
     public static final DeferredBlock<AmethystClusterBlock> SMALL_PRISMITE_BUD = BLOCKS.register("small_prismite_bud",
             () -> new AmethystClusterBlock(3, 4, prismite(1)));
     public static final DeferredBlock<AmethystClusterBlock> LARGE_PRISMITE_BUD = BLOCKS.register("large_prismite_bud",
@@ -232,7 +236,7 @@ public final class SkyseamBlocks {
     }
 
     private static BlockBehaviour.Properties prismite(int light) {
-        return BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).forceSolidOn().noOcclusion().sound(SoundType.AMETHYST_CLUSTER)
+        return BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).forceSolidOn().noOcclusion().noCollission().sound(SoundType.AMETHYST_CLUSTER)
                 .strength(1.5f).lightLevel(state -> light).pushReaction(PushReaction.DESTROY);
     }
 
