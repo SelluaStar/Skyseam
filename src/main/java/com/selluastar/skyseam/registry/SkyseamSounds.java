@@ -16,8 +16,12 @@ import net.neoforged.neoforge.registries.DeferredRegister;
  * file (spec section 21). Replacing a sound is a file swap, never a code change: see {@code docs/ASSET-PATHS.md}.
  */
 public final class SkyseamSounds {
-    /** Seam sounds carry 256 blocks, because everyone within 256 blocks sees the reveal (spec section 6). */
-    public static final float SEAM_RANGE = 256;
+    /**
+     * Seam sounds are sent to everyone within 512 blocks: twice the 256 within which the reveal is seen (spec section
+     * 6), so a Seam opening is heard before it is seen (the author asked for them to carry further). How fast each
+     * fades is its {@code attenuation_distance} in {@code sounds.json}.
+     */
+    public static final float SEAM_RANGE = 512;
 
     public static final DeferredRegister<SoundEvent> SOUNDS = DeferredRegister.create(Registries.SOUND_EVENT, Skyseam.MOD_ID);
 
