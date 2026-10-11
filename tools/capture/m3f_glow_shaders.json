@@ -1,0 +1,266 @@
+{
+ "settle": 200,
+ "steps": [
+  {
+   "command": "gamemode spectator"
+  },
+  {
+   "command": "gamerule sendCommandFeedback false"
+  },
+  {
+   "command": "skyseam halcyon time set noon"
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 300
+  },
+  {
+   "command": "tp @s ~ ~ ~ 0 -75"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "shot": "fs_sky_noon_up"
+  },
+  {
+   "command": "skyseam halcyon time set sunset"
+  },
+  {
+   "command": "tp @s ~ ~ ~ 90 -10"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "shot": "fs_sky_sunset_west"
+  },
+  {
+   "command": "skyseam halcyon time set midnight"
+  },
+  {
+   "command": "tp @s ~ ~ ~ 90 -35"
+  },
+  {
+   "wait": 80
+  },
+  {
+   "shot": "fs_sky_night_west"
+  },
+  {
+   "command": "tp @s ~ ~ ~ 0 -85"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "shot": "fs_sky_night_up"
+  },
+  {
+   "command": "skyseam halcyon time set noon"
+  },
+  {
+   "command": "tp @s ~ ~ ~ 0 18"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "command": "fill ~-7 ~-4 ~3 ~7 ~-4 ~13 skyseam:duskstone"
+  },
+  {
+   "command": "fill ~-7 ~-3 ~13 ~7 ~4 ~13 skyseam:duskstone"
+  },
+  {
+   "command": "fill ~-3 ~-2 ~12 ~3 ~3 ~12 skyseam:glow_moss[north=false,south=true]"
+  },
+  {
+   "command": "fill ~-7 ~-3 ~7 ~-6 ~5 ~8 skyseam:elder_log"
+  },
+  {
+   "command": "fill ~6 ~-3 ~8 ~6 ~5 ~8 skyseam:elder_log"
+  },
+  {
+   "command": "fill ~-3 ~4 ~10 ~3 ~4 ~10 skyseam:elder_log[axis=x]"
+  },
+  {
+   "command": "setblock ~-4 ~-3 ~7 skyseam:prismite_cluster[facing=up]"
+  },
+  {
+   "command": "setblock ~-4 ~-3 ~9 skyseam:prismite_cluster[facing=up]"
+  },
+  {
+   "command": "setblock ~-3 ~-3 ~7 skyseam:large_prismite_bud[facing=up]"
+  },
+  {
+   "command": "setblock ~-3 ~-3 ~9 skyseam:large_prismite_bud[facing=up]"
+  },
+  {
+   "command": "setblock ~-2 ~-3 ~7 skyseam:small_prismite_bud[facing=up]"
+  },
+  {
+   "command": "setblock ~-2 ~-3 ~9 skyseam:prismite_cluster[facing=up]"
+  },
+  {
+   "command": "setblock ~-1 ~-3 ~7 skyseam:prismite_cluster[facing=up]"
+  },
+  {
+   "command": "setblock ~-1 ~-3 ~9 skyseam:small_prismite_bud[facing=up]"
+  },
+  {
+   "command": "setblock ~0 ~-3 ~7 skyseam:large_prismite_bud[facing=up]"
+  },
+  {
+   "command": "setblock ~0 ~-3 ~9 skyseam:large_prismite_bud[facing=up]"
+  },
+  {
+   "command": "setblock ~1 ~-3 ~7 skyseam:prismite_cluster[facing=up]"
+  },
+  {
+   "command": "setblock ~1 ~-3 ~9 skyseam:prismite_cluster[facing=up]"
+  },
+  {
+   "command": "setblock ~2 ~-3 ~7 skyseam:small_prismite_bud[facing=up]"
+  },
+  {
+   "command": "setblock ~2 ~-3 ~9 skyseam:prismite_cluster[facing=up]"
+  },
+  {
+   "command": "setblock ~3 ~-3 ~7 skyseam:large_prismite_bud[facing=up]"
+  },
+  {
+   "command": "setblock ~3 ~-3 ~9 skyseam:large_prismite_bud[facing=up]"
+  },
+  {
+   "command": "setblock ~4 ~-3 ~7 skyseam:prismite_cluster[facing=up]"
+  },
+  {
+   "command": "setblock ~4 ~-3 ~9 skyseam:small_prismite_bud[facing=up]"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "shot": "fs_showcase_noon"
+  },
+  {
+   "command": "skyseam halcyon time set midnight"
+  },
+  {
+   "wait": 80
+  },
+  {
+   "shot": "fs_showcase_night"
+  },
+  {
+   "command": "tp @s ~ ~-1 ~2 0 30"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "shot": "fs_showcase_crystals_night"
+  },
+  {
+   "command": "skyseam halcyon time set noon"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "shot": "fs_showcase_crystals_noon"
+  },
+  {
+   "command": "skyseam halcyon tp hush"
+  },
+  {
+   "wait": 300
+  },
+  {
+   "command": "skyseam halcyon time set midnight"
+  },
+  {
+   "command": "tp @s ~ ~ ~ 180 -30"
+  },
+  {
+   "wait": 80
+  },
+  {
+   "shot": "fs_hush_aurora_north"
+  },
+  {
+   "command": "tp @s ~ ~ ~ 0 -30"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "shot": "fs_hush_aurora_south"
+  },
+  {
+   "command": "tp @s ~ ~ ~ 90 -55"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "shot": "fs_hush_aurora_up"
+  },
+  {
+   "command": "skyseam halcyon find giant_elder_lumen"
+  },
+  {
+   "wait": 400
+  },
+  {
+   "shot": "fs_elder_night"
+  },
+  {
+   "command": "skyseam halcyon find cave_sinkhole"
+  },
+  {
+   "wait": 300
+  },
+  {
+   "shot": "fs_sinkhole_night"
+  },
+  {
+   "command": "skyseam halcyon time set noon"
+  },
+  {
+   "command": "skyseam halcyon tp highlands"
+  },
+  {
+   "wait": 400
+  },
+  {
+   "command": "tp @s ~ ~ ~ ~ 35"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "shot": "fs_highlands_noon"
+  },
+  {
+   "command": "skyseam halcyon time set midnight"
+  },
+  {
+   "wait": 80
+  },
+  {
+   "shot": "fs_highlands_night"
+  },
+  {
+   "quit": true
+  }
+ ]
+}

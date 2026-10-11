@@ -104,7 +104,7 @@ public final class Palette {
             BlockState duskstone = SkyseamBlocks.DUSKSTONE.get().defaultBlockState();
             thorn = new Palette(Blocks.GRASS_BLOCK.defaultBlockState(), Blocks.MOSS_BLOCK.defaultBlockState(), Blocks.DIRT.defaultBlockState(),
                     Blocks.GRAVEL.defaultBlockState(), duskstone, Blocks.GRAVEL.defaultBlockState(), Blocks.GRAVEL.defaultBlockState(),
-                    SkyseamBlocks.PRISMITE_LAMP.get().defaultBlockState(), 0.035, duskstone, 0.4, Blocks.DEEPSLATE.defaultBlockState(), 0.3,
+                    SkyseamBlocks.PRISMITE_LAMP.get().defaultBlockState(), 0.008, duskstone, 0.4, Blocks.DEEPSLATE.defaultBlockState(), 0.3,
                     SkyseamBlocks.COBBLED_DUSKSTONE.get().defaultBlockState(), 0.3);
         }
         return thorn;
@@ -129,9 +129,9 @@ public final class Palette {
                     shoal, 0.5, smoothShoal, 0.25, sandstone, 0.15, Blocks.CALCITE.defaultBlockState(), 0.1);
             case CIRRUS_REEFS -> new Palette(grass, grass, dirt, sand, sandstone, sand, clay, SkyseamBlocks.CLOUD.get().defaultBlockState(), 0.0,
                     Blocks.CALCITE.defaultBlockState(), 0.4, stillstone, 0.4, Blocks.DIORITE.defaultBlockState(), 0.2);
-            case HUSH -> new Palette(grass, grass, dirt, gravel, duskstone, gravel, cobbledDusk, lamp, 0.002,
+            case HUSH -> new Palette(grass, grass, dirt, gravel, duskstone, gravel, cobbledDusk, lamp, 0.0006,
                     duskstone, 0.45, cobbledDusk, 0.3, Blocks.DEEPSLATE.defaultBlockState(), 0.25);
-            case SPINDLE -> new Palette(grass, grass, dirt, sand, sandstone, sand, gravel, lamp, 0.001,
+            case SPINDLE -> new Palette(grass, grass, dirt, sand, sandstone, sand, gravel, lamp, 0.0003,
                     duskstone, 0.45, cobbledDusk, 0.3, Blocks.DEEPSLATE.defaultBlockState(), 0.25);
             case WRECKFIELDS -> new Palette(grass, Blocks.COARSE_DIRT.defaultBlockState(), Blocks.COARSE_DIRT.defaultBlockState(), gravel, Blocks.TUFF
                     .defaultBlockState(), gravel, gravel, Blocks.MOSSY_COBBLESTONE.defaultBlockState(), 0.02,

@@ -1,8 +1,69 @@
 {
-  "parent": "minecraft:block/glow_lichen",
+  "parent": "minecraft:block/block",
+  "ambientocclusion": false,
+  "elements": [
+    {
+      "faces": {
+        "north": {
+          "texture": "#face",
+          "uv": [
+            16.0,
+            0.0,
+            0.0,
+            16.0
+          ]
+        },
+        "south": {
+          "texture": "#face"
+        }
+      },
+      "from": [
+        0,
+        0,
+        0.1
+      ],
+      "to": [
+        16,
+        16,
+        0.1
+      ]
+    },
+    {
+      "faces": {
+        "north": {
+          "texture": "#glow",
+          "uv": [
+            16.0,
+            0.0,
+            0.0,
+            16.0
+          ]
+        },
+        "south": {
+          "texture": "#glow"
+        }
+      },
+      "from": [
+        0,
+        0,
+        0.1
+      ],
+      "neoforge_data": {
+        "ambient_occlusion": false,
+        "block_light": 15,
+        "sky_light": 15
+      },
+      "to": [
+        16,
+        16,
+        0.1
+      ]
+    }
+  ],
   "render_type": "minecraft:cutout",
   "textures": {
-    "glow_lichen": "skyseam:block/glow_moss",
+    "face": "skyseam:block/glow_moss",
+    "glow": "skyseam:block/glow_moss_spores",
     "particle": "skyseam:block/glow_moss"
   }
 }

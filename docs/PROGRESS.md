@@ -971,3 +971,130 @@ This replaces most of M3's world, sky and Obelisk (DECISIONS K75–K90, DEVIATIO
 7. Fly far out. Nothing should pull you back.
 8. If you play with shaders, try them in the Halcyon at day and night.
 9. Send `logs/latest.log` and screenshots, and say what to change.
+
+## M3 follow-up: shaders, Prismite, glow moss and Elder veins (2026-10-11)
+
+The author tested the M3 rebuild with Complementary Reimagined and Distant Horizons. They sent two screenshots: a
+night aerial view with glowing specks on every far island, and the night sky with hard-edged shapes. They said:
+- "there's currently a few problems with the shaders… fix what you can and tell me what I need to fix";
+- "too many crystals everywhere, it should be rare kind of";
+- the glow moss "should only be on full blocks and it should have variations rather than only one";
+- "completely redo the texture of the crystal";
+- "randomize the glow texture on the tree and make them blend into each other; most should be one bigger line rather
+  than two lines, but when it's two lines it should merge".
+
+**What was wrong**
+- **The sky under shaders.** Complementary's sky programs (read in its source) do four things vanilla doesn't:
+  - they ignore the alpha a sky element is faded with;
+  - they use one colour per triangle;
+  - they square a textured colour;
+  - they paint anything untextured with the pack's own sky colour.
+
+  So the faded swirl over the zenith became a solid teal and black shape. The aurora's curtains (untextured) became
+  slabs of sky colour with hard edges, and the faint stars small squares of it.
+- **The blocky glowing squares** near the camera at night (in the author's sky screenshot too) were the wisp
+  particles. Their texture was 8×8, blown up close and spread by the pack's bloom.
+- **The specks on far islands.** Under shaders, Distant Horizons draws every far block that gives off light as glowing
+  (Complementary gives its "illuminated" material an emission of 2.5). It leaves out blocks without collision by
+  default, but Prismite had collision and grew on about 3 % of all bare rock, about 10 % in the Hush. Every far
+  crystal became a glowing block.
+- **Glow moss** grew under anything "solid" (leaves, slabs, stairs, fences), in one texture.
+- **The Elder veins** were two thin lines placed at random, so they broke at every block.
+
+**Built** (DECISIONS K91–K94)
+- **The sky survives a shader pack** (`client/halcyon/sky/SkyDraw`, `ShaderPack`):
+  - **Textured, apart from the dome:** everything but the dome itself is textured. Complementary repaints the dome
+    with its own sky colour.
+  - **Light:** glows, stars, nebulae, swirl and aurora are added with their strength folded into their colour. In
+    vanilla that's exactly the same as fading by alpha; under shaders a square root makes up for the squaring.
+  - **Solid bodies:** moons, planet and debris are drawn in two passes, a white cut-out darkening the sky behind them
+    by their opacity, then their colour. That's exactly vanilla's alpha blend, and it fades the same under shaders.
+  - **New textures:** the faint stars use a dot texture, and the aurora a gradient strip (teal through violet to rose)
+    with rays.
+  - **Smoothing:** the soft glows are smoothed (`.png.mcmeta` blur), so they don't show their pixels stretched across
+    the sky.
+  - **Iris check:** found by reflection, so Iris stays optional.
+- **The wisp particle:** now 32×32, a small bright core in a faint glow.
+- **Prismite is rare:**
+  - **Where it grows:** in scattered patches on bare rock (about 5 % of rock, 10 % in the Hush), about one spot in
+    seven there. Elsewhere a stray small bud, one spot in a thousand.
+  - **Lamps:** fewer on cave floors and the sea floor, and fewer set in the rock (Thorn isles 0.8 %, was 3.5 %).
+  - **No collision**, like a flower, so Distant Horizons leaves it out of its far terrain.
+  - **New textures:** faceted, with a lit left facet and a bright ridge, deep violet roots, rose and cyan tips, and two
+    layouts per size picked at random. The Prismite lamp is repainted to match.
+- **Glow moss:**
+  - only on whole blocks, never leaves, slabs, stairs, fences or walls;
+  - four growths picked at random per face: a lacy mat, branching strands, round colonies, scattered tufts;
+  - spores on a full-bright layer, so they sparkle at night.
+- **Elder veins:**
+  - six vein overlays, mostly one thick vein winding up the bark;
+  - in one, a thinner vein parts from it and merges back; in two, a thinner branch joins or leaves it and fades out;
+  - every vein crosses the block's top and bottom edges through the same two middle pixels, so a trunk's veins never
+    break;
+  - each Elder log and wood picks one of six models at random, with a different vein and one of two barks on each
+    side.
+- **The boot check counts the glow:** in 100 fresh chunks in three places, it counts Prismite crystals, lamps (and how
+  many are open to the air) and glow moss. It fails if any moss clings to less than a whole block.
+- **DEVIATIONS D28 corrected.** The full-bright layers *do* glow under Sodium and Iris; measured below.
+
+**Verified (actually run)**
+- **The milestone check** (`tools/verify_milestone.py`): build ✓, runData ✓, **46/46 GameTests** ✓, server boot ✓.
+- **The boot check's census** (a fresh Halcyon):
+
+  | Where (100 chunks) | Crystals | Per chunk | Lamps | Lamps open to the air | Glow moss | Moss on less than a whole block |
+  |---|---|---|---|---|---|---|
+  | By the Spindle | 72 | 0.72 | 1,130 | 8 | 202 | 0 |
+  | In the archipelago | 59 | 0.59 | 3 | 2 | 193 | 0 |
+  | In the Highlands | 185 | 1.85 | 6 | 5 | 2,668 | 0 |
+
+  - **Lamps:** almost all of the Spindle's lamps are buried in the rock, where nobody sees them.
+  - **Generation speed:** 14.4, 14.6 and 21.1 ms a chunk, as before.
+- **The real client, without and with shaders** (Iris 1.8.14, Sodium 0.8.13, Complementary Reimagined r5.9.3;
+  `tools/capture/m3f_glow.json` and `m3f_glow_shaders.json`):
+  - the sky at noon, sunset and midnight;
+  - the Hush's aurora;
+  - a showcase of crystals, glow moss, Elder trunks and a lying Elder log at noon and midnight;
+  - an Elder Lumen, a sinkhole and the Highlands at night.
+
+  Under Complementary:
+  - the aurora is soft curtains with rays;
+  - the swirl and aurora slabs are gone;
+  - the wisps are smooth round glows;
+  - the Shard Moon and its debris draw correctly;
+  - the Elder veins and moss spores glow. The veins measure as bright at midnight as at noon (mean 196 against 175)
+    while the bark dims (72 against 102).
+
+  Contact sheets:
+  - before and after under shaders: [`docs/previews/m3f-shaders-before-after.png`](previews/m3f-shaders-before-after.png);
+  - the showcase, aurora and Elder: [`m3f-glow.png`](previews/m3f-glow.png);
+  - every new texture, a trunk face and a moss wall from random variants: [`m3f-textures.png`](previews/m3f-textures.png).
+
+**Not tested here**
+- **Distant Horizons** was never run (not installed for development). The fix follows its code: it draws a far block
+  as glowing when the block gives off light, and leaves out blocks without collision by default.
+- **What the pack still owns:** under Complementary the sky's colour and the 3D clouds' shading are the pack's. At
+  night the clouds are dark, opaque shapes that can hide the moons.
+- **Prismite at night under Complementary:** it gives off a little light but has no full-bright layer, so it reads
+  dark.
+
+**For the author to do (Distant Horizons and shaders)**
+1. Use a **new** world. Old chunks keep their crowded crystals, and Distant Horizons keeps its saved far terrain.
+2. In Distant Horizons' settings (Advanced → Graphics → Culling, or `config/DistantHorizons.toml`), keep "blocks to
+   ignore" (`blocksToIgnore`) at its default, non-colliding blocks.
+3. If the few far Prismite lamps still glow too much, add `skyseam:prismite_lamp` to its ignored blocks
+   (`ignoredRenderBlockCsv`).
+
+**Author's in-game test (M3 follow-up)**
+1. New world, Complementary on, Distant Horizons on. Fly high over the islands at night: the far islands should no
+   longer be freckled with glowing specks.
+2. Look round the night sky (`/skyseam halcyon time set midnight`):
+   - no hard-edged shapes;
+   - the aurora (strongest in the Hush, `/skyseam halcyon tp hush`) should be soft curtains with rays;
+   - wisps near you should be round glows, not squares.
+3. Find crystals on bare rock: they should be rare, in small patches, faceted with coloured tips, and you walk
+   through them.
+4. Look under overhangs and in caves (`/skyseam halcyon find cave_sinkhole`): glow moss only on whole blocks, in
+   different growths, sparkling at night.
+5. `/skyseam halcyon find giant_elder_lumen` at night: the veins should run unbroken up the trunk, mostly one thick
+   line, sometimes splitting and merging.
+6. Send screenshots and `logs/latest.log`.

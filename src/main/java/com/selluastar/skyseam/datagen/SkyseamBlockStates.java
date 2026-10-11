@@ -55,7 +55,7 @@ final class SkyseamBlockStates extends BlockStateProvider {
 
         carpet(SkyseamBlocks.PETAL_CARPET);
         carpet(SkyseamBlocks.CLOUDMOSS);
-        multiface(SkyseamBlocks.GLOW_MOSS);
+        multiface(SkyseamBlocks.GLOW_MOSS, 4);
         lanternVine();
         crystal(SkyseamBlocks.SMALL_PRISMITE_BUD);
         crystal(SkyseamBlocks.LARGE_PRISMITE_BUD);
@@ -87,10 +87,10 @@ final class SkyseamBlockStates extends BlockStateProvider {
         variants(SkyseamBlocks.UMBER_CLIFFSTONE, 3);
         variants(SkyseamBlocks.MOSSY_CLIFFSTONE, 2);
         variants(SkyseamBlocks.HORNSTONE, 3);
-        log(SkyseamBlocks.ELDER_LOG, "elder_log", "elder_log_top", "elder_log_glow");
-        log(SkyseamBlocks.ELDER_WOOD, "elder_log", "elder_log", "elder_log_glow");
-        log(SkyseamBlocks.DUSKWOOD_LOG, "duskwood_log", "duskwood_log_top", null);
-        log(SkyseamBlocks.DUSKWOOD_WOOD, "duskwood_log", "duskwood_log", null);
+        veinedLog(SkyseamBlocks.ELDER_LOG, true);
+        veinedLog(SkyseamBlocks.ELDER_WOOD, false);
+        log(SkyseamBlocks.DUSKWOOD_LOG, "duskwood_log", "duskwood_log_top");
+        log(SkyseamBlocks.DUSKWOOD_WOOD, "duskwood_log", "duskwood_log");
         leaves(SkyseamBlocks.ELDER_LEAVES, 2);
         leaves(SkyseamBlocks.DUSKWOOD_LEAVES, 2);
         leaves(SkyseamBlocks.SPIREPINE_NEEDLES, 2);
@@ -157,21 +157,71 @@ final class SkyseamBlockStates extends BlockStateProvider {
         simpleBlockWithItem(block.get(), model);
     }
 
-    /** A log or wood block: bark on the sides, {@code end} on the ends, and optionally a full-bright vein layer on the bark. */
-    private void log(DeferredBlock<RotatedPillarBlock> block, String side, String end, String glow) {
+    /** A log or wood block: bark on the sides and {@code end} on the ends. */
+    private void log(DeferredBlock<RotatedPillarBlock> block, String side, String end) {
         String name = block.getId().getPath();
         BlockModelBuilder model = models().withExistingParent(name, mcLoc("block/block")).texture("side", texture(side))
                 .texture("end", texture(end)).texture("particle", texture(side));
         model.element().from(0, 0, 0).to(16, 16, 16).allFaces((direction, face) ->
                 face.texture(direction.getAxis() == Direction.Axis.Y ? "#end" : "#side").cullface(direction)).end();
-        if (glow != null) {
-            model.texture("glow", texture(glow)).renderType("cutout");
-            boolean wood = side.equals(end);
-            model.element().from(0, 0, 0).to(16, 16, 16).allFacesExcept((direction, face) -> face.texture("#glow").cullface(direction),
-                    wood ? java.util.Set.of() : java.util.Set.of(Direction.UP, Direction.DOWN)).emissivity(15, 15).ao(false).end();
-        }
         axisBlock(block.get(), model, model);
         simpleBlockItem(block.get(), model);
+    }
+
+    /** How many bark and vein textures the Elder has (elder_log[_1], elder_log_glow[_1.._5]). */
+    private static final int ELDER_BARKS = 2;
+    private static final int ELDER_VEINS = 6;
+
+    /**
+     * An Elder log or wood: bark with a full-bright vein layer, in {@link #ELDER_VEINS} models picked at random per
+     * block, each showing a different vein (and bark) on each side. Every vein enters and leaves its texture through
+     * the same middle pixels, so whichever models stand together, the veins run on unbroken up a trunk.
+     */
+    private void veinedLog(DeferredBlock<RotatedPillarBlock> block, boolean log) {
+        String name = block.getId().getPath();
+        Direction[] sides = {Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
+        ConfiguredModel.Builder<?> vertical = ConfiguredModel.builder();
+        ConfiguredModel.Builder<?> alongZ = ConfiguredModel.builder();
+        ConfiguredModel.Builder<?> alongX = ConfiguredModel.builder();
+        ModelFile first = null;
+        for (int k = 0; k < ELDER_VEINS; k++) {
+            BlockModelBuilder model = models().withExistingParent(k == 0 ? name : name + "_" + k, mcLoc("block/block"))
+                    .texture("particle", texture("elder_log")).renderType("cutout");
+            model.texture("end", texture(log ? "elder_log_top" : "elder_log"));
+            for (int s = 0; s < 4; s++) {
+                int bark = (k + s) % ELDER_BARKS;
+                int vein = (k + s * 2 + s / 2) % ELDER_VEINS;
+                model.texture("side" + s, texture(bark == 0 ? "elder_log" : "elder_log_" + bark));
+                model.texture("vein" + s, texture(vein == 0 ? "elder_log_glow" : "elder_log_glow_" + vein));
+            }
+            model.texture("vein_end", texture("elder_log_glow_" + (1 + k % (ELDER_VEINS - 1))));
+            model.element().from(0, 0, 0).to(16, 16, 16).allFaces((direction, face) -> face.texture(
+                    direction.getAxis() == Direction.Axis.Y ? "#end" : "#side" + java.util.Arrays.asList(sides).indexOf(direction))
+                    .cullface(direction)).end();
+            model.element().from(0, 0, 0).to(16, 16, 16).allFacesExcept((direction, face) -> face.texture(
+                    direction.getAxis() == Direction.Axis.Y ? "#vein_end" : "#vein" + java.util.Arrays.asList(sides).indexOf(direction))
+                    .cullface(direction), log ? java.util.Set.of(Direction.UP, Direction.DOWN) : java.util.Set.of())
+                    .emissivity(15, 15).ao(false).end();
+            if (k == 0) {
+                first = model;
+            } else {
+                vertical = vertical.nextModel();
+                alongZ = alongZ.nextModel();
+                alongX = alongX.nextModel();
+            }
+            vertical.modelFile(model);
+            alongZ.modelFile(model).rotationX(90);
+            alongX.modelFile(model).rotationX(90).rotationY(90);
+        }
+        ConfiguredModel[] up = vertical.build();
+        ConfiguredModel[] z = alongZ.build();
+        ConfiguredModel[] x = alongX.build();
+        getVariantBuilder(block.get()).forAllStates(state -> switch (state.getValue(RotatedPillarBlock.AXIS)) {
+            case Y -> up;
+            case Z -> z;
+            case X -> x;
+        });
+        simpleBlockItem(block.get(), first);
     }
 
     /**
@@ -264,11 +314,17 @@ final class SkyseamBlockStates extends BlockStateProvider {
         simpleBlockWithItem(block.get(), models().carpet(name, texture(name)).renderType("cutout"));
     }
 
-    /** A glow-lichen-like block: one flat face per side it clings to, rotated as vanilla's glow lichen. */
-    private void multiface(DeferredBlock<? extends Block> block) {
+    /**
+     * A glow-lichen-like block: one flat face per side it clings to, rotated as vanilla's glow lichen, each face
+     * showing one of {@code count} growths ({@code name}, {@code name_1}, ...) picked at random per block.
+     */
+    private void multiface(DeferredBlock<? extends Block> block, int count) {
         String name = block.getId().getPath();
-        ModelFile model = models().withExistingParent(name, mcLoc("block/glow_lichen"))
-                .texture("glow_lichen", texture(name)).texture("particle", texture(name)).renderType("cutout");
+        ModelFile[] models = new ModelFile[count];
+        for (int k = 0; k < count; k++) {
+            String suffix = k == 0 ? "" : "_" + k;
+            models[k] = glowingFace(name + suffix, texture(name + suffix), texture(name + "_spores" + suffix), texture(name));
+        }
         MultiPartBlockStateBuilder builder = getMultipartBuilder(block.get());
         for (Direction direction : Direction.values()) {
             int x = direction == Direction.UP ? 270 : direction == Direction.DOWN ? 90 : 0;
@@ -279,15 +335,43 @@ final class SkyseamBlockStates extends BlockStateProvider {
                 default -> 0;
             };
             BooleanProperty face = MultifaceBlock.getFaceProperty(direction);
-            builder.part().modelFile(model).rotationX(x).rotationY(y).uvLock(x != 0 || y != 0).addModel().condition(face, true).end();
+            growths(builder.part(), models, x, y).condition(face, true).end();
             // With no face set (as an item would place it), every face shows, as vanilla does.
-            MultiPartBlockStateBuilder.PartBuilder none = builder.part().modelFile(model).rotationX(x).rotationY(y).uvLock(x != 0 || y != 0).addModel();
+            MultiPartBlockStateBuilder.PartBuilder none = growths(builder.part(), models, x, y);
             for (Direction other : Direction.values()) {
                 none.condition(MultifaceBlock.getFaceProperty(other), false);
             }
             none.end();
         }
         flatItem(block, name);
+    }
+
+    /**
+     * A flat face like vanilla's glow lichen (one plane a tenth of a pixel off the block it clings to, seen from
+     * both sides), with a second, full-bright plane of {@code glow} over it.
+     */
+    private ModelFile glowingFace(String model, ResourceLocation face, ResourceLocation glow, ResourceLocation particle) {
+        BlockModelBuilder builder = models().withExistingParent(model, mcLoc("block/block")).ao(false).texture("face", face)
+                .texture("glow", glow).texture("particle", particle).renderType("cutout");
+        builder.element().from(0, 0, 0.1f).to(16, 16, 0.1f)
+                .face(Direction.NORTH).uvs(16, 0, 0, 16).texture("#face").end()
+                .face(Direction.SOUTH).uvs(0, 0, 16, 16).texture("#face").end().end();
+        builder.element().from(0, 0, 0.1f).to(16, 16, 0.1f)
+                .face(Direction.NORTH).uvs(16, 0, 0, 16).texture("#glow").end()
+                .face(Direction.SOUTH).uvs(0, 0, 16, 16).texture("#glow").end().emissivity(15, 15).ao(false).end();
+        return builder;
+    }
+
+    /** One face of a multiface block: any of {@code models}, turned {@code (x, y)}. */
+    private static MultiPartBlockStateBuilder.PartBuilder growths(ConfiguredModel.Builder<MultiPartBlockStateBuilder.PartBuilder> part,
+            ModelFile[] models, int x, int y) {
+        for (int k = 0; k < models.length; k++) {
+            if (k > 0) {
+                part = part.nextModel();
+            }
+            part.modelFile(models[k]).rotationX(x).rotationY(y).uvLock(x != 0 || y != 0);
+        }
+        return part.addModel();
     }
 
     private void lanternVine() {
@@ -299,10 +383,11 @@ final class SkyseamBlockStates extends BlockStateProvider {
         flatItem(block, "lantern_vine_tip");
     }
 
-    /** An amethyst-style crystal that grows out of whichever face it was placed on. */
+    /** An amethyst-style crystal that grows out of whichever face it was placed on, in two layouts picked at random. */
     private void crystal(DeferredBlock<? extends AmethystClusterBlock> block) {
         String name = block.getId().getPath();
         ModelFile model = models().cross(name, texture(name)).renderType("cutout");
+        ModelFile other = models().cross(name + "_1", texture(name + "_1")).renderType("cutout");
         getVariantBuilder(block.get()).forAllStatesExcept(state -> {
             Direction facing = state.getValue(BlockStateProperties.FACING);
             int x = facing == Direction.UP ? 0 : facing == Direction.DOWN ? 180 : 90;
@@ -312,7 +397,8 @@ final class SkyseamBlockStates extends BlockStateProvider {
                 case WEST -> 270;
                 default -> 0;
             };
-            return ConfiguredModel.builder().modelFile(model).rotationX(x).rotationY(y).build();
+            return ConfiguredModel.builder().modelFile(model).rotationX(x).rotationY(y).nextModel().modelFile(other).rotationX(x).rotationY(y)
+                    .build();
         }, BlockStateProperties.WATERLOGGED);
         itemModels().withExistingParent(name, mcLoc("item/amethyst_bud")).texture("layer0", texture(name));
     }

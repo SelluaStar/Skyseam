@@ -32,6 +32,8 @@ import net.minecraft.util.Mth;
  */
 public final class StarField {
     private static final ResourceLocation GLINT = Skyseam.id("textures/environment/star_glint.png");
+    /** A small soft dot: the faint stars are textured too, as a shader pack repaints untextured quads as sky. */
+    private static final ResourceLocation DUST_DOT = Skyseam.id("textures/environment/star_dust.png");
     private static final ResourceLocation NEBULA = Skyseam.id("textures/environment/nebula.png");
     private static final ResourceLocation NEBULA_TEAL = Skyseam.id("textures/environment/nebula_teal.png");
     private static final ResourceLocation METEOR = Skyseam.id("textures/environment/meteor.png");
@@ -113,14 +115,15 @@ public final class StarField {
     }
 
     private static void stars(Matrix4f matrix, Matrix4f turn, float night, float time) {
-        RenderSystem.setShader(GameRenderer::getPositionColorShader);
-        BufferBuilder dust = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+        RenderSystem.setShaderTexture(0, DUST_DOT);
+        BufferBuilder dust = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         Vector3f at = new Vector3f();
         for (float[] star : DUST_STARS) {
             turn.transformDirection(star[0], star[1], star[2], at);
             float alpha = night * star[7] * (0.7f + 0.3f * Mth.sin(time * star[8] + star[9])) * SkyDraw.aboveHorizon(at);
             if (alpha > 0.01f) {
-                quad(dust, matrix, at, star[3], null, star[4], star[5], star[6], alpha);
+                quad(dust, matrix, at, star[3], new float[] {0, 0, 1, 1}, star[4], star[5], star[6], alpha);
             }
         }
         SkyDraw.draw(dust);
@@ -138,9 +141,12 @@ public final class StarField {
         SkyDraw.draw(bright);
     }
 
-    /** A square of {@code degrees} half-width facing the camera from {@code direction}; textured if {@code uv} is given. */
+    /**
+     * A textured square of {@code degrees} half-width facing the camera from {@code direction}, added to the sky at
+     * {@code strength} (folded into its colour; see {@link SkyDraw}).
+     */
     private static void quad(BufferBuilder buffer, Matrix4f matrix, Vector3f direction, float degrees, float[] uv, float r, float g, float b,
-            float alpha) {
+            float strength) {
         float half = SkyDraw.DOME * degrees * Mth.DEG_TO_RAD;
         Vector3f at = new Vector3f(direction).mul(SkyDraw.DOME);
         Vector3f side = new Vector3f(direction).cross(0, 1, 0);
@@ -149,17 +155,11 @@ public final class StarField {
         }
         side.normalize().mul(half);
         Vector3f up = new Vector3f(side).cross(direction).normalize().mul(half);
-        if (uv == null) {
-            buffer.addVertex(matrix, at.x - side.x - up.x, at.y - side.y - up.y, at.z - side.z - up.z).setColor(r, g, b, alpha);
-            buffer.addVertex(matrix, at.x + side.x - up.x, at.y + side.y - up.y, at.z + side.z - up.z).setColor(r, g, b, alpha);
-            buffer.addVertex(matrix, at.x + side.x + up.x, at.y + side.y + up.y, at.z + side.z + up.z).setColor(r, g, b, alpha);
-            buffer.addVertex(matrix, at.x - side.x + up.x, at.y - side.y + up.y, at.z - side.z + up.z).setColor(r, g, b, alpha);
-        } else {
-            buffer.addVertex(matrix, at.x - side.x - up.x, at.y - side.y - up.y, at.z - side.z - up.z).setUv(uv[0], uv[3]).setColor(r, g, b, alpha);
-            buffer.addVertex(matrix, at.x + side.x - up.x, at.y + side.y - up.y, at.z + side.z - up.z).setUv(uv[2], uv[3]).setColor(r, g, b, alpha);
-            buffer.addVertex(matrix, at.x + side.x + up.x, at.y + side.y + up.y, at.z + side.z + up.z).setUv(uv[2], uv[1]).setColor(r, g, b, alpha);
-            buffer.addVertex(matrix, at.x - side.x + up.x, at.y - side.y + up.y, at.z - side.z + up.z).setUv(uv[0], uv[1]).setColor(r, g, b, alpha);
-        }
+        float k = SkyDraw.lit(strength);
+        buffer.addVertex(matrix, at.x - side.x - up.x, at.y - side.y - up.y, at.z - side.z - up.z).setUv(uv[0], uv[3]).setColor(r * k, g * k, b * k, 1);
+        buffer.addVertex(matrix, at.x + side.x - up.x, at.y + side.y - up.y, at.z + side.z - up.z).setUv(uv[2], uv[3]).setColor(r * k, g * k, b * k, 1);
+        buffer.addVertex(matrix, at.x + side.x + up.x, at.y + side.y + up.y, at.z + side.z + up.z).setUv(uv[2], uv[1]).setColor(r * k, g * k, b * k, 1);
+        buffer.addVertex(matrix, at.x - side.x + up.x, at.y - side.y + up.y, at.z - side.z + up.z).setUv(uv[0], uv[1]).setColor(r * k, g * k, b * k, 1);
     }
 
     /** A nebula band round a great circle (u, w) of the turning sky, {@code width} degrees wide, its texture slid by {@code slide}. */
@@ -188,9 +188,9 @@ public final class StarField {
             float tu, float tv, float strength) {
         Vector3f local = new Vector3f(u).mul(Mth.cos(t)).add(new Vector3f(w).mul(Mth.sin(t))).mul(Mth.cos(across)).add(new Vector3f(normal).mul(Mth.sin(across)));
         Vector3f at = turn.transformDirection(local, new Vector3f());
-        float alpha = strength * SkyDraw.aboveHorizon(at);
+        float k = SkyDraw.lit(strength * SkyDraw.aboveHorizon(at));
         at.mul(SkyDraw.DOME * 0.99f);
-        buffer.addVertex(matrix, at.x, at.y, at.z).setUv(tu, tv).setColor(1, 1, 1, alpha);
+        buffer.addVertex(matrix, at.x, at.y, at.z).setUv(tu, tv).setColor(k, k, k, 1);
     }
 
     /**
@@ -224,14 +224,14 @@ public final class StarField {
             Vector3f head = new Vector3f(origin).mul(Mth.cos(length * progress)).add(new Vector3f(travel).mul(Mth.sin(length * progress))).normalize();
             Vector3f tail = new Vector3f(origin).mul(Mth.cos(length * Math.max(0, progress - 0.35f)))
                     .add(new Vector3f(travel).mul(Mth.sin(length * Math.max(0, progress - 0.35f)))).normalize();
-            float alpha = night * Mth.sin(progress * Mth.PI) * SkyDraw.aboveHorizon(head);
+            float k = SkyDraw.lit(night * Mth.sin(progress * Mth.PI) * SkyDraw.aboveHorizon(head));
             Vector3f across = new Vector3f(head).cross(travel).normalize().mul(SkyDraw.DOME * 0.004f);
             head.mul(SkyDraw.DOME * 0.98f);
             tail.mul(SkyDraw.DOME * 0.98f);
-            buffer.addVertex(matrix, tail.x - across.x, tail.y - across.y, tail.z - across.z).setUv(0, 1).setColor(1, 1, 1, alpha);
-            buffer.addVertex(matrix, head.x - across.x, head.y - across.y, head.z - across.z).setUv(1, 1).setColor(1, 1, 1, alpha);
-            buffer.addVertex(matrix, head.x + across.x, head.y + across.y, head.z + across.z).setUv(1, 0).setColor(1, 1, 1, alpha);
-            buffer.addVertex(matrix, tail.x + across.x, tail.y + across.y, tail.z + across.z).setUv(0, 0).setColor(1, 1, 1, alpha);
+            buffer.addVertex(matrix, tail.x - across.x, tail.y - across.y, tail.z - across.z).setUv(0, 1).setColor(k, k, k, 1);
+            buffer.addVertex(matrix, head.x - across.x, head.y - across.y, head.z - across.z).setUv(1, 1).setColor(k, k, k, 1);
+            buffer.addVertex(matrix, head.x + across.x, head.y + across.y, head.z + across.z).setUv(1, 0).setColor(k, k, k, 1);
+            buffer.addVertex(matrix, tail.x + across.x, tail.y + across.y, tail.z + across.z).setUv(0, 0).setColor(k, k, k, 1);
         }
         SkyDraw.draw(buffer);
     }

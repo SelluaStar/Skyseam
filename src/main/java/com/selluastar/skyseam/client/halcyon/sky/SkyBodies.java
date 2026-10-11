@@ -34,6 +34,14 @@ public final class SkyBodies {
     private static final ResourceLocation SHARD_MOON = tex("shard_moon");
     private static final ResourceLocation DEBRIS = tex("moon_debris");
     private static final ResourceLocation EMBER_MOON = tex("ember_moon");
+    // The solid bodies' cut-outs, for SkyDraw.solid.
+    private static final ResourceLocation PLANET_MASK = tex("planet_mask");
+    private static final ResourceLocation PLANET_SHADOW_MASK = tex("planet_shadow_mask");
+    private static final ResourceLocation PALE_MOON_MASK = tex("pale_moon_mask");
+    private static final ResourceLocation RINGED_MOON_MASK = tex("ringed_moon_mask");
+    private static final ResourceLocation SHARD_MOON_MASK = tex("shard_moon_mask");
+    private static final ResourceLocation DEBRIS_MASK = tex("moon_debris_mask");
+    private static final ResourceLocation EMBER_MOON_MASK = tex("ember_moon_mask");
 
     private SkyBodies() {}
 
@@ -73,21 +81,20 @@ public final class SkyBodies {
         float r = 1;
         float g = Mth.lerp(warm, 0.96f, 0.76f);
         float b = Mth.lerp(warm, 0.86f, 0.55f);
-        SkyDraw.additive();
         // The halo: wide and soft, pulsing slowly; warmer and larger low in the sky.
         float pulse = 0.92f + 0.08f * Mth.sin(time * 0.02f);
-        SkyDraw.billboard(matrix, HALO, at.sun(), 26 * (1 + 0.4f * warm), null, r, g * 0.95f, b * 0.85f, 0.42f * sunUp * pulse * (0.4f + 0.6f * light));
+        SkyDraw.glow(matrix, HALO, at.sun(), 26 * (1 + 0.4f * warm), null, r, g * 0.95f, b * 0.85f, 0.42f * sunUp * pulse * (0.4f + 0.6f * light));
         Vector3f spin = SkyDraw.spun(new Vector3f(at.sun()).cross(0, 1, 0), at.sun(), time * 0.0009f);
-        SkyDraw.billboard(matrix, CORONA, at.sun(), 15, spin, r, g, b, 0.45f * sunUp * light);
+        SkyDraw.glow(matrix, CORONA, at.sun(), 15, spin, r, g, b, 0.45f * sunUp * light);
         Vector3f counter = SkyDraw.spun(new Vector3f(at.sun()).cross(0, 1, 0), at.sun(), -time * 0.0006f + 0.3f);
-        SkyDraw.billboard(matrix, CORONA, at.sun(), 11, counter, r, g, b, 0.3f * sunUp * light);
+        SkyDraw.glow(matrix, CORONA, at.sun(), 11, counter, r, g, b, 0.3f * sunUp * light);
         // The Lantern-Sun itself: its bright core spans 24 of the texture's 64 pixels.
-        SkyDraw.billboard(matrix, SUN, at.sun(), 12, null, r, Math.min(1, g + 0.04f), Math.min(1, b + 0.1f), Math.min(1, sunUp * (0.75f + 0.25f * light)));
+        SkyDraw.glow(matrix, SUN, at.sun(), 12, null, r, Math.min(1, g + 0.04f), Math.min(1, b + 0.1f), Math.min(1, sunUp * (0.75f + 0.25f * light)));
         // The Ember companion, twinkling.
         float twinkle = 1 + 0.18f * Mth.sin(time * 0.13f) + 0.08f * Mth.sin(time * 0.31f + 1);
         float companionUp = SkyDraw.aboveHorizon(at.companion()) * clear;
-        SkyDraw.billboard(matrix, HALO, at.companion(), 6, null, 0.7f, 0.85f, 1, 0.3f * companionUp);
-        SkyDraw.billboard(matrix, COMPANION, at.companion(), 3.6f * twinkle, null, 0.85f, 0.93f, 1, companionUp);
+        SkyDraw.glow(matrix, HALO, at.companion(), 6, null, 0.7f, 0.85f, 1, 0.3f * companionUp);
+        SkyDraw.glow(matrix, COMPANION, at.companion(), 3.6f * twinkle, null, 0.85f, 0.93f, 1, companionUp);
     }
 
     /**
@@ -98,39 +105,29 @@ public final class SkyBodies {
         // Veyra: pale by day, full by night, its night side away from the sun.
         float planetUp = SkyDraw.aboveHorizon(at.planet()) * clear;
         float planetAlpha = planetUp * (0.55f + 0.45f * night);
-        SkyDraw.additive();
-        SkyDraw.billboard(matrix, HALO, at.planet(), 13, null, 0.5f, 0.85f, 0.9f, 0.12f * planetAlpha);
-        SkyDraw.normal();
-        SkyDraw.billboard(matrix, PLANET, at.planet(), 9.5f, null, 1, 1, 1, planetAlpha);
-        SkyDraw.billboard(matrix, PLANET_SHADOW, at.planet(), 9.5f, at.sun(), 1, 1, 1, planetAlpha * 0.95f);
+        SkyDraw.glow(matrix, HALO, at.planet(), 13, null, 0.5f, 0.85f, 0.9f, 0.12f * planetAlpha);
+        SkyDraw.solid(matrix, PLANET, PLANET_MASK, at.planet(), 9.5f, null, planetAlpha);
+        SkyDraw.solid(matrix, PLANET_SHADOW, PLANET_SHADOW_MASK, at.planet(), 9.5f, at.sun(), planetAlpha * 0.95f);
 
         float moons = (0.25f + 0.75f * night) * clear;
         // The Pale Moon, in vanilla's phase for the night.
         float paleUp = SkyDraw.aboveHorizon(at.paleMoon()) * moons;
         int frame = (int) Math.floorMod(moonPhase, 8);
-        SkyDraw.additive();
-        SkyDraw.billboard(matrix, HALO, at.paleMoon(), 22, null, 0.75f, 0.72f, 1, 0.3f * paleUp * night);
-        SkyDraw.normal();
-        SkyDraw.billboard(matrix, PALE_MOON, at.paleMoon(), 10, null, new float[] {frame / 8f, 0, (frame + 1) / 8f, 1}, 1, 1, 1, paleUp);
+        SkyDraw.glow(matrix, HALO, at.paleMoon(), 22, null, 0.75f, 0.72f, 1, 0.3f * paleUp * night);
+        SkyDraw.solid(matrix, PALE_MOON, PALE_MOON_MASK, at.paleMoon(), 10, null, new float[] {frame / 8f, 0, (frame + 1) / 8f, 1}, 1, 1, 1, paleUp);
         // The Ringed Moon.
         float ringedUp = SkyDraw.aboveHorizon(at.ringedMoon()) * moons;
-        SkyDraw.additive();
-        SkyDraw.billboard(matrix, HALO, at.ringedMoon(), 14, null, 0.7f, 0.45f, 1, 0.24f * ringedUp * night);
-        SkyDraw.normal();
-        SkyDraw.billboard(matrix, RINGED_MOON, at.ringedMoon(), 9.5f, null, 1, 1, 1, ringedUp);
+        SkyDraw.glow(matrix, HALO, at.ringedMoon(), 14, null, 0.7f, 0.45f, 1, 0.24f * ringedUp * night);
+        SkyDraw.solid(matrix, RINGED_MOON, RINGED_MOON_MASK, at.ringedMoon(), 9.5f, null, ringedUp);
         // The Shard Moon, its debris circling it.
         float shardUp = SkyDraw.aboveHorizon(at.shardMoon()) * moons;
-        SkyDraw.additive();
-        SkyDraw.billboard(matrix, HALO, at.shardMoon(), 15, null, 0.4f, 1, 0.95f, 0.3f * shardUp * night);
-        SkyDraw.normal();
-        SkyDraw.billboard(matrix, SHARD_MOON, at.shardMoon(), 8, null, 1, 1, 1, shardUp);
+        SkyDraw.glow(matrix, HALO, at.shardMoon(), 15, null, 0.4f, 1, 0.95f, 0.3f * shardUp * night);
+        SkyDraw.solid(matrix, SHARD_MOON, SHARD_MOON_MASK, at.shardMoon(), 8, null, shardUp);
         debris(matrix, at.shardMoon(), time, shardUp);
         // The Ember Moon, small and quick.
         float emberUp = SkyDraw.aboveHorizon(at.emberMoon()) * moons;
-        SkyDraw.additive();
-        SkyDraw.billboard(matrix, HALO, at.emberMoon(), 7, null, 1, 0.5f, 0.45f, 0.4f * emberUp);
-        SkyDraw.normal();
-        SkyDraw.billboard(matrix, EMBER_MOON, at.emberMoon(), 3.6f, null, 1, 1, 1, emberUp);
+        SkyDraw.glow(matrix, HALO, at.emberMoon(), 7, null, 1, 0.5f, 0.45f, 0.4f * emberUp);
+        SkyDraw.solid(matrix, EMBER_MOON, EMBER_MOON_MASK, at.emberMoon(), 3.6f, null, emberUp);
     }
 
     /** Four lumps of rock on a tilted ring round the Shard Moon, each turning as it goes. */
@@ -150,7 +147,7 @@ public final class SkyBodies {
             float behind = Mth.sin(a) < 0 ? 0.55f : 1;
             float[] uv = {(k % 2) * 0.5f, (k / 2) * 0.5f, (k % 2) * 0.5f + 0.5f, (k / 2) * 0.5f + 0.5f};
             Vector3f spin = SkyDraw.spun(right, at, time * 0.01f * (k % 2 == 0 ? 1 : -1));
-            SkyDraw.billboard(matrix, DEBRIS, at, 1.1f + 0.3f * (k % 3), spin, uv, behind, behind, behind, alpha);
+            SkyDraw.solid(matrix, DEBRIS, DEBRIS_MASK, at, 1.1f + 0.3f * (k % 3), spin, uv, behind, behind, behind, alpha);
         }
     }
 }

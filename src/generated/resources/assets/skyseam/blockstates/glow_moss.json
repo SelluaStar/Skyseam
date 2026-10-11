@@ -1,21 +1,55 @@
 {
   "multipart": [
     {
-      "apply": {
-        "model": "skyseam:block/glow_moss",
-        "uvlock": true,
-        "x": 90
-      },
+      "apply": [
+        {
+          "model": "skyseam:block/glow_moss",
+          "uvlock": true,
+          "x": 90
+        },
+        {
+          "model": "skyseam:block/glow_moss_1",
+          "uvlock": true,
+          "x": 90
+        },
+        {
+          "model": "skyseam:block/glow_moss_2",
+          "uvlock": true,
+          "x": 90
+        },
+        {
+          "model": "skyseam:block/glow_moss_3",
+          "uvlock": true,
+          "x": 90
+        }
+      ],
       "when": {
         "down": "true"
       }
     },
     {
-      "apply": {
-        "model": "skyseam:block/glow_moss",
-        "uvlock": true,
-        "x": 90
-      },
+      "apply": [
+        {
+          "model": "skyseam:block/glow_moss",
+          "uvlock": true,
+          "x": 90
+        },
+        {
+          "model": "skyseam:block/glow_moss_1",
+          "uvlock": true,
+          "x": 90
+        },
+        {
+          "model": "skyseam:block/glow_moss_2",
+          "uvlock": true,
+          "x": 90
+        },
+        {
+          "model": "skyseam:block/glow_moss_3",
+          "uvlock": true,
+          "x": 90
+        }
+      ],
       "when": {
         "down": "false",
         "east": "false",
@@ -26,21 +60,55 @@
       }
     },
     {
-      "apply": {
-        "model": "skyseam:block/glow_moss",
-        "uvlock": true,
-        "x": 270
-      },
+      "apply": [
+        {
+          "model": "skyseam:block/glow_moss",
+          "uvlock": true,
+          "x": 270
+        },
+        {
+          "model": "skyseam:block/glow_moss_1",
+          "uvlock": true,
+          "x": 270
+        },
+        {
+          "model": "skyseam:block/glow_moss_2",
+          "uvlock": true,
+          "x": 270
+        },
+        {
+          "model": "skyseam:block/glow_moss_3",
+          "uvlock": true,
+          "x": 270
+        }
+      ],
       "when": {
         "up": "true"
       }
     },
     {
-      "apply": {
-        "model": "skyseam:block/glow_moss",
-        "uvlock": true,
-        "x": 270
-      },
+      "apply": [
+        {
+          "model": "skyseam:block/glow_moss",
+          "uvlock": true,
+          "x": 270
+        },
+        {
+          "model": "skyseam:block/glow_moss_1",
+          "uvlock": true,
+          "x": 270
+        },
+        {
+          "model": "skyseam:block/glow_moss_2",
+          "uvlock": true,
+          "x": 270
+        },
+        {
+          "model": "skyseam:block/glow_moss_3",
+          "uvlock": true,
+          "x": 270
+        }
+      ],
       "when": {
         "down": "false",
         "east": "false",
@@ -51,17 +119,39 @@
       }
     },
     {
-      "apply": {
-        "model": "skyseam:block/glow_moss"
-      },
+      "apply": [
+        {
+          "model": "skyseam:block/glow_moss"
+        },
+        {
+          "model": "skyseam:block/glow_moss_1"
+        },
+        {
+          "model": "skyseam:block/glow_moss_2"
+        },
+        {
+          "model": "skyseam:block/glow_moss_3"
+        }
+      ],
       "when": {
         "north": "true"
       }
     },
     {
-      "apply": {
-        "model": "skyseam:block/glow_moss"
-      },
+      "apply": [
+        {
+          "model": "skyseam:block/glow_moss"
+        },
+        {
+          "model": "skyseam:block/glow_moss_1"
+        },
+        {
+          "model": "skyseam:block/glow_moss_2"
+        },
+        {
+          "model": "skyseam:block/glow_moss_3"
+        }
+      ],
       "when": {
         "down": "false",
         "east": "false",
@@ -72,21 +162,55 @@
       }
     },
     {
-      "apply": {
-        "model": "skyseam:block/glow_moss",
-        "uvlock": true,
-        "y": 180
-      },
+      "apply": [
+        {
+          "model": "skyseam:block/glow_moss",
+          "uvlock": true,
+          "y": 180
+        },
+        {
+          "model": "skyseam:block/glow_moss_1",
+          "uvlock": true,
+          "y": 180
+        },
+        {
+          "model": "skyseam:block/glow_moss_2",
+          "uvlock": true,
+          "y": 180
+        },
+        {
+          "model": "skyseam:block/glow_moss_3",
+          "uvlock": true,
+          "y": 180
+        }
+      ],
       "when": {
         "south": "true"
       }
     },
     {
-      "apply": {
-        "model": "skyseam:block/glow_moss",
-        "uvlock": true,
-        "y": 180
-      },
+      "apply": [
+        {
+          "model": "skyseam:block/glow_moss",
+          "uvlock": true,
+          "y": 180
+        },
+        {
+          "model": "skyseam:block/glow_moss_1",
+          "uvlock": true,
+          "y": 180
+        },
+        {
+          "model": "skyseam:block/glow_moss_2",
+          "uvlock": true,
+          "y": 180
+        },
+        {
+          "model": "skyseam:block/glow_moss_3",
+          "uvlock": true,
+          "y": 180
+        }
+      ],
       "when": {
         "down": "false",
         "east": "false",
@@ -97,21 +221,55 @@
       }
     },
     {
-      "apply": {
-        "model": "skyseam:block/glow_moss",
-        "uvlock": true,
-        "y": 270
-      },
+      "apply": [
+        {
+          "model": "skyseam:block/glow_moss",
+          "uvlock": true,
+          "y": 270
+        },
+        {
+          "model": "skyseam:block/glow_moss_1",
+          "uvlock": true,
+          "y": 270
+        },
+        {
+          "model": "skyseam:block/glow_moss_2",
+          "uvlock": true,
+          "y": 270
+        },
+        {
+          "model": "skyseam:block/glow_moss_3",
+          "uvlock": true,
+          "y": 270
+        }
+      ],
       "when": {
         "west": "true"
       }
     },
     {
-      "apply": {
-        "model": "skyseam:block/glow_moss",
-        "uvlock": true,
-        "y": 270
-      },
+      "apply": [
+        {
+          "model": "skyseam:block/glow_moss",
+          "uvlock": true,
+          "y": 270
+        },
+        {
+          "model": "skyseam:block/glow_moss_1",
+          "uvlock": true,
+          "y": 270
+        },
+        {
+          "model": "skyseam:block/glow_moss_2",
+          "uvlock": true,
+          "y": 270
+        },
+        {
+          "model": "skyseam:block/glow_moss_3",
+          "uvlock": true,
+          "y": 270
+        }
+      ],
       "when": {
         "down": "false",
         "east": "false",
@@ -122,21 +280,55 @@
       }
     },
     {
-      "apply": {
-        "model": "skyseam:block/glow_moss",
-        "uvlock": true,
-        "y": 90
-      },
+      "apply": [
+        {
+          "model": "skyseam:block/glow_moss",
+          "uvlock": true,
+          "y": 90
+        },
+        {
+          "model": "skyseam:block/glow_moss_1",
+          "uvlock": true,
+          "y": 90
+        },
+        {
+          "model": "skyseam:block/glow_moss_2",
+          "uvlock": true,
+          "y": 90
+        },
+        {
+          "model": "skyseam:block/glow_moss_3",
+          "uvlock": true,
+          "y": 90
+        }
+      ],
       "when": {
         "east": "true"
       }
     },
     {
-      "apply": {
-        "model": "skyseam:block/glow_moss",
-        "uvlock": true,
-        "y": 90
-      },
+      "apply": [
+        {
+          "model": "skyseam:block/glow_moss",
+          "uvlock": true,
+          "y": 90
+        },
+        {
+          "model": "skyseam:block/glow_moss_1",
+          "uvlock": true,
+          "y": 90
+        },
+        {
+          "model": "skyseam:block/glow_moss_2",
+          "uvlock": true,
+          "y": 90
+        },
+        {
+          "model": "skyseam:block/glow_moss_3",
+          "uvlock": true,
+          "y": 90
+        }
+      ],
       "when": {
         "down": "false",
         "east": "false",

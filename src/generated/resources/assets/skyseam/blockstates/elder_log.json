@@ -1,16 +1,82 @@
 {
   "variants": {
-    "axis=x": {
-      "model": "skyseam:block/elder_log",
-      "x": 90,
-      "y": 90
-    },
-    "axis=y": {
-      "model": "skyseam:block/elder_log"
-    },
-    "axis=z": {
-      "model": "skyseam:block/elder_log",
-      "x": 90
-    }
+    "axis=x": [
+      {
+        "model": "skyseam:block/elder_log",
+        "x": 90,
+        "y": 90
+      },
+      {
+        "model": "skyseam:block/elder_log_1",
+        "x": 90,
+        "y": 90
+      },
+      {
+        "model": "skyseam:block/elder_log_2",
+        "x": 90,
+        "y": 90
+      },
+      {
+        "model": "skyseam:block/elder_log_3",
+        "x": 90,
+        "y": 90
+      },
+      {
+        "model": "skyseam:block/elder_log_4",
+        "x": 90,
+        "y": 90
+      },
+      {
+        "model": "skyseam:block/elder_log_5",
+        "x": 90,
+        "y": 90
+      }
+    ],
+    "axis=y": [
+      {
+        "model": "skyseam:block/elder_log"
+      },
+      {
+        "model": "skyseam:block/elder_log_1"
+      },
+      {
+        "model": "skyseam:block/elder_log_2"
+      },
+      {
+        "model": "skyseam:block/elder_log_3"
+      },
+      {
+        "model": "skyseam:block/elder_log_4"
+      },
+      {
+        "model": "skyseam:block/elder_log_5"
+      }
+    ],
+    "axis=z": [
+      {
+        "model": "skyseam:block/elder_log",
+        "x": 90
+      },
+      {
+        "model": "skyseam:block/elder_log_1",
+        "x": 90
+      },
+      {
+        "model": "skyseam:block/elder_log_2",
+        "x": 90
+      },
+      {
+        "model": "skyseam:block/elder_log_3",
+        "x": 90
+      },
+      {
+        "model": "skyseam:block/elder_log_4",
+        "x": 90
+      },
+      {
+        "model": "skyseam:block/elder_log_5",
+        "x": 90
+      }
+    ]
   }
 }

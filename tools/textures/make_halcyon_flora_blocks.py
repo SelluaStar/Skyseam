@@ -1,8 +1,11 @@
 """The Halcyon's wood, leaves, mushrooms and plants, painted with pixelkit.
 
 Writes, under src/main/resources/assets/skyseam/textures/block/:
-  elder_log, elder_log_top, elder_log_glow (full-bright vein overlay), elder_leaves[_1]   the giant glowing-vein
-                                           trees of the Elderwood (image 8)
+  elder_log[_1], elder_log_top, elder_leaves[_1]   the giant glowing-vein trees of the Elderwood (image 8)
+  elder_log_glow, elder_log_glow_1 ... _5  full-bright vein overlays: one thick vein winding up the bark, or one that
+                                           splits and rejoins, or takes in a thinner branch. Every one enters at the
+                                           top and leaves at the bottom through the same two middle pixels, so the
+                                           veins of a trunk run on from block to block whichever variant each shows
   duskwood_log, duskwood_log_top, duskwood_leaves[_1]   violet-barked trees with violet crowns (images 5, 6)
   spirepine_needles[_1]                    the dark conifers of the Sunreach Cliffs (image 11)
   pale_blossom_leaves[_1], wisteria, wisteria_tip       white umbrella crowns and purple drapes (images 5, 6)
@@ -90,23 +93,83 @@ def log_top(seed, heart, bark):
     return image(img)
 
 
-def elder_glow(seed):
-    """Glowing veins that wind up the bark in its fissures, branching once or twice: drawn full-bright."""
-    rng = np.random.default_rng(seed)
+# Where every vein crosses the top and bottom edges: the line between pixels 7 and 8, two pixels wide.
+VEIN_ANCHOR = 7.5
+GROOVE = ELDER_BARK[0]
+
+
+def vein_path(amp, waves, phase, width, swell=None):
+    """A vein down the face as (row, centre, half-width) for rows 0 to 15: anchored at the middle at both edges,
+    bending {amp} pixels over {waves} half-waves, two pixels wide at the edges and {width} half-wide at its middle,
+    with an optional bulge {swell} = (row, extra half-width)."""
+    rows = []
+    for y in range(N):
+        t = y / (N - 1)
+        envelope = math.sin(math.pi * t)
+        c = VEIN_ANCHOR + amp * envelope * math.sin(waves * math.pi * t + phase)
+        h = 1.0 + (width - 1.0) * envelope ** 0.7
+        if swell is not None:
+            h += swell[1] * max(0.0, 1 - abs(y - swell[0]) / 2.2)
+        rows.append((y, c, h))
+    return rows
+
+
+def branch_path(start, end, width0, width1, bend):
+    """A thinner vein from {start} (x, y) to {end} (x, y), widening from {width0} to {width1} half-wide and bowing
+    {bend} pixels sideways at its middle."""
+    (x0, y0), (x1, y1) = start, end
+    rows = []
+    step = 1 if y1 >= y0 else -1
+    span = max(1, abs(y1 - y0))
+    for y in range(y0, y1 + step, step):
+        t = abs(y - y0) / span
+        c = x0 + (x1 - x0) * t + bend * math.sin(math.pi * t)
+        rows.append((y, c, width0 + (width1 - width0) * t))
+    return rows
+
+
+def paint_veins(strokes, fade_ends=()):
+    """Draws the strokes full-bright: a white-cyan core, cyan body and teal rim by distance from each stroke's
+    middle, and a dark groove beside the vein where it cuts into the bark. Rows in {fade_ends} (y, x) points get
+    only the dim rim colour, so a branch's free end fades out."""
+    level = np.full((N, N), -1.0)
+    for rows in strokes:
+        for y, c, h in rows:
+            if not 0 <= y < N:
+                continue
+            for x in range(N):
+                d = abs(x + 0.5 - c)
+                if d <= h:
+                    r = d / max(h, 0.5)
+                    v = 2 if r < 0.4 and h > 1.05 else 1 if r < 0.8 else 0
+                    level[y, x] = max(level[y, x], v)
+    for fy, fx in fade_ends:
+        for y in range(fy - 1, fy + 2):
+            for x in range(fx - 1, fx + 2):
+                if 0 <= y < N and 0 <= x < N and level[y, x] > 0:
+                    level[y, x] = 0
     arr = blank()
-    for start in (3, 11):
-        x = start + int(rng.integers(-1, 2))
-        for y in range(N):
-            c = VEIN[2] if rng.random() < 0.18 else VEIN[1] if rng.random() < 0.6 else VEIN[0]
-            put(arr, x % N, y, c)
-            if rng.random() < 0.35:
-                x += int(rng.choice([-1, 1]))
-            if rng.random() < 0.12:
-                bx = x
-                for k in range(int(rng.integers(2, 4))):
-                    bx += 1 if start < 8 else -1
-                    put(arr, bx % N, (y - k - 1) % N, VEIN[0])
+    for y in range(N):
+        for x in range(N):
+            if level[y, x] >= 0:
+                put(arr, x, y, VEIN[int(level[y, x])])
+            elif (x > 0 and level[y, x - 1] >= 0) or (x < N - 1 and level[y, x + 1] >= 0):
+                put(arr, x, y, GROOVE)
     return image(arr)
+
+
+def elder_veins():
+    """The six vein overlays (see the module's notes): mostly one thick vein, two that split and merge."""
+    # The split: a thinner vein parting from the main one, bowing away and merging back into it lower down.
+    split = [(y, VEIN_ANCHOR - 4.2 * math.sin(math.pi * (y - 2) / 11) ** 0.9, 0.75) for y in range(2, 14)]
+    return [
+        paint_veins([vein_path(3.2, 1.0, 0.0, 1.9)]),
+        paint_veins([vein_path(2.6, 2.0, 0.3, 1.6, swell=(7, 0.7))]),
+        paint_veins([vein_path(2.2, 1.0, 0.0, 1.7), split]),
+        paint_veins([vein_path(2.4, 1.0, math.pi, 1.8), branch_path((2, 1), (6, 11), 0.55, 1.05, -1.6)], fade_ends=[(1, 2)]),
+        paint_veins([vein_path(1.6, 1.5, 0.6, 2.2)]),
+        paint_veins([vein_path(2.8, 1.0, 0.0, 1.7), branch_path((9, 4), (13, 14), 1.05, 0.55, 1.4)], fade_ends=[(14, 13)]),
+    ]
 
 
 # ---- Leaves ----------------------------------------------------------------------------------------------------------
@@ -360,8 +423,10 @@ def bloomcoral(colour):
 def main():
     made = {}
     made["elder_log"] = log_side(3, ELDER_BARK)
+    made["elder_log_1"] = log_side(4, ELDER_BARK)
     made["elder_log_top"] = log_top(5, ELDER_HEART, ELDER_BARK)
-    made["elder_log_glow"] = elder_glow(7)
+    for k, vein in enumerate(elder_veins()):
+        made["elder_log_glow" if k == 0 else f"elder_log_glow_{k}"] = vein
     made["elder_leaves"] = leaves(9, [ELDER_LEAF], [1.0], glints=[(150, 240, 220)])
     made["elder_leaves_1"] = leaves(10, [ELDER_LEAF], [1.0], glints=[(150, 240, 220)])
     made["duskwood_log"] = log_side(13, DUSK_BARK)

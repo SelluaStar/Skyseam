@@ -184,16 +184,35 @@ public final class HalcyonDecorator {
         if (block.is(BlockTags.LEAVES) || block.is(BlockTags.LOGS) || !block.isSolid() || block.getBlock() instanceof net.minecraft.world.level.block.HugeMushroomBlock) {
             return;
         }
-        // Bare rock: crystals, and now and then a glowing Prismite lamp set into the rock.
-        double crystal = noise.hash(x, y, z, 18);
-        double rich = region == HalcyonRegion.HUSH ? 3 : region == HalcyonRegion.SPINDLE ? 1.5 : 1;
-        if (crystal < 0.012 * rich) {
-            set(level, up, SkyseamBlocks.PRISMITE_CLUSTER.get().defaultBlockState().setValue(AmethystClusterBlock.FACING, Direction.UP));
-        } else if (crystal < 0.03 * rich) {
-            set(level, up, SkyseamBlocks.LARGE_PRISMITE_BUD.get().defaultBlockState().setValue(AmethystClusterBlock.FACING, Direction.UP));
-        } else if (crystal < 0.034 * rich) {
+        crystals(level, noise, region, ground, up);
+    }
+
+    /**
+     * Bare rock: Prismite is rare. It grows in scattered patches (about one spot of rock in twenty lies in one, twice
+     * that in the Hush), where about one spot in seven bears crystal; elsewhere only a stray small bud, one spot in a
+     * thousand. A glowing Prismite lamp set into the rock is rarer still.
+     */
+    private static void crystals(WorldGenLevel level, Noise noise, HalcyonRegion region, BlockPos ground, BlockPos up) {
+        int x = ground.getX();
+        int y = ground.getY();
+        int z = ground.getZ();
+        double roll = noise.hash(x, y, z, 18);
+        boolean patch = noise.fbm(x + 811, z - 377, 22, 2) > (region == HalcyonRegion.HUSH ? 0.38 : 0.46);
+        if (patch && roll < 0.04) {
+            set(level, up, crystal(SkyseamBlocks.PRISMITE_CLUSTER.get()));
+        } else if (patch && roll < 0.1) {
+            set(level, up, crystal(SkyseamBlocks.LARGE_PRISMITE_BUD.get()));
+        } else if (patch && roll < 0.15) {
+            set(level, up, crystal(SkyseamBlocks.SMALL_PRISMITE_BUD.get()));
+        } else if (patch && roll < 0.153) {
             set(level, ground, SkyseamBlocks.PRISMITE_LAMP.get().defaultBlockState());
+        } else if (!patch && roll < 0.001) {
+            set(level, up, crystal(SkyseamBlocks.SMALL_PRISMITE_BUD.get()));
         }
+    }
+
+    private static BlockState crystal(Block block) {
+        return block.defaultBlockState().setValue(AmethystClusterBlock.FACING, Direction.UP);
     }
 
     /** The plants of open grass, by biome. */
@@ -289,13 +308,18 @@ public final class HalcyonDecorator {
             }
         } else if (block.is(Blocks.SAND) || block.is(Blocks.GRAVEL) || !block.isSolid() || block.is(BlockTags.LEAVES)) {
             return;
-        } else if (roll < 0.03) {
-            set(level, up, SkyseamBlocks.PRISMITE_CLUSTER.get().defaultBlockState().setValue(AmethystClusterBlock.FACING, Direction.UP));
-        } else if (roll < 0.06) {
+        } else if (roll < 0.008) {
+            set(level, up, crystal(roll < 0.004 ? SkyseamBlocks.PRISMITE_CLUSTER.get() : SkyseamBlocks.LARGE_PRISMITE_BUD.get()));
+        } else if (roll < 0.04) {
             set(level, up, SkyseamBlocks.GLOW_SHROOM.get().defaultBlockState());
-        } else if (roll < 0.2) {
+        } else if (roll < 0.18 && isFullBlock(level, ground, block)) {
             set(level, up, SkyseamBlocks.GLOW_MOSS.get().defaultBlockState().setValue(MultifaceBlock.getFaceProperty(Direction.DOWN), true));
         }
+    }
+
+    /** Glow moss only clings to a whole block: not to leaves, slabs, stairs, fences or anything else less than a cube. */
+    private static boolean isFullBlock(WorldGenLevel level, BlockPos pos, BlockState state) {
+        return !state.is(BlockTags.LEAVES) && state.isCollisionShapeFullBlock(level, pos);
     }
 
     private static double treeChance(HalcyonRegion region) {
@@ -428,7 +452,7 @@ public final class HalcyonDecorator {
             hang(level, air, SkyseamBlocks.LANTERN_VINE.get().defaultBlockState(), 2 + (int) (noise.hash(x, y, z, 23) * 5));
         } else if (roll < 0.07) {
             set(level, air, Blocks.HANGING_ROOTS.defaultBlockState());
-        } else if (roll < 0.2) {
+        } else if (roll < 0.17 && isFullBlock(level, air.above(), level.getBlockState(air.above()))) {
             set(level, air, SkyseamBlocks.GLOW_MOSS.get().defaultBlockState().setValue(MultifaceBlock.getFaceProperty(Direction.UP), true));
         }
     }
@@ -464,9 +488,9 @@ public final class HalcyonDecorator {
         BlockPos up = floor.above();
         boolean shallow = y > SEA - 9;
         if (shallow) {
-            // Reefs: Bloomcoral in patches, glowing Prismite, seagrass.
+            // Reefs: Bloomcoral in patches, now and then a glowing Prismite lamp, seagrass.
             boolean reef = noise.fbm(x, z, 16, 2) > 0.05;
-            if (roll < 0.006) {
+            if (roll < 0.001) {
                 set(level, floor, SkyseamBlocks.PRISMITE_LAMP.get().defaultBlockState());
             } else if (roll < (reef ? 0.22 : 0.04)) {
                 set(level, up, bloomcoral(noise.hash(x, y, z, 32)).setValue(BloomcoralBlock.WATERLOGGED, true));
