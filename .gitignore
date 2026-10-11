@@ -33,3 +33,7 @@ vendor/
 
 # Local build output
 build-log.txt
+
+# Third-party reference images the author shared (game screenshots, renders): used locally for colour sampling
+# and side-by-side comparison, never published.
+reference/local/

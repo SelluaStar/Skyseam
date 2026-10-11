@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "skyseam:block/elder_wood",
+      "x": 90,
+      "y": 90
+    },
+    "axis=y": {
+      "model": "skyseam:block/elder_wood"
+    },
+    "axis=z": {
+      "model": "skyseam:block/elder_wood",
+      "x": 90
+    }
+  }
+}

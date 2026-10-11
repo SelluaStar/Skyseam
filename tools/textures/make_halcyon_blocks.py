@@ -1,15 +1,14 @@
 """First-pass textures for the Halcyon's blocks and sky (spec sections 7 and 20). [FIRST PASS]
 
 Writes, under src/main/resources/assets/skyseam/textures/:
-  block/stillstone*.png, stillstone_glass.png      the Stillstone set: pale lavender limestone
+  block/stillstone_glass.png                         the Wrights' pale glass
   block/cloud.png, rose_cloud.png, dusk_cloud.png    soft cloud blocks, slightly see-through
   block/petal_carpet.png, cloudmoss.png              carpets, with gaps (drawn cut out)
   block/glow_moss.png                                glowing teal strands, like glow lichen
   block/lantern_vine.png, lantern_vine_tip.png       a hanging vine and its glowing lantern-bud
   block/small_prismite_bud.png, large_prismite_bud.png, prismite_cluster.png   violet crystal, three sizes
-  environment/lantern_sun.png                        64x64 orb with rays, drawn by the sky renderer
-  environment/halcyon_clouds.png                     256x256 soft cloud banks, drawn by the sky renderer
-and a scaled-up contact sheet in build/previews/halcyon_blocks.png.
+and a scaled-up contact sheet in build/previews/halcyon_blocks.png. The rest of the Stillstone set is painted by
+make_halcyon_terrain_blocks.py, and the sky's textures by make_sky_textures.py.
 
 Deterministic: the same script always writes the same files. Run with tools/.venv/Scripts/python.exe.
 Every colour comes from palette.py or the few material tones below. Replace any file by name (docs/ASSET-PATHS.md).
@@ -61,97 +60,6 @@ def noise_fill(img, base, amount, rng, alpha=255):
 
 
 # ---- Stillstone ---------------------------------------------------------------------------------------------------
-
-
-def stillstone():
-    rng = random.Random(11)
-    img = Image.new("RGBA", (16, 16))
-    noise_fill(img, STONE, 0.035, rng)
-    px = img.load()
-    # A few soft darker flecks and lighter grains, like fine limestone.
-    for _ in range(14):
-        x, y = rng.randrange(16), rng.randrange(16)
-        px[x, y] = (STONE_DARK if rng.random() < 0.5 else STONE_LIGHT) + (255,)
-    return img
-
-
-def bricks(seed, mossy=False):
-    rng = random.Random(seed)
-    img = Image.new("RGBA", (16, 16))
-    px = img.load()
-    for y in range(16):
-        row = y // 4
-        offset = 4 if row % 2 else 0
-        for x in range(16):
-            if y % 4 == 3 or (x + offset) % 8 == 7:
-                c = MORTAR
-            else:
-                brick = ((x + offset) // 8, row)
-                tone = 0.96 + 0.08 * random.Random(hash(brick) + seed).random()
-                c = shade(STONE, tone * (1 + (rng.random() - 0.5) * 0.05))
-                if y % 4 == 0:
-                    c = shade(c, 1.06)
-            px[x, y] = c + (255,)
-    if mossy:
-        # Moss creeping down from the top and in a patch, as on the Obelisk in reference image 3.
-        for x in range(16):
-            depth = int(2 + 3 * (0.5 + 0.5 * math.sin(x * 0.9 + 1.3)) + rng.random() * 2)
-            for y in range(depth):
-                if rng.random() < 0.85:
-                    px[x, y] = (MOSS_LIGHT if y == depth - 1 else MOSS if rng.random() < 0.7 else MOSS_DARK) + (255,)
-        for _ in range(10):
-            x, y = 9 + rng.randrange(6), 8 + rng.randrange(6)
-            px[x, y] = (MOSS if rng.random() < 0.6 else MOSS_DARK) + (255,)
-    return img
-
-
-def chiseled():
-    """A carved stitch: the Wrights' mark, a seam sewn shut, framed in a border."""
-    img = bricks(23)
-    px = img.load()
-    for y in range(16):
-        for x in range(16):
-            px[x, y] = shade(STONE, 1.0 + 0.03 * math.sin(x + y)) + (255,)
-    for k in range(16):
-        for edge in (0, 15):
-            px[k, edge] = STONE_DARK + (255,)
-            px[edge, k] = STONE_DARK + (255,)
-        px[k, 1] = STONE_LIGHT + (255,)
-        px[1, k] = STONE_LIGHT + (255,)
-    for y in range(3, 13):
-        px[8, y] = STONE_DEEP + (255,)
-        px[7, y] = STONE_DARK + (255,)
-    for y in (4, 7, 10):
-        for x in range(5, 11):
-            px[x, y] = STONE_DEEP + (255,)
-        px[5, y + 1] = STONE_LIGHT + (255,)
-        px[10, y - 1] = STONE_LIGHT + (255,)
-    return img
-
-
-def pillar_side():
-    rng = random.Random(31)
-    img = Image.new("RGBA", (16, 16))
-    px = img.load()
-    for y in range(16):
-        for x in range(16):
-            flute = 0.92 if x % 4 == 0 else 1.06 if x % 4 == 2 else 1.0
-            px[x, y] = shade(STONE, flute * (1 + (rng.random() - 0.5) * 0.04)) + (255,)
-    for x in range(16):
-        px[x, 0] = STONE_DARK + (255,)
-        px[x, 15] = STONE_DARK + (255,)
-    return img
-
-
-def pillar_top():
-    img = Image.new("RGBA", (16, 16))
-    px = img.load()
-    for y in range(16):
-        for x in range(16):
-            d = max(abs(x - 7.5), abs(y - 7.5))
-            ring = int(d) % 3 == 0
-            px[x, y] = (STONE_DARK if ring else shade(STONE, 1.04 - d * 0.01)) + (255,)
-    return img
 
 
 def glass():
@@ -297,48 +205,6 @@ def prismite(stage):
 # ---- Sky ----------------------------------------------------------------------------------------------------------
 
 
-def lantern_sun():
-    img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
-    px = img.load()
-    for y in range(64):
-        for x in range(64):
-            dx, dy = x - 31.5, y - 31.5
-            d = math.hypot(dx, dy)
-            angle = math.atan2(dy, dx)
-            ray = max(0.0, math.cos(angle * 8)) ** 6 * max(0.0, 1 - d / 31)
-            if d < 9:
-                c, a = P.LANTERN_CORE, 255
-            elif d < 13:
-                t = (d - 9) / 4
-                c, a = mix(P.LANTERN_CORE, P.LANTERN_GLOW, t), 255
-            else:
-                glow = max(0.0, 1 - (d - 13) / 19) ** 2
-                a = int(255 * min(1.0, glow * 0.75 + ray * 0.8))
-                c = mix(P.LANTERN_GLOW, P.GOLD_LIGHT, ray)
-            if a > 0:
-                px[x, y] = c + (a,)
-    return img
-
-
-def cloud_banks():
-    """Soft, slow cloud banks: a few hundred overlapping puffs, tiling left to right and top to bottom."""
-    size = 256
-    banks = value_noise(size, 4, 81)
-    shape = value_noise(size, 12, 82)
-    detail = value_noise(size, 32, 83)
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    px = img.load()
-    for y in range(size):
-        for x in range(size):
-            # Broad banks decide where clouds are; finer noise breaks their edges into soft puffs.
-            n = 0.55 * banks(x, y) + 0.3 * shape(x, y) + 0.15 * detail(x, y)
-            a = max(0.0, min(1.0, (n - 0.5) / 0.22))
-            a = a * a * (3 - 2 * a)
-            if a > 0.02:
-                px[x, y] = mix(P.SKY_GLOW, P.PEARL, 0.4 + 0.6 * a) + (int(210 * a),)
-    return img
-
-
 def save(img, path):
     path.parent.mkdir(parents=True, exist_ok=True)
     img.save(path)
@@ -346,13 +212,8 @@ def save(img, path):
 
 
 def main():
+    # The Stillstone set is painted by make_halcyon_terrain_blocks.py now, and the sky textures by make_sky_textures.py.
     blocks = {
-        "stillstone": stillstone(),
-        "stillstone_bricks": bricks(17),
-        "mossy_stillstone_bricks": bricks(19, mossy=True),
-        "chiseled_stillstone_bricks": chiseled(),
-        "stillstone_pillar": pillar_side(),
-        "stillstone_pillar_top": pillar_top(),
         "stillstone_glass": glass(),
         "cloud": cloud(P.PEARL, 1),
         "rose_cloud": cloud((255, 220, 230), 2),
@@ -368,18 +229,11 @@ def main():
     }
     for name, img in blocks.items():
         save(img, TEXTURES / "block" / f"{name}.png")
-    sun = lantern_sun()
-    clouds = cloud_banks()
-    save(sun, TEXTURES / "environment" / "lantern_sun.png")
-    save(clouds, TEXTURES / "environment" / "halcyon_clouds.png")
 
     cols = 6
-    sheet = Image.new("RGBA", (cols * 104 + 8, ((len(blocks) + cols - 1) // cols) * 104 + 8 + 264), (40, 36, 56, 255))
+    sheet = Image.new("RGBA", (cols * 104 + 8, ((len(blocks) + cols - 1) // cols) * 104 + 8), (40, 36, 56, 255))
     for k, img in enumerate(blocks.values()):
         sheet.alpha_composite(img.resize((96, 96), Image.NEAREST), (8 + (k % cols) * 104, 8 + (k // cols) * 104))
-    y = 8 + ((len(blocks) + cols - 1) // cols) * 104
-    sheet.alpha_composite(sun.resize((256, 256), Image.NEAREST), (8, y))
-    sheet.alpha_composite(clouds, (272, y))
     save(sheet, PREVIEW / "halcyon_blocks.png")
 
 

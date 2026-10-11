@@ -14,6 +14,7 @@ import com.selluastar.skyseam.client.halcyon.HalcyonFog;
 import com.selluastar.skyseam.client.halcyon.HalcyonSky;
 import com.selluastar.skyseam.client.halcyon.VeilMuffle;
 import com.selluastar.skyseam.client.particle.GlowParticle;
+import com.selluastar.skyseam.client.particle.WispParticle;
 import com.selluastar.skyseam.client.seam.SeamClientEffects;
 import com.selluastar.skyseam.client.seam.SeamRenderer;
 import com.selluastar.skyseam.registry.SkyseamBlockEntities;
@@ -82,6 +83,7 @@ public final class SkyseamClient {
         event.registerSpriteSet(SkyseamParticles.SEAM_SPARK.get(), sprites -> new GlowParticle.Provider(sprites, GlowParticle.Kind.SPARK));
         event.registerSpriteSet(SkyseamParticles.THREAD_SNAP.get(), sprites -> new GlowParticle.Provider(sprites, GlowParticle.Kind.THREAD));
         event.registerSpriteSet(SkyseamParticles.SCAR.get(), sprites -> new GlowParticle.Provider(sprites, GlowParticle.Kind.SCAR));
+        event.registerSpriteSet(SkyseamParticles.WISP.get(), WispParticle.Provider::new);
     }
 
     @SubscribeEvent

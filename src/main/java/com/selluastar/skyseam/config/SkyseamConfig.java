@@ -35,9 +35,13 @@ public final class SkyseamConfig {
     public static final ModConfigSpec.IntValue MAX_ENTRY_RADIUS;
 
     // Spec section 7, the Halcyon (docs/DECISIONS.md K59 to K66).
-    public static final ModConfigSpec.DoubleValue ISLAND_DENSITY_SMALL;
-    public static final ModConfigSpec.DoubleValue ISLAND_DENSITY_MEDIUM;
-    public static final ModConfigSpec.DoubleValue ISLAND_DENSITY_LARGE;
+    public static final ModConfigSpec.DoubleValue MAIN_ISLAND_DENSITY;
+    public static final ModConfigSpec.DoubleValue ISLE_DENSITY;
+    public static final ModConfigSpec.DoubleValue SEA_ROCK_DENSITY;
+    public static final ModConfigSpec.DoubleValue SPIRE_DENSITY;
+    public static final ModConfigSpec.DoubleValue FLOATING_ISLAND_DENSITY;
+    public static final ModConfigSpec.DoubleValue TREE_DENSITY;
+    public static final ModConfigSpec.BooleanValue VEIL_ENABLED;
     public static final ModConfigSpec.DoubleValue VEIL_PLAYER_PUSH;
     public static final ModConfigSpec.DoubleValue VEIL_SHIP_PUSH;
     public static final ModConfigSpec.IntValue REBOUND_HEIGHT;
@@ -108,13 +112,22 @@ public final class SkyseamConfig {
         b.pop();
 
         b.push("halcyon");
-        ISLAND_DENSITY_SMALL = b.comment("How many small islands (20 to 40 blocks across) the Halcyon makes: 1 is the default, 0 none.",
-                        "Only chunks generated after a change are affected.")
-                .defineInRange("island_density_small", 1.0, 0.0, 1.8);
-        ISLAND_DENSITY_MEDIUM = b.comment("How many medium islands (60 to 120 blocks across) the Halcyon makes.")
-                .defineInRange("island_density_medium", 1.0, 0.0, 1.6);
-        ISLAND_DENSITY_LARGE = b.comment("How many large islands (150 to 300 blocks across) the Halcyon makes.")
-                .defineInRange("island_density_large", 1.0, 0.0, 2.0);
+        MAIN_ISLAND_DENSITY = b.comment("How many main islands (big landmasses rising from the sea) the Halcyon makes: 1 is the default,",
+                        "0 none. These settings apply to worlds whose Halcyon is generated after a change; restart after changing them.")
+                .defineInRange("main_island_density", 1.0, 0.0, 1.15);
+        ISLE_DENSITY = b.comment("How many small islands are scattered between the main islands.")
+                .defineInRange("isle_density", 1.0, 0.0, 2.5);
+        SEA_ROCK_DENSITY = b.comment("How many sea stacks, leaning slabs, boulders and arches stand in the sea.")
+                .defineInRange("sea_rock_density", 1.0, 0.0, 2.0);
+        SPIRE_DENSITY = b.comment("How many needle-spire clusters rise from the sea, mostly in the Hush.")
+                .defineInRange("spire_density", 1.0, 0.0, 2.0);
+        FLOATING_ISLAND_DENSITY = b.comment("How many floating islands hang above the land and sea.")
+                .defineInRange("floating_island_density", 1.0, 0.0, 2.0);
+        TREE_DENSITY = b.comment("How thickly trees grow on the islands.")
+                .defineInRange("tree_density", 1.0, 0.0, 3.0);
+        VEIL_ENABLED = b.comment("Whether the Veil holds the Halcyon in: its pearl fog, its muffling, and its push back from the",
+                        "1,500-block rim and the Y 420 lid. Off for now, so the Halcyon has no edge; it will return later.")
+                .define("veil_enabled", false);
         VEIL_PLAYER_PUSH = b.comment("How hard the Veil pushes a player back towards the centre at the very rim, in blocks per tick",
                         "of speed added each second. It grows from nothing where the Veil begins.")
                 .defineInRange("veil_player_push", 0.6, 0.0, 4.0);

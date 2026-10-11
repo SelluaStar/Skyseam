@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "half=lower": {
+      "model": "skyseam:block/skylupine_bottom"
+    },
+    "half=upper": {
+      "model": "skyseam:block/skylupine_top"
+    }
+  }
+}

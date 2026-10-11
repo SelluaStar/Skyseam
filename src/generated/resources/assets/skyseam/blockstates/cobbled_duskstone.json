@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "": [
+      {
+        "model": "skyseam:block/cobbled_duskstone"
+      },
+      {
+        "model": "skyseam:block/cobbled_duskstone_1"
+      }
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "skyseam:block/duskstone_pillar_top",
+    "side": "skyseam:block/duskstone_pillar"
+  }
+}

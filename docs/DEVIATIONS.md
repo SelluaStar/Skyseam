@@ -58,3 +58,22 @@ where the spec is simply silent go in `DECISIONS.md` instead.
 | # | Expected (spec) | Reality (Sable 2.0.6) | What Skyseam does |
 |---|---|---|---|
 | D22 | Spec §7 physics pack: "`data/skyseam/dimension_physics/halcyon.json` … gravity -9, base pressure 1.2 with the curve staying flat to Y 320, universal drag 0.07. Confirm the folder name and the fields" | The folder is right. Sable also needs `dimension` (the level it applies to) and `priority`. Gravity is a vector, `base_gravity: [x, y, z]` (Sable's default is [0, −11, 0]). The pressure at a height is `base_pressure` times a curve, `pressure_function`: a list of `{altitude, value, slope}` points it joins smoothly. `universal_drag` is a plain number (default 0.09). Also read: `magnetic_north` and `ignore_chunks` | The file sets `dimension` `skyseam:halcyon`, gravity [0, −9, 0], pressure 1.2 times a curve that stays at 1.0 to Y 320 and falls to 0.3 at the lid (Y 420) and 0 at Y 520, and drag 0.07. The server boot check reads Sable's gravity and pressure back for the Halcyon (−9 and 1.2 at Y 200) |
+
+## The M3 rebuild (the author's changes to spec §7, §14 and §8)
+
+The author rejected the first Halcyon and asked for these changes, so here the spec gives way to the author.
+
+| # | Spec | What the author asked for | What Skyseam does now |
+|---|---|---|---|
+| D23 | §7: floating islands over a mirror sea, in rough concentric biome rings, inside a 3,000-block world held by the Veil | "The entire thing should not be in the air, only the floating islands"; a generation system "different every time"; "remove the map limit for now" | A grounded archipelago (about 45 % land) that grows into dense, mountainous outer lands, from a seeded plan; seeded biome regions; no edge, with the Veil off (DECISIONS K75, K77, K81) |
+| D24 | §7 and §14: fixed places for the Arrival Lane, the Anchorage and the Obelisk | "Deviate from the main spec, do whatever's best" | The lane's bearing and everything placed from it are seeded per world; only the Spindle stays at the centre (K76) |
+| D25 | §14: the Sundered Obelisk on the Anchorage's cliff, about the size of reference 3 | "Very tall and detailed (100 or so blocks)", then "longer and bigger… mid-air, not on an island", with blended materials | About 238 blocks tall in five slices, floating over open sea with its gate on a hanging terrace; the Anchorage island is gone (K78, K83) |
+| D26 | §7: "the Halcyon has no sun or moon, only a hovering orb that circles the Spindle", its phases a look over a fixed light level | "At night 4 moons each with a unique look, in the morning a sun, another smaller star and another planet… all moving with the time", lighting that changes, working with shaders | The Lantern-Sun is the sky's sun on vanilla's path, with a companion star, a planet and four moons; the game's day in the Halcyon follows the Lantern-Sun's 40-minute clock through a mixin, so night really darkens (K82, K86) |
+| D27 | §7: seven biomes | "Different biomes… different land types, different land shapes, different colours", and the author's images of Palworld cliffs, giant mushrooms and giant glowing trees | Three more biomes in the outer lands: Sunreach Cliffs, Capwood and Elderwood (K77) |
+
+## Found in the M3 rebuild
+
+| # | Expected | Reality | What Skyseam does |
+|---|---|---|---|
+| D28 | A block model element with `neoforge_data` block light 15 draws full-bright everywhere | It does with the vanilla renderer. Under Sodium (with Iris and Complementary Reimagined) the per-element light is ignored: the Elder log's vein layer and Runed Duskstone's glyphs draw at the block's ordinary light | The blocks also give off light (Elder log 5, Runed Duskstone 6), so they still glow a little. Recorded for the author (TODO-MANUAL) |
+| D29 | Vanilla's `Level.dayTime()` goes through `getDayTime()` | `LevelAccessor.dayTime()` reads the level data directly, and the sun's angle, sky darkness and moon phase all go through it | `LevelTimeMixin` overrides both in the Halcyon (K82) |

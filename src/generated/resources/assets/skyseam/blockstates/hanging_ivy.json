@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "tip=false": {
+      "model": "skyseam:block/hanging_ivy"
+    },
+    "tip=true": {
+      "model": "skyseam:block/hanging_ivy_tip"
+    }
+  }
+}

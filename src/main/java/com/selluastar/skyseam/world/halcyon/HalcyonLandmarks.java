@@ -1,9 +1,12 @@
 package com.selluastar.skyseam.world.halcyon;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.selluastar.skyseam.Skyseam;
-import com.selluastar.skyseam.world.HalcyonLayout;
+import com.selluastar.skyseam.world.halcyon.plan.HalcyonPlan;
 import com.selluastar.skyseam.world.structure.StructureMarkers;
 
 import net.minecraft.core.BlockPos;
@@ -19,19 +22,25 @@ import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.templatesystem.BlockIgnoreProcessor;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
 
 /**
- * The Halcyon's fixed landmarks (spec section 14: "Halcyon landmarks sit at fixed positions chosen by the dimension
- * generator"). Each is a structure file placed at its spot a chunk at a time, as the chunks around it generate, so a
- * large build never stalls the server. Its data markers are swapped for their real blocks as they are placed
- * ({@link StructureMarkers}).
+ * The Halcyon's landmark buildings, placed where the world's {@link HalcyonPlan} puts them. Each is a stack of
+ * structure files, each at most 48 blocks on every side (so a hand-built replacement can be saved slice by slice with
+ * a structure block): slice {@code k} sits 48 blocks above slice {@code k - 1}. They are placed a chunk at a time, as
+ * the chunks round them generate, and their data markers are swapped for real blocks ({@link StructureMarkers}).
  *
- * <p>M3 places the Sundered Obelisk on the Anchorage, its gate turned to face the Arrival Lane.
+ * <p>The Sundered Obelisk (docs/DECISIONS.md K78, K83) floats in mid-air over open sea, its foot hanging under its
+ * terrace, its gate turned to face the Arrival Lane. Its files are {@code sundered_obelisk/slice_0} (the foot and
+ * terrace) to {@code slice_4} (the capstone), 48 blocks apart.
  */
 public final class HalcyonLandmarks {
-    /** A structure file placed at a fixed spot: its template's centre column sits on {@code centre}. */
-    public record Landmark(ResourceLocation template, BlockPos centre, Rotation rotation) {
-        /** Where the template goes and how, for a template of the given size. */
+    public static final int SLICE = 48;
+    public static final String OBELISK = "sundered_obelisk/slice_";
+    private static final AtomicBoolean MISSING_LOGGED = new AtomicBoolean();
+
+    /** One structure file placed with its middle column on {@code centre}. */
+    public record Piece(ResourceLocation template, BlockPos centre, Rotation rotation) {
         public StructurePlaceSettings settings(StructureTemplate structure) {
             return new StructurePlaceSettings()
                     .setRotation(rotation)
@@ -39,7 +48,6 @@ public final class HalcyonLandmarks {
                     .addProcessor(BlockIgnoreProcessor.STRUCTURE_BLOCK);
         }
 
-        /** The corner the template is placed from, so that its centre lands on {@link #centre}. */
         public BlockPos origin(StructureTemplate structure) {
             return centre.offset(-structure.getSize().getX() / 2, 0, -structure.getSize().getZ() / 2);
         }
@@ -49,32 +57,51 @@ public final class HalcyonLandmarks {
         }
     }
 
-    /** The Sundered Obelisk: its gate faces south in the file, and the lane is to the south-west. */
-    public static final Landmark SUNDERED_OBELISK = new Landmark(Skyseam.id("sundered_obelisk"), HalcyonLayout.OBELISK, Rotation.NONE);
-
     private HalcyonLandmarks() {}
 
-    static void place(WorldGenLevel level, ChunkAccess chunk) {
-        place(level, chunk.getPos(), SUNDERED_OBELISK);
+    /** The Obelisk's slices in this world, from the bottom up, with their files. */
+    public static List<Piece> obelisk(HalcyonPlan plan, StructureTemplateManager structures) {
+        List<Piece> pieces = new ArrayList<>();
+        for (int k = 0; k < 8; k++) {
+            ResourceLocation id = Skyseam.id(OBELISK + k);
+            if (structures.get(id).isEmpty()) {
+                break;
+            }
+            pieces.add(new Piece(id, plan.landmarks.obeliskBase().above(SLICE * k), plan.landmarks.gateRotation));
+        }
+        return pieces;
     }
 
-    private static void place(WorldGenLevel level, ChunkPos chunk, Landmark landmark) {
+    static void place(WorldGenLevel level, ChunkAccess chunk, HalcyonPlan plan) {
         MinecraftServer server = level.getServer();
-        Optional<StructureTemplate> found = server == null ? Optional.empty() : server.getStructureManager().get(landmark.template());
+        if (server == null) {
+            return;
+        }
+        List<Piece> pieces = obelisk(plan, server.getStructureManager());
+        if (pieces.isEmpty()) {
+            if (!MISSING_LOGGED.getAndSet(true)) {
+                Skyseam.LOGGER.error("The Sundered Obelisk's structure files ({}0 and up) are missing", OBELISK);
+            }
+            return;
+        }
+        for (Piece piece : pieces) {
+            place(level, chunk.getPos(), piece, server.getStructureManager().get(piece.template()));
+        }
+    }
+
+    private static void place(WorldGenLevel level, ChunkPos chunk, Piece piece, Optional<StructureTemplate> found) {
         if (found.isEmpty()) {
-            Skyseam.LOGGER.error("Landmark structure {} is missing", landmark.template());
             return;
         }
         StructureTemplate structure = found.get();
         BoundingBox chunkBox = new BoundingBox(chunk.getMinBlockX(), level.getMinBuildHeight(), chunk.getMinBlockZ(), chunk.getMaxBlockX(),
                 level.getMaxBuildHeight() - 1, chunk.getMaxBlockZ());
-        if (!landmark.bounds(structure).intersects(chunkBox)) {
+        if (!piece.bounds(structure).intersects(chunkBox)) {
             return;
         }
-        BlockPos origin = landmark.origin(structure);
-        StructurePlaceSettings settings = landmark.settings(structure).setBoundingBox(chunkBox);
-        RandomSource random = RandomSource.create(chunk.toLong());
-        structure.placeInWorld(level, origin, origin, settings, random, Block.UPDATE_CLIENTS);
-        StructureMarkers.apply(level, structure, origin, landmark.settings(structure), chunkBox);
+        BlockPos origin = piece.origin(structure);
+        StructurePlaceSettings settings = piece.settings(structure).setBoundingBox(chunkBox);
+        structure.placeInWorld(level, origin, origin, settings, RandomSource.create(chunk.toLong()), Block.UPDATE_CLIENTS);
+        StructureMarkers.apply(level, structure, origin, piece.settings(structure), chunkBox);
     }
 }

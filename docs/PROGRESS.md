@@ -767,3 +767,207 @@ The author's answers before building:
 9. Come back with `/skyseam ship cross minecraft:overworld`.
 10. Send `logs/latest.log` (it has a line for each crossing and each Rebound throw), and say what to change in the
     look, the terrain, the Veil and Rebound.
+
+## M3 rebuild: the Halcyon from the author's images (2026-10-10 to 2026-10-11)
+
+After testing M3 the author rejected the world ("the entire world is so bad") and the Obelisk. They asked for:
+- a generation system that is different every time, built from kits of pieces with variations;
+- ground, not air, with only the floating islands in the sky;
+- detailed biomes;
+- the sky of their images;
+- an Obelisk about 100 blocks tall and detailed like reference 3.
+
+Round one was built to an approved plan, with a halfway check-in of captures beside the images. The author's
+answers to round one changed the brief again, with seven more reference images:
+- **The Obelisk:** blended materials, bigger, and in mid-air.
+- **Textures:** better ones with more colour and variants.
+- **The world:** unique caves, no pull-back and no map limit for now, varied sea floor, and taller, denser land with
+  Palworld-style cliffs further out.
+- **Floating islands:** big ones further out.
+- **Nature:** giant mushrooms and giant trees.
+- **The sky:** rebuilt to work with shaders, with time cycles and lighting: a sun, a smaller star and a planet by day,
+  and four moons by night.
+
+Their answers:
+- keep the 40-minute Lantern-Sun day through a mixin;
+- `/time` is turned away in the Halcyon, and beds don't work there until a unique way to rest comes later;
+- test with Complementary Reimagined;
+- no check-in, finish everything.
+
+This replaces most of M3's world, sky and Obelisk (DECISIONS K75–K90, DEVIATIONS D23–D29).
+
+**Built**
+- **A grounded archipelago from a seeded plan** (`world/halcyon/plan/`, K75):
+  - land rising from a sea at Y 96, about 45 % of the archipelago;
+  - main islands in six archetypes (Terraced, Spire Massif, Caldera, Twin Ridge, Cove, and Highland in the outer
+    lands), each with 5–10 satellite isles;
+  - scattered isles (mound, knoll, sandbar) and needle-spire clusters;
+  - sea rocks (stacks, leaning slabs, boulders, arches);
+  - floating islands in eight variants: Tuft, Teardrop, Shelf, Shard, Cluster, Ruin-top, Thorn, and the colossal
+    Horncrown, a pale isle crowned by giant curved horns (image 9).
+
+  Every world is laid out anew from its seed, the Arrival Lane included (K76).
+- **No edge for now** (K81):
+  - **The Veil:** off behind `veil_enabled`, so nothing pulls you back.
+  - **The outer lands:** past 1,300 blocks the islands grow bigger, taller and closer together. Past 2,600 the land is
+    mostly mountainous Highlands (about 78 % land, ground on average 37 blocks higher), with sheer stepped sea cliffs,
+    fjords, and sea straits and sounds winding through.
+  - **The plan's caches:** bounded, so the world can go on without end.
+- **The sea floor** (`HalcyonPlan.seaFloor`): a deep basin crossed by undersea ridges, with seamounts rising to reefs,
+  canyons down to Y 30, shallow lagoons in the Mirror Shoals, and stepped reef shelves round the land.
+- **Palworld cliffs** (image 11):
+  - **Layered rock:** the Sunreach Cliffs' rock lies in horizontal beds of sandy, ochre and umber Cliffstone.
+  - **Ledges:** on every tall cliff, ledges jut from the bed lines, grassed on top with ivy under them.
+- **Ten biomes** in seeded regions (K77): Petalwash, the Cirrus Reefs, the Hush, the Wreckfields and the Mirror Shoals
+  in the archipelago; the Sunreach Cliffs, the Capwood and the Elderwood in the outer lands; the Spindle at the centre;
+  the Underbloom in caves and under floating islands. Each has its own rock, land shapes, colours, trees and flora.
+- **Caves** (K84), all four kinds plus tunnels:
+  - **Grotto** (image 11): a sea-level lagoon under a pierced rock roof, with sand, an islet with a tree, and an arch to
+    the sea.
+  - **Waterfall Hall** (image 12): a cliff chamber looking out through a waterfall, with lupines, ferns and a timber
+    railing.
+  - **Sinkhole** (image 13): a domed cavern with a shaft of light, a pool, ivy and a plank walkway.
+  - **Geode:** lined with Prismite.
+  - **Tunnels:** twisting through the high land.
+- **Giant flora** (K85), written chunk by chunk so it can be any size:
+  - **Trees:** the Elder Lumen (55 tall, glowing veins; image 8), the Great Violet, the Grand Blossom, the Weeping Dusk
+    and the Spirepine.
+  - **Mushrooms:** the Ember Cap (image 10), the Parasol, the glowing Glowcap, the Bellcap, and clusters.
+- **Decoration** (K79):
+  - **Trees and ground plants:** small trees by biome; grass, petals, ferns, lupines and small mushrooms.
+  - **Hanging and climbing plants:** Bloomcoral; vines down cliffs; wisteria, ivy and lantern vines under overhangs.
+  - **Crystals and the sea floor:** crystals on rock; kelp forests and Bloomcoral reefs underwater.
+  - **Waterfalls:** real water, two blocks wide, lit as they fall.
+- **The Sundered Obelisk** (K78, K83):
+  - **Where:** floating over open sea 170 blocks in from the lane, nothing under it.
+  - **The parts:** about 238 tall, its gate on a hanging terrace, two shafts with an orb and a ring of rubble between,
+    a floating capstone, and drifting masonry.
+  - **The stone:** pale brick blended through mauve Duskstone by noise and gradients, with moss, ivy, glowing runes and
+    amethyst veins.
+  - **The files:** five slices of at most 48.
+- **Time** (K82):
+  - **The day:** the Halcyon's day is the Lantern-Sun's 40 minutes, so night really falls and shader packs follow it.
+  - **Commands:** `/time` answers "Time works differently here"; `/skyseam halcyon time set|add|query` replaces it.
+  - **Beds:** they bring no sleep there.
+- **The sky, rebuilt** (K86), all moving with the time:
+  - **By day:** the Lantern-Sun (corona and halo), its Ember companion star, and the ringed planet Veyra.
+  - **By night:** four moons, the Pale Moon (with phases), the Ringed Moon, the Shard Moon with its debris, and the
+    Ember Moon.
+  - **Stars and effects:** 2,600 twinkling stars, two nebulae, shooting stars, sky lanterns, a swirl of high cloud
+    (image 14) and aurora.
+  - **Clouds and light:** thinner, shaded 3D clouds; moonlight and twilight in the light; mist in the Elderwood
+    valleys; fireflies and floating wisps at night.
+- **Blocks and textures** (K87):
+  - **The texture kit:** a new pixel-art kit with colour ramps, bevels, cracks, moss and variants.
+  - **Repainted:** Duskstone, Shoalrock, Stillstone, the leaves and the plants.
+  - **New blocks (26):**
+    - cracked, mossy, tiled, chiseled and runed Duskstone;
+    - four Cliffstones and Hornstone;
+    - Elder and Duskwood logs, wood and leaves, and Spirepine needles;
+    - four giant mushroom caps and their stem;
+    - two small mushrooms, the Skylupine and hanging ivy.
+  - **Logs** craft into vanilla planks.
+- **Commands** (K89): `tp` to the terrace, the Obelisk, the Highlands and each biome; `find` for every kit, cave and
+  giant.
+
+**Verified (actually run)**
+- **The milestone check** (`tools/verify_milestone.py`): build ✓, runData ✓, **46/46 GameTests** ✓ (three runs in a row; see the M2 flake below), server boot ✓. Sounds (`tools/audio/check.py`): all 18 pass.
+- **The Halcyon's GameTests** (`HalcyonGameTests`):
+  - `planFollowsTheRules`:
+    - the same seed makes the same world and another seed a different one;
+    - the lane's air is clear, and the view to the Obelisk is clear;
+    - nothing stands within 40 blocks of the Obelisk's axis;
+    - the archipelago is 46 % land and the Highlands 78 % (mean ground Y 123 and 160);
+    - nothing reaches the build limit, and floating islands keep clear of the land;
+    - every kit appears;
+    - the plan works 20,000 blocks out.
+  - `outerLandsHaveTheirPieces` (new): a Horncrown, an Elderwood blade, all four kinds of cave (each inside land), and
+    the giants of each biome standing on their ground.
+  - `regionsCoverTheWorld`:
+    - every inner and outer biome gets at least two regions, and the Obelisk is in Petalwash;
+    - two seeds differ;
+    - it is the Underbloom under a floating island and inside a cave.
+  - `veilPushesBack`: the Veil is off by default; its maths still hold.
+  - `lanternSunKeepsTime`: the day mapping (sunrise, noon, sunset and midnight in the right phases, the day count, the
+    offset) and the time commands.
+  - `structuresFitAndHaveTheirMarkers`: the Obelisk is over 200 tall in slices of at most 48, with its markers and
+    palette, and its motto is carved.
+- **The server boot check**, on a real dedicated server with the Halcyon generated fresh:
+  - the lane's air is clear, with sea under it;
+  - all five Obelisk slices stand as their files say, its motto is carved, and it floats, with only air and sea under
+    its foot;
+  - the Obelisk is in Petalwash;
+  - the Halcyon's day time is the Lantern-Sun's (the mixin works);
+  - `/time` run inside the Halcyon left the Overworld's day alone;
+  - Sable reads gravity −9 and pressure 1.2;
+  - generation: 144 fresh chunks each took 16.0 ms a chunk by the Spindle, 16.3 in the archipelago and 22.9 in the Highlands (the first M3 world, all floating islands, took about 11).
+- **The real client** (`tools/capture/m3r2_world.json`, `m3r2_sky.json`, `m3r2_shaders.json`):
+  - every cave kind, the giant mushrooms and trees by day and night, the Sunreach canyons, a Horncrown and a Thorn,
+    the Highlands, the Capwood, the Elderwood and the Hush;
+  - the sky at dawn, noon, sunset and night, and a wall of every new block.
+
+  Contact sheets: [`docs/previews/m3r2-arrival.png`](previews/m3r2-arrival.png),
+  [`m3r2-world.png`](previews/m3r2-world.png), [`m3r2-sky.png`](previews/m3r2-sky.png), every new texture
+  [`m3r2-textures.png`](previews/m3r2-textures.png), and the Obelisk beside reference 3:
+  [`m3r2-obelisk.png`](previews/m3r2-obelisk.png).
+- **Shaders** (Iris 1.8.14 beta, Sodium 0.8.13, Complementary Reimagined r5.9.3, `-Pshaders`):
+  - **Compatibility:** they load beside Sable, Create and Aeronautics, and the Halcyon renders.
+  - **What shows:** the Lantern-Sun, the companion star, the planet, all four moons, the stars, nebulae, aurora, swirl
+    and lanterns.
+  - **What the pack replaces:** its own sky colour and cloud shading.
+  - **The time:** night falls with the Lantern-Sun.
+
+  Contact sheet: [`docs/previews/m3r2-shaders.png`](previews/m3r2-shaders.png).
+- **Fixed from the capture runs, before this commit:**
+  - the outer lands were solid land (now cut by straits);
+  - Horncrowns couldn't fit over the Highlands;
+  - the Obelisk's stone looked grainy (now blended in patches);
+  - waterfalls off floating islands looked like strings (now fewer and wider);
+  - the Elderwood mist was too thick;
+  - the high clouds hid the sky, and the moons were too small;
+  - `find` could frame a giant behind a cliff;
+  - an M2 GameTest crashed when its ship was already gone.
+- **Seen but not mine:**
+  - **Create's registry startup race:** "Mod loading has failed" during registry baking stopped one capture launch at
+    startup. The relaunch worked.
+  - **NeoForge's early loading window:** it failed to open once while the previous game was still closing.
+  - **M2's `seamMendsAfterTheShipLeaves`:** it failed twice in about nine GameTest runs, once by crashing in its
+    clean-up when its ship was already gone (removing a ship that is already gone now does nothing). It runs alone in
+    its own batch, before the new world tests, so the new world isn't the cause. It needs a closer look in M2's
+    timing with Sable. The last three runs in a row all passed.
+
+**Needs the author's eyes** (`[FIRST PASS]`)
+- **The new look:** every texture, the biomes' colours, the cliffs, caves, giants and the Obelisk.
+- **The sky:** whether day and night, the moons and the light feel right.
+- **The world's balance:** how much land, how tall, how many floating islands and caves. Densities are config.
+- **Shaders:** other shader packs. Under Sodium, the Elder logs' and Runed Duskstone's glowing layers draw at
+  ordinary light (DEVIATIONS D28).
+- **Performance on real hardware,** especially flying over the Highlands.
+
+**Stubs and limits**
+- **No edge:** the Veil is off for now (it comes back later). A world is now unbounded.
+- **Beds:** no sleep in the Halcyon; a unique way to rest is planned for a later part.
+- **Markers without a block yet become air:** `mooring_post` and `almanac_pages` until M4, the two
+  `wrightling_stall` until the Wrightling (M5).
+- **Not yet:** the Wright ruins on Ruin-top islands and in the Wreckfields, stone bridges, and Wreckfields hulls.
+- **Old worlds:** a Halcyon generated before this commit keeps its old chunks. Use a new world.
+
+**Author's in-game test (M3 rebuild)**
+1. Use a **new** world.
+2. Cross into the Halcyon with an Aeronautics ship.
+   - You should arrive over the sea at the Arrival Lane and face the Sundered Obelisk floating ahead.
+   - Fly up to its terrace and read the motto over the gate.
+3. Try `/time set day` in the Halcyon: it should say time works differently here.
+   - Then try `/skyseam halcyon time set sunrise`, `noon`, `sunset` and `midnight`, and look round the sky each time:
+     - by day: the Lantern-Sun, its small companion star and the ringed planet;
+     - by night: four moons, stars, aurora and shooting stars.
+   - A full day takes 40 minutes.
+4. Visit the biomes with `/skyseam halcyon tp petalwash`, `hush`, `shoals`, `cirrus` and `wreckfields`, and in the
+   outer lands `sunreach`, `capwood` and `elderwood`. `/skyseam halcyon tp highlands` puts you over the mountains
+   3,000 blocks out.
+5. Find the caves and giants with `/skyseam halcyon find cave_grotto`, `cave_waterfall_hall`, `cave_sinkhole`,
+   `giant_elder_lumen`, `giant_ember_cap`, `giant_parasol` and `floating_island_horncrown`.
+6. Try sleeping in a bed in the Halcyon: you shouldn't be able to.
+7. Fly far out. Nothing should pull you back.
+8. If you play with shaders, try them in the Halcyon at day and night.
+9. Send `logs/latest.log` and screenshots, and say what to change.

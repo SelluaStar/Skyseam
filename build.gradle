@@ -58,6 +58,13 @@ configurations {
         canBeResolved = true
         transitive = false
     }
+    // gradlew runCaptureClient -Pshaders: Iris and Sodium, in the screenshot client only, to see the Halcyon's sky under
+    // a shader pack. Never shipped and never required (docs/DECISIONS.md K86).
+    shaderMods {
+        canBeConsumed = false
+        canBeResolved = true
+        transitive = false
+    }
 }
 
 dependencies {
@@ -74,6 +81,9 @@ dependencies {
     runMods "maven.modrinth:create-aeronautics:${aeronautics_version}"
     runMods "dev.ryanhcode.sable:sable-neoforge-${minecraft_version}:${sable_version}"
     runMods files("libs/fealty-${fealty_version}.jar")
+
+    shaderMods "maven.modrinth:iris:${iris_version}"
+    shaderMods "maven.modrinth:sodium:${sodium_version}"
 }
 
 // Aeronautics and Create keep the classes Skyseam compiles against (the balloon map, Simulated's ropes, catnip's
@@ -102,8 +112,11 @@ def syncRunMods = tasks.register('syncRunMods', Sync) {
     into file('run/mods')
 }
 def syncCaptureMods = tasks.register('syncCaptureMods', Sync) {
-    description = 'Copies the runtime mods into run/capture/mods for the screenshot client (runCaptureClient).'
+    description = 'Copies the runtime mods into run/capture/mods for the screenshot client (runCaptureClient), with Iris and Sodium when -Pshaders is set.'
     from configurations.runMods
+    if (project.hasProperty('shaders')) {
+        from configurations.shaderMods
+    }
     into file('run/capture/mods')
 }
 
@@ -124,6 +137,8 @@ neoForge {
             programArgument '--nogui'
             // gradlew runServer -PbootCheck: stop on its own once the server has started (dev/DevBootCheck).
             systemProperty 'skyseam.dev.stopAfterBoot', project.hasProperty('bootCheck').toString()
+            // gradlew runServer -PbootCheck -PhalcyonMap: also write maps of the Halcyon's plan to build/previews.
+            systemProperty 'skyseam.dev.map', project.hasProperty('halcyonMap') ? file('build/previews').absolutePath : ''
         }
         gameTestServer {
             type = 'gameTestServer'

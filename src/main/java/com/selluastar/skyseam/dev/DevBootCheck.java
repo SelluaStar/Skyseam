@@ -1,25 +1,29 @@
 package com.selluastar.skyseam.dev;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.selluastar.skyseam.Skyseam;
+import com.selluastar.skyseam.halcyon.LanternSun;
 import com.selluastar.skyseam.external.SableBridge;
 import com.selluastar.skyseam.registry.SkyseamBlocks;
 import com.selluastar.skyseam.world.HalcyonLayout;
+import com.selluastar.skyseam.world.halcyon.HalcyonChunkGenerator;
 import com.selluastar.skyseam.world.halcyon.HalcyonLandmarks;
+import com.selluastar.skyseam.world.halcyon.plan.HalcyonPlan;
+import com.selluastar.skyseam.world.halcyon.plan.Landmarks;
 import com.selluastar.skyseam.world.structure.StructureMarkers;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
@@ -32,6 +36,7 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
 public final class DevBootCheck {
     public static final String PROPERTY = "skyseam.dev.stopAfterBoot";
     public static final String PASSED_MARKER = "Skyseam boot check passed";
+    public static final String MAP_PROPERTY = "skyseam.dev.map";
 
     private DevBootCheck() {}
 
@@ -60,79 +65,153 @@ public final class DevBootCheck {
     }
 
     /**
-     * M3's "a ship arrives and the Obelisk is in view", checked on the real world: generates the Arrival Lane and the
-     * Anchorage, then checks the lane is open air over the Mirror Sea, the Sundered Obelisk stands on the Anchorage with
-     * its motto carved, the Anchorage is in Petalwash Meadows, and Sable gives the Halcyon its own physics.
+     * "A ship arrives and the Obelisk is in view", checked on the real world, generated fresh: the Arrival Lane is
+     * open air over the sea, every slice of the Sundered Obelisk stands as its file says with its motto carved, it
+     * floats with nothing but air and sea under its foot, its gate is in Petalwash, the Halcyon keeps the Lantern-Sun's
+     * day and turns away /time, Sable gives the Halcyon its own physics, and the Halcyon generates fast enough near the
+     * Spindle, at the lane, and out in the Highlands.
      */
     private static List<String> checkHalcyon(ServerLevel level) {
         List<String> problems = new ArrayList<>();
+        HalcyonPlan plan = HalcyonChunkGenerator.plan(level).orElse(null);
+        if (plan == null) {
+            return List.of("the Halcyon does not use the Halcyon chunk generator");
+        }
+        exportMaps(plan);
         long started = System.nanoTime();
-        // Generate the lane's area and the Anchorage, chunk by chunk.
-        AABB lane = HalcyonLayout.ARRIVAL_CLEARANCE;
-        for (int cx = Mth.floor(lane.minX) >> 4; cx <= Mth.floor(lane.maxX) >> 4; cx++) {
-            for (int cz = Mth.floor(lane.minZ) >> 4; cz <= Mth.floor(lane.maxZ) >> 4; cz++) {
-                level.getChunk(cx, cz);
-            }
-        }
-        BlockPos obelisk = HalcyonLayout.OBELISK;
-        for (int cx = (obelisk.getX() - 20) >> 4; cx <= (obelisk.getX() + 20) >> 4; cx++) {
-            for (int cz = (obelisk.getZ() - 20) >> 4; cz <= (obelisk.getZ() + 20) >> 4; cz++) {
-                level.getChunk(cx, cz);
-            }
-        }
+        Vec3 lane = plan.landmarks.arrival;
+        BlockPos gate = plan.landmarks.gate;
+        generate(level, (int) lane.x, (int) lane.z, 56);
+        generate(level, gate.getX(), gate.getZ(), 32);
         int solid = 0;
-        for (int x = Mth.floor(lane.minX); x <= lane.maxX; x += 4) {
-            for (int z = Mth.floor(lane.minZ); z <= lane.maxZ; z += 4) {
-                for (int y = Mth.floor(lane.minY); y <= lane.maxY; y += 4) {
+        for (int x = (int) lane.x - 48; x <= lane.x + 48; x += 4) {
+            for (int z = (int) lane.z - 48; z <= lane.z + 48; z += 4) {
+                for (int y = Landmarks.LANE_Y - 50; y <= Landmarks.LANE_Y + 50; y += 4) {
                     solid += level.getBlockState(new BlockPos(x, y, z)).isAir() ? 0 : 1;
                 }
             }
         }
         if (solid > 0) {
-            problems.add(solid + " blocks stand in the Arrival Lane's clearance");
+            problems.add(solid + " blocks stand in the air round the Arrival Lane");
         }
-        BlockPos below = BlockPos.containing(HalcyonLayout.ARRIVAL_LANE.x, HalcyonLayout.SEA_LEVEL - 1, HalcyonLayout.ARRIVAL_LANE.z);
-        if (!level.getBlockState(below).is(Blocks.WATER) && level.getBlockState(below).isAir()) {
-            problems.add("there is no Mirror Sea under the Arrival Lane at " + below.toShortString());
+        BlockPos below = BlockPos.containing(lane.x, HalcyonLayout.SEA_LEVEL - 1, lane.z);
+        if (!level.getBlockState(below).is(Blocks.WATER)) {
+            problems.add("there is no sea under the Arrival Lane at " + below.toShortString() + " (found " + level.getBlockState(below) + ")");
         }
-        // The Obelisk: standing as its file says, and its motto marker turned into the carved sign. The blocks checked are
-        // read from the file, so a hand-built replacement passes as long as it is placed whole.
-        StructureTemplate template = server(level).getStructureManager().get(HalcyonLandmarks.SUNDERED_OBELISK.template()).orElse(null);
-        if (template == null) {
-            problems.add("the Sundered Obelisk's structure file is missing");
-        } else {
-            BlockPos origin = HalcyonLandmarks.SUNDERED_OBELISK.origin(template);
-            StructurePlaceSettings settings = HalcyonLandmarks.SUNDERED_OBELISK.settings(template);
-            int checked = 0;
-            int missing = 0;
-            for (Block block : List.of(Blocks.PEARLESCENT_FROGLIGHT, Blocks.GOLD_BLOCK, Blocks.AMETHYST_BLOCK, SkyseamBlocks.CHISELED_STILLSTONE_BRICKS.get())) {
+        // The Obelisk: every slice standing as its file says (the blocks checked are read from the files, so a
+        // hand-built replacement passes as long as it is placed whole), and its motto marker turned into the sign.
+        List<HalcyonLandmarks.Piece> pieces = HalcyonLandmarks.obelisk(plan, server(level).getStructureManager());
+        if (pieces.isEmpty()) {
+            problems.add("the Sundered Obelisk's structure files are missing");
+        }
+        int checked = 0;
+        int missing = 0;
+        boolean motto = false;
+        for (HalcyonLandmarks.Piece piece : pieces) {
+            StructureTemplate template = server(level).getStructureManager().get(piece.template()).orElseThrow();
+            BlockPos origin = piece.origin(template);
+            StructurePlaceSettings settings = piece.settings(template);
+            for (Block block : List.of(Blocks.AMETHYST_BLOCK, SkyseamBlocks.CHISELED_STILLSTONE_BRICKS.get(), SkyseamBlocks.STILLSTONE_PILLAR.get(),
+                    SkyseamBlocks.RUNED_DUSKSTONE.get(), SkyseamBlocks.CHISELED_DUSKSTONE.get(), SkyseamBlocks.PRISMITE_LAMP.get())) {
                 for (StructureTemplate.StructureBlockInfo info : template.filterBlocks(origin, settings, block)) {
                     checked++;
                     missing += level.getBlockState(info.pos()).is(block) ? 0 : 1;
                 }
             }
-            if (missing > 0) {
-                problems.add(missing + " of the " + checked + " Obelisk blocks checked against its file are not in the world");
+            for (StructureTemplate.StructureBlockInfo info : StructureMarkers.markers(template, origin, settings)) {
+                if (StructureMarkers.name(info).equals("motto")) {
+                    motto = true;
+                    if (!(level.getBlockEntity(info.pos()) instanceof SignBlockEntity)) {
+                        problems.add("the Obelisk's motto is not carved at " + info.pos().toShortString());
+                    }
+                }
             }
-            StructureMarkers.markers(template, origin, settings).stream().filter(info -> StructureMarkers.name(info).equals("motto")).findFirst()
-                    .ifPresentOrElse(info -> {
-                        if (!(level.getBlockEntity(info.pos()) instanceof SignBlockEntity)) {
-                            problems.add("the Obelisk's motto is not carved at " + info.pos().toShortString());
-                        }
-                    }, () -> problems.add("the Obelisk has no motto marker"));
         }
-        String biome = level.getBiome(obelisk.above(5)).unwrapKey().map(key -> key.location().toString()).orElse("?");
+        if (checked == 0 || missing > 0) {
+            problems.add(missing + " of the " + checked + " Obelisk blocks checked against its files are not in the world");
+        }
+        if (!motto) {
+            problems.add("the Obelisk has no motto marker");
+        }
+        // It floats: under its foot, only air down to the sea.
+        BlockPos foot = plan.landmarks.obeliskBase();
+        for (int y = foot.getY() - 2; y > HalcyonLayout.SEA_LEVEL; y--) {
+            BlockPos at = new BlockPos(foot.getX(), y, foot.getZ());
+            if (!level.getBlockState(at).isAir()) {
+                problems.add("the Obelisk does not float: " + level.getBlockState(at) + " under it at " + at.toShortString());
+                break;
+            }
+        }
+        String biome = level.getBiome(gate.above(3)).unwrapKey().map(key -> key.location().toString()).orElse("?");
         if (!biome.equals("skyseam:petalwash_meadows")) {
-            problems.add("the Anchorage is in " + biome + ", not Petalwash Meadows");
+            problems.add("the Obelisk's gate is in " + biome + ", not Petalwash Meadows");
+        }
+        // Time (docs/DECISIONS.md K82): the Halcyon's day is the Lantern-Sun's, through the mixin, and /time run from
+        // inside the Halcyon is turned away, leaving the Overworld's day as it was.
+        long expected = LanternSun.dayTime(level.getGameTime(), LanternSun.offset(false));
+        if (level.getDayTime() != expected) {
+            problems.add("the Halcyon's day time is " + level.getDayTime() + ", not the Lantern-Sun's " + expected + " (is the mixin applied?)");
+        }
+        long overworldDay = server(level).overworld().getDayTime();
+        server(level).getCommands().performPrefixedCommand(server(level).createCommandSourceStack().withLevel(level).withSuppressedOutput(),
+                "time set 12345");
+        if (server(level).overworld().getDayTime() != overworldDay) {
+            problems.add("/time run inside the Halcyon changed the day to " + server(level).overworld().getDayTime());
         }
         Vec3 gravity = SableBridge.gravity(level);
         double pressure = SableBridge.airPressure(level, new Vec3(0, 200, 0));
         if (Math.abs(gravity.y + 9) > 0.01 || Math.abs(pressure - 1.2) > 0.01) {
             problems.add("Sable gives the Halcyon gravity " + gravity + " and pressure " + pressure + ", not -9 and 1.2");
         }
-        Skyseam.LOGGER.info("Skyseam boot check: Halcyon generated around the lane and the Anchorage in {} ms; gravity {}, pressure {} at Y 200",
-                (System.nanoTime() - started) / 1_000_000, gravity, pressure);
+        long landmarks = (System.nanoTime() - started) / 1_000_000;
+        // Generation speed: a block of fresh chunks by the Spindle, the busiest part of the archipelago; another in the
+        // archipelago round 1,000 blocks out; and one out in the Highlands, 3,000 blocks out.
+        double spindle = timeChunks(level, 14, -6);
+        double archipelago = timeChunks(level, (int) (-plan.landmarks.outZ * 1000) >> 4, (int) (plan.landmarks.outX * 1000) >> 4);
+        double highlands = timeChunks(level, (int) (plan.landmarks.outX * 3000) >> 4, (int) (plan.landmarks.outZ * 3000) >> 4);
+        Skyseam.LOGGER.info("Skyseam boot check: seed {}, lane at {}, Obelisk at {} facing {}; generated round them in {} ms; 144 more chunks "
+                + "each by the Spindle at {} ms a chunk, in the archipelago at {} ms, in the Highlands at {} ms; gravity {}, pressure {} at Y 200",
+                plan.seed, lane, gate.toShortString(), plan.landmarks.gateRotation, landmarks, String.format("%.1f", spindle),
+                String.format("%.1f", archipelago), String.format("%.1f", highlands), gravity, pressure);
+        if (Math.max(spindle, Math.max(archipelago, highlands)) > 40) {
+            problems.add("the Halcyon generates too slowly: " + Math.round(Math.max(spindle, Math.max(archipelago, highlands))) + " ms a chunk");
+        }
         return problems;
+    }
+
+    /** Generates 12 by 12 fresh chunks from {@code (cx, cz)} and returns the milliseconds each took. */
+    private static double timeChunks(ServerLevel level, int cx0, int cz0) {
+        long timed = System.nanoTime();
+        for (int cx = cx0; cx < cx0 + 12; cx++) {
+            for (int cz = cz0; cz < cz0 + 12; cz++) {
+                level.getChunk(cx, cz);
+            }
+        }
+        return (System.nanoTime() - timed) / 1e6 / 144;
+    }
+
+    /** Generates every chunk within {@code reach} blocks of a column. */
+    private static void generate(ServerLevel level, int x, int z, int reach) {
+        for (int cx = (x - reach) >> 4; cx <= (x + reach) >> 4; cx++) {
+            for (int cz = (z - reach) >> 4; cz <= (z + reach) >> 4; cz++) {
+                level.getChunk(cx, cz);
+            }
+        }
+    }
+
+    /** With {@code -Dskyseam.dev.map=<folder>}: maps of this world's plan and of two other seeds, to compare layouts. */
+    private static void exportMaps(HalcyonPlan plan) {
+        String folder = System.getProperty(MAP_PROPERTY, "");
+        if (folder.isEmpty()) {
+            return;
+        }
+        try {
+            HalcyonMapExport.write(plan, Path.of(folder, "halcyon_map_world.png"), 8, 4000);
+            HalcyonMapExport.write(HalcyonPlan.of(12345L), Path.of(folder, "halcyon_map_seed_12345.png"), 8, 4000);
+            HalcyonMapExport.write(HalcyonPlan.of(-777L), Path.of(folder, "halcyon_map_seed_-777.png"), 8, 4000);
+        } catch (IOException e) {
+            Skyseam.LOGGER.error("Skyseam dev: could not write the Halcyon maps", e);
+        }
     }
 
     private static MinecraftServer server(ServerLevel level) {

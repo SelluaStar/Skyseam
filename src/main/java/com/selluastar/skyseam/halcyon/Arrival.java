@@ -1,6 +1,6 @@
 package com.selluastar.skyseam.halcyon;
 
-import com.selluastar.skyseam.world.HalcyonLayout;
+import com.selluastar.skyseam.world.halcyon.HalcyonChunkGenerator;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
@@ -27,17 +27,22 @@ public final class Arrival {
         player.connection.send(new ClientboundSetTitlesAnimationPacket(FADE_IN, STAY, FADE_OUT));
         player.connection.send(new ClientboundSetSubtitleTextPacket(Component.translatable("skyseam.arrival.subtitle")));
         player.connection.send(new ClientboundSetTitleTextPacket(Component.translatable("skyseam.arrival.title")));
-        face(player, Vec3.atCenterOf(HalcyonLayout.OBELISK).add(0, 24, 0));
+        HalcyonChunkGenerator.plan(player.serverLevel()).ifPresent(plan -> face(player, plan.landmarks.lookAt()));
     }
 
     /** Turns a player to look at {@code target}, without moving them. */
     public static void face(ServerPlayer player, Vec3 target) {
+        face(player, target, 30);
+    }
+
+    /** Turns a player to look at {@code target}, tilting up or down at most {@code limit} degrees. */
+    public static void face(ServerPlayer player, Vec3 target, float limit) {
         Vec3 eye = player.getEyePosition();
         double dx = target.x - eye.x;
         double dy = target.y - eye.y;
         double dz = target.z - eye.z;
         float yaw = (float) (Mth.atan2(dz, dx) * Mth.RAD_TO_DEG) - 90;
         float pitch = (float) -(Mth.atan2(dy, Math.sqrt(dx * dx + dz * dz)) * Mth.RAD_TO_DEG);
-        player.connection.teleport(player.getX(), player.getY(), player.getZ(), yaw, Mth.clamp(pitch, -30, 30));
+        player.connection.teleport(player.getX(), player.getY(), player.getZ(), yaw, Mth.clamp(pitch, -limit, limit));
     }
 }

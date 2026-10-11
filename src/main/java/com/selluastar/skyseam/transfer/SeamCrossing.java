@@ -20,6 +20,7 @@ import com.selluastar.skyseam.registry.SkyseamSounds;
 import com.selluastar.skyseam.seam.SeamEntity;
 import com.selluastar.skyseam.seam.SeamShape;
 import com.selluastar.skyseam.world.HalcyonLayout;
+import com.selluastar.skyseam.world.halcyon.HalcyonChunkGenerator;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -191,7 +192,7 @@ public final class SeamCrossing {
         aboard.forEach(player -> SkyseamNetwork.flash(player, FLASH_HOLD_TICKS));
         level.playSound(null, from.x, from.y, from.z, SkyseamSounds.SEAM_CROSSING.get(), SoundSource.AMBIENT, 1, 1);
         Skyseam.LOGGER.info("Ship {} is crossing the Seam at {} into {}", id, seam.blockPosition().toShortString(), target.dimension().location());
-        ShipTransfer.begin(ship, target, HalcyonLayout.ARRIVAL_LANE, null, List.of(), result -> {
+        ShipTransfer.begin(ship, target, HalcyonChunkGenerator.arrivalIn(target), null, List.of(), result -> {
             UNDER_WAY.remove(id);
             TRACKS.remove(id);
             if (!result.succeeded()) {
@@ -226,7 +227,7 @@ public final class SeamCrossing {
             for (Ship body : SableBridge.linked(ship)) {
                 bounds = bounds.minmax(SableBridge.worldBounds(body));
             }
-            Vec3 lane = HalcyonLayout.ARRIVAL_LANE;
+            Vec3 lane = HalcyonChunkGenerator.arrivalIn(target);
             double half = Math.max(bounds.getXsize(), bounds.getZsize()) / 2 + ArrivalFinder.HORIZONTAL_RADIUS;
             CrossingHolds.keepLoaded(target, new AABB(lane.x - half, lane.y, lane.z - half, lane.x + half, lane.y + 1, lane.z + half));
         }

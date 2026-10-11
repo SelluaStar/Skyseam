@@ -3,6 +3,10 @@ loaderVersion="${loader_version_range}"
 license="${mod_license}"
 issueTrackerURL="https://github.com/SelluaStar/Skyseam/issues"
 
+# One small mixin: the Halcyon's day follows the Lantern-Sun's clock (LevelTimeMixin).
+[[mixins]]
+config="skyseam.mixins.json"
+
 [[mods]]
 modId="${mod_id}"
 version="${mod_version}"

@@ -3,12 +3,18 @@
   "temperature": 0.7,
   "downfall": 0.4,
   "effects": {
-    "sky_color": 5919380,
-    "fog_color": 6183062,
-    "water_color": 8162504,
-    "water_fog_color": 5925544,
-    "grass_color": 9213116,
-    "foliage_color": 8949944
+    "sky_color": 1973322,
+    "fog_color": 4866704,
+    "water_color": 2768022,
+    "water_fog_color": 1318480,
+    "grass_color": 7229360,
+    "foliage_color": 8013008,
+    "particle": {
+      "options": {
+        "type": "skyseam:wisp"
+      },
+      "probability": 0.006
+    }
   },
   "spawners": {},
   "spawn_costs": {},

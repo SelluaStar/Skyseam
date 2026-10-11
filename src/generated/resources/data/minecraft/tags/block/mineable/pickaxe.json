@@ -11,6 +11,24 @@
     "skyseam:stillstone_brick_wall",
     "skyseam:small_prismite_bud",
     "skyseam:large_prismite_bud",
-    "skyseam:prismite_cluster"
+    "skyseam:prismite_cluster",
+    "skyseam:duskstone",
+    "skyseam:cobbled_duskstone",
+    "skyseam:duskstone_bricks",
+    "skyseam:polished_duskstone",
+    "skyseam:duskstone_pillar",
+    "skyseam:shoalrock",
+    "skyseam:smooth_shoalrock",
+    "skyseam:prismite_lamp",
+    "skyseam:cracked_duskstone_bricks",
+    "skyseam:mossy_duskstone_bricks",
+    "skyseam:duskstone_tiles",
+    "skyseam:chiseled_duskstone",
+    "skyseam:runed_duskstone",
+    "skyseam:cliffstone",
+    "skyseam:ochre_cliffstone",
+    "skyseam:umber_cliffstone",
+    "skyseam:mossy_cliffstone",
+    "skyseam:hornstone"
   ]
 }

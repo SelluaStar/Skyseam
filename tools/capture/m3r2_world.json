@@ -1,0 +1,224 @@
+{
+ "settle": 120,
+ "steps": [
+  {
+   "command": "gamemode spectator"
+  },
+  {
+   "command": "gamerule sendCommandFeedback false"
+  },
+  {
+   "command": "skyseam halcyon time set noon"
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 300
+  },
+  {
+   "shot": "r2_arrival_noon"
+  },
+  {
+   "command": "skyseam halcyon tp obelisk"
+  },
+  {
+   "wait": 200
+  },
+  {
+   "shot": "r2_obelisk_noon"
+  },
+  {
+   "command": "skyseam halcyon time set sunset"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "shot": "r2_obelisk_sunset"
+  },
+  {
+   "command": "skyseam halcyon time set noon"
+  },
+  {
+   "command": "skyseam halcyon tp terrace"
+  },
+  {
+   "wait": 120
+  },
+  {
+   "shot": "r2_terrace"
+  },
+  {
+   "command": "skyseam halcyon find cave_grotto"
+  },
+  {
+   "wait": 300
+  },
+  {
+   "shot": "r2_grotto"
+  },
+  {
+   "command": "skyseam halcyon find cave_waterfall_hall"
+  },
+  {
+   "wait": 300
+  },
+  {
+   "shot": "r2_waterfall_hall"
+  },
+  {
+   "command": "skyseam halcyon find cave_sinkhole"
+  },
+  {
+   "wait": 300
+  },
+  {
+   "shot": "r2_sinkhole"
+  },
+  {
+   "command": "skyseam halcyon find giant_ember_cap"
+  },
+  {
+   "wait": 400
+  },
+  {
+   "shot": "r2_mushrooms"
+  },
+  {
+   "command": "skyseam halcyon find giant_parasol"
+  },
+  {
+   "wait": 200
+  },
+  {
+   "shot": "r2_parasol"
+  },
+  {
+   "command": "skyseam halcyon find giant_elder_lumen"
+  },
+  {
+   "wait": 400
+  },
+  {
+   "shot": "r2_elder"
+  },
+  {
+   "command": "skyseam halcyon time set midnight"
+  },
+  {
+   "wait": 80
+  },
+  {
+   "shot": "r2_elder_night"
+  },
+  {
+   "command": "skyseam halcyon time set noon"
+  },
+  {
+   "command": "skyseam halcyon find giant_spirepine"
+  },
+  {
+   "wait": 400
+  },
+  {
+   "shot": "r2_spirepines"
+  },
+  {
+   "command": "skyseam halcyon tp sunreach"
+  },
+  {
+   "wait": 400
+  },
+  {
+   "shot": "r2_sunreach"
+  },
+  {
+   "command": "skyseam halcyon find main_island_highland 340 300"
+  },
+  {
+   "wait": 400
+  },
+  {
+   "shot": "r2_highland_aerial"
+  },
+  {
+   "command": "skyseam halcyon find floating_island_horncrown"
+  },
+  {
+   "wait": 400
+  },
+  {
+   "shot": "r2_horncrown"
+  },
+  {
+   "command": "skyseam halcyon find floating_island_thorn"
+  },
+  {
+   "wait": 300
+  },
+  {
+   "shot": "r2_thorn"
+  },
+  {
+   "command": "skyseam halcyon tp highlands"
+  },
+  {
+   "wait": 400
+  },
+  {
+   "shot": "r2_highlands"
+  },
+  {
+   "command": "skyseam halcyon tp capwood"
+  },
+  {
+   "wait": 400
+  },
+  {
+   "shot": "r2_capwood"
+  },
+  {
+   "command": "skyseam halcyon tp elderwood"
+  },
+  {
+   "wait": 400
+  },
+  {
+   "shot": "r2_elderwood"
+  },
+  {
+   "command": "skyseam halcyon tp hush"
+  },
+  {
+   "wait": 300
+  },
+  {
+   "shot": "r2_hush"
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 300
+  },
+  {
+   "command": "tp @s ~ 72 ~ 30 12"
+  },
+  {
+   "wait": 120
+  },
+  {
+   "shot": "r2_underwater"
+  },
+  {
+   "quit": true
+  }
+ ]
+}

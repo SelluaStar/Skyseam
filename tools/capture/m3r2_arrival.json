@@ -1,0 +1,24 @@
+{
+ "settle": 120,
+ "steps": [
+  {"command": "gamemode spectator"},
+  {"command": "gamerule sendCommandFeedback false"},
+  {"command": "skyseam halcyon time set noon"},
+  {"command": "skyseam halcyon tp arrival"},
+  {"wait": 60},
+  {"command": "skyseam halcyon tp arrival"},
+  {"wait": 300},
+  {"shot": "r2_arrival_noon"},
+  {"command": "skyseam halcyon tp terrace"},
+  {"wait": 160},
+  {"shot": "r2_terrace"},
+  {"command": "skyseam halcyon time set dusk"},
+  {"command": "skyseam halcyon tp arrival"},
+  {"wait": 80},
+  {"shot": "r2_arrival_dusk"},
+  {"command": "skyseam halcyon time set midnight"},
+  {"wait": 80},
+  {"shot": "r2_arrival_night"},
+  {"quit": true}
+ ]
+}

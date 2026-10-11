@@ -53,19 +53,31 @@ All paths are under `src/main/resources/`, except the block files `runData` writ
 |---|---|---|
 | Halcyon block textures | `textures/block/{stillstone,stillstone_bricks,mossy_stillstone_bricks,chiseled_stillstone_bricks,stillstone_pillar,stillstone_pillar_top,stillstone_glass,cloud,rose_cloud,dusk_cloud,petal_carpet,cloudmoss,glow_moss,lantern_vine,lantern_vine_tip,small_prismite_bud,large_prismite_bud,prismite_cluster}.png` | 16×16. `stillstone_glass` and the cloud blocks are drawn translucent, so their alpha counts. The slab, stairs and wall use `stillstone_bricks` |
 | Halcyon block files | `src/generated/resources/assets/skyseam/{blockstates,models/block,models/item}/<block>.json`, `src/generated/resources/data/skyseam/loot_table/blocks/<block>.json`, block tags under `src/generated/resources/data/{minecraft,skyseam}/tags/block/` | Written by `gradlew runData` from `src/main/java/com/selluastar/skyseam/datagen/`. Replace textures freely. To change a model, a loot table or a tag, edit the datagen class and run `runData`: a hand-written file at the same path would be a second copy of it |
-| The Lantern-Sun | `textures/environment/lantern_sun.png` | A soft orb on transparent, drawn facing the camera. Its bright core must span the middle 9 of every 32 pixels of half-width: the code sizes the orb from that. Tinted white-gold to ember by code |
-| Cloud layer | `textures/environment/halcyon_clouds.png` | Tiles in both directions. Drawn white and tinted by the light, at Y 384, fading with distance |
-| Sky, fog, the Veil, the Hush's dusk | none | Drawn by code (`client/halcyon/HalcyonSky`, `HalcyonFog`). The phase palettes are at the top of `HalcyonSky` |
+| The Lantern-Sun | `textures/environment/lantern_sun.png` | Replaced in the M3 rebuild (below) |
+| Sky, fog, the Veil, the Hush's dusk | none | Drawn by code (`client/halcyon/HalcyonSky`, `HalcyonFog`). The phase palettes are at the top of `HalcyonSky`. The flat cloud texture is gone: the clouds are 3D boxes drawn by `HalcyonClouds` |
 | Biome colours | `data/skyseam/worldgen/biome/<biome>.json` (`the_spindle`, `the_hush`, `cirrus_reefs`, `petalwash_meadows`, `mirror_shoals`, `wreckfields`, `underbloom`) | Sky, fog, water, water fog, grass and foliage colours. Written by `tools/worldgen/make_halcyon_data.py` |
 | The dimension | `data/skyseam/dimension_type/halcyon.json`, `data/skyseam/dimension/halcyon.json` | Written by `tools/worldgen/make_halcyon_data.py`. The generator and biome source are code (`skyseam:halcyon`) |
 | Physics pack | `data/skyseam/dimension_physics/halcyon.json` | Sable's format (DEVIATIONS D22). Gravity, pressure curve and drag are the numbers to tune |
-| Sundered Obelisk | `data/skyseam/structure/sundered_obelisk.nbt` | At most 48 on every side. Keep the markers and see where it is placed in `docs/STRUCTURE-MARKERS.md`. Made by `tools/structures/make_sundered_obelisk.py` |
+| Sundered Obelisk | `data/skyseam/structure/sundered_obelisk.nbt` | Replaced in the M3 rebuild by five slices (below) |
 | Mirror Sea sounds | `sounds/mirror_sea/rebound.ogg`; `mirror_sea.splash` names a vanilla event in `sounds.json` | Mono. To give the splash its own file, change its `sounds.json` entry to name `skyseam:mirror_sea/splash` and add the `.ogg` |
 
 Note that 1.21 data folders are **singular**: `recipe/`, `advancement/`, `loot_table/`, `structure/`.
 
 `data/skyseam/structure/gametest/` holds GameTest templates (`empty.nbt` from `tools/structures/make_gametest_empty.py`).
 They are test scaffolding, not world structures. Structure checks skip them, and there is nothing in that folder to hand-build.
+
+### Added or replaced in the M3 rebuild
+
+| Asset | Path under `assets/skyseam/` (or `data/skyseam/`) | Notes for a replacement |
+|---|---|---|
+| Rock and masonry textures | `textures/block/{duskstone,cobbled_duskstone,shoalrock,cliffstone,ochre_cliffstone,umber_cliffstone,mossy_cliffstone,hornstone,stillstone}[_1…_3].png`, `textures/block/{duskstone_bricks,cracked_duskstone_bricks,mossy_duskstone_bricks,duskstone_tiles,polished_duskstone,chiseled_duskstone,runed_duskstone,runed_duskstone_glow,duskstone_pillar,duskstone_pillar_top,smooth_shoalrock,stillstone_bricks,mossy_stillstone_bricks,chiseled_stillstone_bricks,stillstone_pillar,stillstone_pillar_top,prismite_lamp}.png` | 16×16. A name ending `_1`, `_2`, `_3` is a variant the blockstate picks at random by position: keep the same count or edit `SkyseamBlockStates`. `runed_duskstone_glow` is drawn full-bright over the block: transparent except the glyphs. Painted by `tools/textures/make_halcyon_terrain_blocks.py` |
+| Wood, leaves, mushrooms and plants | `textures/block/{elder_log,elder_log_top,elder_log_glow,duskwood_log,duskwood_log_top}.png`, `textures/block/{elder_leaves,duskwood_leaves,spirepine_needles,pale_blossom_leaves}[_1].png`, `textures/block/{ember_cap,parasol_cap,glowcap,bell_cap,giant_mushroom_stem}[_inside].png`, `textures/block/{ember_shroom,glow_shroom,skylupine_top,skylupine_bottom,hanging_ivy,hanging_ivy_tip,wisteria,wisteria_tip,bloomcoral_pink,bloomcoral_violet,bloomcoral_white}.png` | 16×16. `elder_log_glow` is drawn full-bright over the bark's sides. A mushroom block shows its `_inside` texture on faces touching another mushroom block and on a cap's underside (its gills). Painted by `tools/textures/make_halcyon_flora_blocks.py` |
+| Sky bodies and effects | `textures/environment/{lantern_sun,sun_corona,halo,companion_star,planet,planet_shadow,pale_moon,ringed_moon,shard_moon,moon_debris,ember_moon,star_glint,meteor,nebula,nebula_teal,swirl}.png` | Drawn as billboards and tinted by code (`client/halcyon/sky/`). `lantern_sun`'s bright core spans the middle 24 of its 64 pixels. `pale_moon` is eight 64×64 phases side by side, in vanilla's order (full first). `planet_shadow` is the planet's night side, dark on its left; the code turns it away from the sun. `moon_debris` is four lumps, 2 by 2. `nebula*` tile left to right. Painted by `tools/textures/make_sky_textures.py`. The old `halcyon_clouds.png` and `rift_eye.png` are gone |
+| Wisp particle | `textures/particle/wisp.png`, `particles/wisp.json` | 8×8, drawn full-bright and tinted by code |
+| Biome colours and wisps | `data/skyseam/worldgen/biome/<biome>.json`, now also `sunreach_cliffs`, `capwood`, `elderwood` | Written by `tools/worldgen/make_halcyon_data.py`. The `particle` entry is how often a biome gives off wisps at night |
+| The dimension type | `data/skyseam/dimension_type/halcyon.json` | No `fixed_time`: the Lantern-Sun's clock sets the day (DECISIONS K82) |
+| Sundered Obelisk | `data/skyseam/structure/sundered_obelisk/slice_0.nbt` … `slice_4.nbt` | Five slices, each at most 48 on every side, stacked 48 apart. Keep the markers in slice 0 (`docs/STRUCTURE-MARKERS.md`). Made by `tools/structures/make_sundered_obelisk.py`. The old single `sundered_obelisk.nbt` is gone |
+| Mixin config | `src/main/resources/skyseam.mixins.json` | One mixin, `LevelTimeMixin` (K82) |
 
 ## Source files (outside the resources folder)
 
@@ -77,6 +89,7 @@ They are test scaffolding, not world structures. Structure checks skip them, and
 | Structure generators | `tools/structures/` | Write `.nbt` files plus isometric previews (`preview.py`). `structure_lib.py` writes the same bytes for the same structure |
 | World data generator | `tools/worldgen/make_halcyon_data.py` | Writes the Halcyon's biome, dimension and physics JSON |
 | Block datagen | `src/main/java/com/selluastar/skyseam/datagen/` | Run by `gradlew runData`; writes `src/generated/resources/` |
-| Reference images | `reference/` | Style references only (spec §3) |
+| Reference images | `reference/` | Style references only (spec §3). The author's round-two images (third-party screenshots) stay in the git-ignored `reference/local/` (DECISIONS K90) |
+| Texture kit | `tools/textures/pixelkit.py` | The shared pixel-art helpers: hue-shifted ramps, lit stones, bricks, strata, bark, leaves, caps |
 
 Folders are created by the milestone that first needs them. This file is the contract they follow.

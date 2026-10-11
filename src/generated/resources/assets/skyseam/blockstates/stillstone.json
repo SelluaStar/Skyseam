@@ -1,7 +1,15 @@
 {
   "variants": {
-    "": {
-      "model": "skyseam:block/stillstone"
-    }
+    "": [
+      {
+        "model": "skyseam:block/stillstone"
+      },
+      {
+        "model": "skyseam:block/stillstone_1"
+      },
+      {
+        "model": "skyseam:block/stillstone_2"
+      }
+    ]
   }
 }
