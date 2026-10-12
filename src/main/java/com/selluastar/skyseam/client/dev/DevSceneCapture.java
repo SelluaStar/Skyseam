@@ -47,7 +47,8 @@ import net.neoforged.neoforge.common.NeoForge;
  * {"quit": true}]}}. Commands run on the integrated server as the player with full permission. The HUD is hidden
  * so screenshots show only the world, unless a {@code {"gui": true}} step shows it. {@code {"use": "main"}} (or
  * {@code "off"}) right-clicks with that hand, on the block looked at if there is one; screens it opens stay open
- * until a {@code {"close": true}} step.
+ * until a {@code {"close": true}} step. {@code {"jump": true}} makes the player jump, if they stand on something, and
+ * {@code {"camera": "back"}} (or {@code "front"}, {@code "first"}) switches to that view.
  */
 public final class DevSceneCapture {
     public static final String PROPERTY = "skyseam.dev.capture";
@@ -93,6 +94,10 @@ public final class DevSceneCapture {
                     STEPS.add(new Step("use", step.get("use").getAsString(), 0));
                 } else if (step.has("close")) {
                     STEPS.add(new Step("close", "", 0));
+                } else if (step.has("jump")) {
+                    STEPS.add(new Step("jump", "", 0));
+                } else if (step.has("camera")) {
+                    STEPS.add(new Step("camera", step.get("camera").getAsString(), 0));
                 }
             }
         } catch (IOException | RuntimeException e) {
@@ -146,6 +151,17 @@ public final class DevSceneCapture {
                     return;
                 }
                 case "gui" -> showGui = Boolean.parseBoolean(step.value());
+                case "camera" -> minecraft.options.setCameraType(switch (step.value()) {
+                    case "back" -> net.minecraft.client.CameraType.THIRD_PERSON_BACK;
+                    case "front" -> net.minecraft.client.CameraType.THIRD_PERSON_FRONT;
+                    default -> net.minecraft.client.CameraType.FIRST_PERSON;
+                });
+                case "jump" -> {
+                    if (minecraft.player.onGround()) {
+                        minecraft.player.jumpFromGround();
+                    }
+                    return;
+                }
                 case "use" -> {
                     use(minecraft, "off".equals(step.value()) ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND);
                     keepScreen = true;

@@ -2,6 +2,7 @@ package com.selluastar.skyseam.registry;
 
 import com.selluastar.skyseam.Skyseam;
 import com.selluastar.skyseam.aperture.ApertureBlockEntity;
+import com.selluastar.skyseam.halcyon.flora.SpringbloomBlockEntity;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -15,6 +16,10 @@ public final class SkyseamBlockEntities {
     @SuppressWarnings("DataFlowIssue")
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ApertureBlockEntity>> APERTURE = BLOCK_ENTITIES.register("harmonic_aperture",
             () -> BlockEntityType.Builder.of(ApertureBlockEntity::new, SkyseamBlocks.HARMONIC_APERTURE.get()).build(null));
+
+    @SuppressWarnings("DataFlowIssue")
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SpringbloomBlockEntity>> SPRINGBLOOM = BLOCK_ENTITIES.register("springbloom",
+            () -> BlockEntityType.Builder.of(SpringbloomBlockEntity::new, SkyseamBlocks.SPRINGBLOOM.get()).build(null));
 
     private SkyseamBlockEntities() {}
 

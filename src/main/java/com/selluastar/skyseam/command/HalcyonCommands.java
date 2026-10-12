@@ -95,7 +95,7 @@ final class HalcyonCommands {
                 .then(Commands.literal("query").then(Commands.literal("clock").executes(context -> queryTime(context, "clock")))
                         .then(Commands.literal("phase").executes(context -> queryTime(context, "phase")))
                         .then(Commands.literal("day").executes(context -> queryTime(context, "day"))));
-        return Commands.literal("halcyon").then(tp).then(find).then(phase).then(time).then(VortexCommands.build());
+        return Commands.literal("halcyon").then(tp).then(find).then(phase).then(time).then(VortexCommands.build()).then(SpringbloomCommands.build());
     }
 
     /**

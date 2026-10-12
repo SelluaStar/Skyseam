@@ -234,5 +234,11 @@
   "skyseam.configuration.rebound_height": "Rebound height",
   "skyseam.configuration.rebound_cooldown_seconds": "Rebound cooldown (seconds)",
   "skyseam.configuration.rebound_slow_falling_seconds": "Slow Falling after Rebound (seconds)",
-  "skyseam.configuration.rebound_weakness_seconds": "Weakness after Rebound (seconds)"
+  "skyseam.configuration.rebound_weakness_seconds": "Weakness after Rebound (seconds)",
+
+  "block.skyseam.springbloom": "Springbloom",
+  "subtitles.skyseam.springbloom.squish": "Springbloom squishes rudely",
+  "subtitles.skyseam.springbloom.launch": "Springbloom springs",
+  "commands.skyseam.halcyon.springbloom.none": "No Springbloom in the loaded chunks within %s blocks.",
+  "commands.skyseam.halcyon.springbloom.found": "Beside the Springbloom at %s (it was %s blocks away)."
 }

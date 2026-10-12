@@ -4,6 +4,8 @@ import com.selluastar.skyseam.Skyseam;
 import com.selluastar.skyseam.aperture.ApertureBlockEntity;
 import com.selluastar.skyseam.client.aperture.ApertureChargeSound;
 import com.selluastar.skyseam.client.aperture.ApertureRenderer;
+import com.selluastar.skyseam.client.flora.SpringbloomRenderer;
+import com.selluastar.skyseam.client.particle.SporeParticle;
 import com.selluastar.skyseam.client.aperture.ApertureScreen;
 import com.selluastar.skyseam.client.aperture.ClientGauge;
 import com.selluastar.skyseam.client.aperture.SeamGaugeHud;
@@ -73,6 +75,7 @@ public final class SkyseamClient {
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(SkyseamEntities.SEAM.get(), SeamRenderer::new);
         event.registerBlockEntityRenderer(SkyseamBlockEntities.APERTURE.get(), ApertureRenderer::new);
+        event.registerBlockEntityRenderer(SkyseamBlockEntities.SPRINGBLOOM.get(), SpringbloomRenderer::new);
     }
 
     @SubscribeEvent
@@ -96,6 +99,7 @@ public final class SkyseamClient {
         event.registerSpriteSet(SkyseamParticles.FLUX_DUST.get(), sprites -> new VortexParticle.Provider(sprites, VortexParticle.Kind.DUST));
         event.registerSpriteSet(SkyseamParticles.FLUX_GLINT.get(), sprites -> new VortexParticle.Provider(sprites, VortexParticle.Kind.GLINT));
         event.registerSpriteSet(SkyseamParticles.FLUX_SPARK.get(), sprites -> new GlowParticle.Provider(sprites, GlowParticle.Kind.SPARK));
+        event.registerSpriteSet(SkyseamParticles.SPRINGBLOOM_SPORE.get(), SporeParticle.Provider::new);
     }
 
     @SubscribeEvent

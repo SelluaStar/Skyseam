@@ -40,6 +40,11 @@ public final class SkyseamParticles {
      * falling from the crown, and light drawn in over the water to the foot (client/particle/VortexParticle).
      */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FLUX_GLINT = simple("flux_glint");
+    /**
+     * A Springbloom's spore (client/particle/SporeParticle): a little glowing cube that keeps the speed passed in and
+     * floats up as it fades. Its puffs, bursts and trails (docs/DECISIONS.md K98).
+     */
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> SPRINGBLOOM_SPORE = simple("springbloom_spore");
 
     private SkyseamParticles() {}
 

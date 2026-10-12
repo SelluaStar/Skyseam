@@ -17,6 +17,7 @@ import com.selluastar.skyseam.halcyon.HalcyonTime;
 import com.selluastar.skyseam.halcyon.LanternSun;
 import com.selluastar.skyseam.halcyon.Rebound;
 import com.selluastar.skyseam.halcyon.Veil;
+import com.selluastar.skyseam.halcyon.flora.Springblooms;
 import com.selluastar.skyseam.halcyon.vortex.FluxVortices;
 import com.selluastar.skyseam.network.SkyseamNetwork;
 import com.selluastar.skyseam.registry.SkyseamBlockEntities;
@@ -95,6 +96,10 @@ public final class Skyseam {
         NeoForge.EVENT_BUS.addListener(FluxVortices::onChangedDimension);
         NeoForge.EVENT_BUS.addListener(FluxVortices::onLoggedOut);
         NeoForge.EVENT_BUS.addListener(FluxVortices::onServerStopping);
+        NeoForge.EVENT_BUS.addListener(Springblooms::onJump);
+        NeoForge.EVENT_BUS.addListener(Springblooms::onFall);
+        NeoForge.EVENT_BUS.addListener(Springblooms::onLevelTick);
+        NeoForge.EVENT_BUS.addListener(Springblooms::onServerStopped);
     }
 
     private static void commonSetup(FMLCommonSetupEvent event) {
