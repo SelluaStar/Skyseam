@@ -5,6 +5,7 @@ import java.util.List;
 import com.selluastar.skyseam.block.BloomcoralBlock;
 import com.selluastar.skyseam.block.LanternVineBlock;
 import com.selluastar.skyseam.config.SkyseamConfig;
+import com.selluastar.skyseam.halcyon.flora.SpringbloomBlock;
 import com.selluastar.skyseam.registry.SkyseamBlocks;
 import com.selluastar.skyseam.world.HalcyonLayout;
 import com.selluastar.skyseam.world.halcyon.decor.CaveDecor;
@@ -20,6 +21,7 @@ import com.selluastar.skyseam.world.halcyon.shape.CaveFeature;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.AmethystClusterBlock;
 import net.minecraft.world.level.block.Block;
@@ -150,6 +152,42 @@ public final class HalcyonDecorator {
         return sx == x && sz == z && ((h >>> 32) & 0xFFFF) / 65536.0 < springbloomChance();
     }
 
+    /**
+     * A Springbloom of a size rolled by {@code roll} (most are the usual size, a few up to three times as big), made
+     * smaller until its leaves and stalks have room: open air round it, as far as they reach.
+     */
+    private static BlockState springbloom(WorldGenLevel level, BlockPos at, double roll) {
+        BlockState bloom = SkyseamBlocks.SPRINGBLOOM.get().defaultBlockState();
+        for (int size = SpringbloomBlock.sizeFor(roll); size > 0; size--) {
+            BlockState sized = bloom.setValue(SpringbloomBlock.SIZE, size);
+            if (roomFor(level, at, SpringbloomBlock.scale(sized))) {
+                return sized;
+            }
+        }
+        return bloom;
+    }
+
+    /**
+     * Room for a Springbloom {@code scale} times the usual size at {@code at}: open air up its middle as high as its
+     * stalks reach, and round it as far as its leaves reach from a block above it (its low leaves may lie over a bump).
+     */
+    private static boolean roomFor(WorldGenLevel level, BlockPos at, float scale) {
+        int reach = Mth.ceil(scale);
+        int high = Mth.ceil(1.6f * scale);
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        for (int dx = -reach; dx <= reach; dx++) {
+            for (int dz = -reach; dz <= reach; dz++) {
+                boolean middle = Math.abs(dx) <= 1 && Math.abs(dz) <= 1;
+                for (int dy = middle ? 0 : 1; dy <= (middle ? high : 2); dy++) {
+                    if (!level.getBlockState(pos.setWithOffset(at, dx, dy, dz)).canBeReplaced()) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
     private static double springbloomChance() {
         try {
             return SkyseamConfig.SPRINGBLOOM_CHANCE.get();
@@ -195,7 +233,7 @@ public final class HalcyonDecorator {
             return;
         }
         if (turf && isSpringbloomSpot(noise, x, z) && flat(level, ground)) {
-            set(level, up, SkyseamBlocks.SPRINGBLOOM.get().defaultBlockState());
+            set(level, up, springbloom(level, up, noise.hash(x, y, z, 94)));
             return;
         }
         if (turf) {

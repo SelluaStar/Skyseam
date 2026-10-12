@@ -353,8 +353,17 @@
 					]
 				},
 				{
-					"name": "bulb",
+					"name": "cushion",
 					"parent": "root",
+					"pivot": [
+						0,
+						1,
+						0
+					]
+				},
+				{
+					"name": "bulb",
+					"parent": "cushion",
 					"pivot": [
 						0,
 						1,
@@ -567,8 +576,17 @@
 					]
 				},
 				{
-					"name": "stalks",
+					"name": "perch",
 					"parent": "root",
+					"pivot": [
+						0,
+						8,
+						0
+					]
+				},
+				{
+					"name": "stalks",
+					"parent": "perch",
 					"pivot": [
 						0,
 						8,

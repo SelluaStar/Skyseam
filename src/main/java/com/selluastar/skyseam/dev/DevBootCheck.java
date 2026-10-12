@@ -3,6 +3,7 @@ package com.selluastar.skyseam.dev;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import com.selluastar.skyseam.Skyseam;
@@ -10,6 +11,7 @@ import com.selluastar.skyseam.halcyon.LanternSun;
 import com.selluastar.skyseam.halcyon.vortex.FluxVortex;
 import com.selluastar.skyseam.halcyon.vortex.VortexField;
 import com.selluastar.skyseam.external.SableBridge;
+import com.selluastar.skyseam.halcyon.flora.SpringbloomBlock;
 import com.selluastar.skyseam.registry.SkyseamBlocks;
 import com.selluastar.skyseam.world.HalcyonLayout;
 import com.selluastar.skyseam.world.halcyon.HalcyonChunkGenerator;
@@ -203,6 +205,7 @@ public final class DevBootCheck {
                 {(int) (plan.landmarks.outX * 3000) >> 4, (int) (plan.landmarks.outZ * 3000) >> 4}};
         int count = 0;
         int floating = 0;
+        int[] sizes = new int[SpringbloomBlock.SIZE.getPossibleValues().size()];
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         for (int[] origin : origins) {
             for (int cx = origin[0] + 1; cx < origin[0] + 11; cx++) {
@@ -218,10 +221,12 @@ public final class DevBootCheck {
                         for (int y = 0; y < 16; y++) {
                             for (int z = 0; z < 16; z++) {
                                 for (int x = 0; x < 16; x++) {
-                                    if (!section.getBlockState(x, y, z).is(SkyseamBlocks.SPRINGBLOOM.get())) {
+                                    BlockState bloom = section.getBlockState(x, y, z);
+                                    if (!bloom.is(SkyseamBlocks.SPRINGBLOOM.get())) {
                                         continue;
                                     }
                                     count++;
+                                    sizes[bloom.getValue(SpringbloomBlock.SIZE)]++;
                                     pos.set(chunk.getPos().getMinBlockX() + x, y0 + y - 2, chunk.getPos().getMinBlockZ() + z);
                                     while (pos.getY() > HalcyonLayout.SEA_LEVEL && !level.getBlockState(pos).isAir()) {
                                         pos.move(Direction.DOWN);
@@ -234,7 +239,8 @@ public final class DevBootCheck {
                 }
             }
         }
-        Skyseam.LOGGER.info("Skyseam boot check: in 300 chunks, {} Springblooms, {} of them on floating islands", count, floating);
+        Skyseam.LOGGER.info("Skyseam boot check: in 300 chunks, {} Springblooms, {} of them on floating islands; by size, smallest first: {}", count,
+                floating, Arrays.toString(sizes));
         if (count == 0) {
             problems.add("no Springbloom grew in 300 chunks");
         }

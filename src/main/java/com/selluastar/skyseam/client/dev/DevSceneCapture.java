@@ -47,7 +47,8 @@ import net.neoforged.neoforge.common.NeoForge;
  * {"quit": true}]}}. Commands run on the integrated server as the player with full permission. The HUD is hidden
  * so screenshots show only the world, unless a {@code {"gui": true}} step shows it. {@code {"use": "main"}} (or
  * {@code "off"}) right-clicks with that hand, on the block looked at if there is one; screens it opens stay open
- * until a {@code {"close": true}} step. {@code {"jump": true}} makes the player jump, if they stand on something, and
+ * until a {@code {"close": true}} step. {@code {"jump": true}} makes the player jump, if they stand on something,
+ * {@code {"walk": 20}} holds the forward key for that many ticks (and waits them out), and
  * {@code {"camera": "back"}} (or {@code "front"}, {@code "first"}) switches to that view.
  */
 public final class DevSceneCapture {
@@ -58,6 +59,8 @@ public final class DevSceneCapture {
 
     private static final List<Step> STEPS = new ArrayList<>();
     private static int settleTicks = 60;
+    /** True while a {@code walk} step holds the forward key. */
+    private static boolean walking;
     private static boolean worldRequested;
     private static int inWorldTicks;
     private static int next;
@@ -94,6 +97,8 @@ public final class DevSceneCapture {
                     STEPS.add(new Step("use", step.get("use").getAsString(), 0));
                 } else if (step.has("close")) {
                     STEPS.add(new Step("close", "", 0));
+                } else if (step.has("walk")) {
+                    STEPS.add(new Step("walk", "", step.get("walk").getAsInt()));
                 } else if (step.has("jump")) {
                     STEPS.add(new Step("jump", "", 0));
                 } else if (step.has("camera")) {
@@ -132,7 +137,10 @@ public final class DevSceneCapture {
             return;
         }
         if (waiting > 0) {
-            waiting--;
+            if (--waiting == 0 && walking) {
+                walking = false;
+                minecraft.options.keyUp.setDown(false);
+            }
             return;
         }
         while (next < STEPS.size()) {
@@ -156,6 +164,12 @@ public final class DevSceneCapture {
                     case "front" -> net.minecraft.client.CameraType.THIRD_PERSON_FRONT;
                     default -> net.minecraft.client.CameraType.FIRST_PERSON;
                 });
+                case "walk" -> {
+                    walking = true;
+                    minecraft.options.keyUp.setDown(true);
+                    waiting = step.ticks();
+                    return;
+                }
                 case "jump" -> {
                     if (minecraft.player.onGround()) {
                         minecraft.player.jumpFromGround();

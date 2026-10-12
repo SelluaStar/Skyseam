@@ -18,10 +18,12 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.event.entity.living.LivingEvent;
 import net.neoforged.neoforge.event.entity.living.LivingFallEvent;
@@ -36,7 +38,8 @@ import net.neoforged.neoforge.event.tick.LevelTickEvent;
  * it squishes ({@link #squish}): its block event plays the {@code squish} animation and puffs spores out on every
  * client, with a rude noise, louder and lower the further the fall.</li>
  * <li><b>Jumping</b> while standing on it ({@link #onJump}): the jump becomes a launch, about
- * {@code springbloom.launch_height} blocks straight up, keeping the way you were going. For a player the jump runs on
+ * {@code springbloom.base_launch_height} blocks straight up from one of the usual size and up to twice that from a
+ * huge one ({@link SpringbloomBlock#lift}), a little higher or lower each time, keeping the way you were going. For a player the jump runs on
  * their own client (which moves them), and again on the server when it sees them leave the ground, which plays the
  * {@code launch} animation, the sound and the burst for everyone, and leaves a trail of spores behind them for a
  * moment ({@link #onLevelTick}). Crouching steps off without a launch.</li>
@@ -51,20 +54,28 @@ public final class Springblooms {
     private static final int SPARE_TICKS = 400;
     /** Ticks a launched creature trails spores. */
     private static final int TRAIL_TICKS = 24;
+    /** Each launch goes up to this much higher or lower than the plant's own height. */
+    private static final double SPREAD = 0.12;
     private static final Map<ResourceKey<Level>, Map<UUID, Integer>> TRAILS = new HashMap<>();
 
     private Springblooms() {}
 
-    /** The upward speed of a launch, in blocks per tick. */
+    /** The upward speed of a launch from a Springbloom of the usual size, in blocks per tick. */
     public static double launchSpeed() {
         return Rebound.launchSpeed(launchHeight());
     }
 
+    /** The upward speed of one launch from this Springbloom, in blocks per tick: higher from a bigger one, and never quite the same twice. */
+    public static double launchSpeed(BlockState bloom, RandomSource random) {
+        double spread = 1.0 + SPREAD * (2.0 * random.nextDouble() - 1.0);
+        return Rebound.launchSpeed(launchHeight() * SpringbloomBlock.lift(bloom) * spread);
+    }
+
     private static double launchHeight() {
         try {
-            return SkyseamConfig.SPRINGBLOOM_LAUNCH_HEIGHT.get();
+            return SkyseamConfig.SPRINGBLOOM_BASE_LAUNCH_HEIGHT.get();
         } catch (IllegalStateException notLoaded) {
-            return SkyseamConfig.SPRINGBLOOM_LAUNCH_HEIGHT.getDefault();
+            return SkyseamConfig.SPRINGBLOOM_BASE_LAUNCH_HEIGHT.getDefault();
         }
     }
 
@@ -79,8 +90,10 @@ public final class Springblooms {
             return;
         }
         BlockPos pos = entity.getOnPos();
+        BlockState bloom = entity.level().getBlockState(pos);
+        float scale = SpringbloomBlock.scale(bloom);
         Vec3 motion = entity.getDeltaMovement();
-        entity.setDeltaMovement(motion.x, Math.max(motion.y, launchSpeed()), motion.z);
+        entity.setDeltaMovement(motion.x, Math.max(motion.y, launchSpeed(bloom, entity.getRandom())), motion.z);
         entity.hasImpulse = true;
         if (entity.level() instanceof ServerLevel level) {
             entity.resetFallDistance();
@@ -90,7 +103,9 @@ public final class Springblooms {
                 entity.hurtMarked = true;
             }
             level.blockEvent(pos, SkyseamBlocks.SPRINGBLOOM.get(), SpringbloomBlock.LAUNCH, 0);
-            level.playSound(null, pos, SkyseamSounds.SPRINGBLOOM_LAUNCH.get(), SoundSource.BLOCKS, 1.0f, 0.92f + 0.16f * level.random.nextFloat());
+            // A big one booms lower.
+            float pitch = (0.92f + 0.16f * level.random.nextFloat()) / Mth.sqrt(scale);
+            level.playSound(null, pos, SkyseamSounds.SPRINGBLOOM_LAUNCH.get(), SoundSource.BLOCKS, Math.min(1.0f + 0.2f * (scale - 1), 1.4f), pitch);
             TRAILS.computeIfAbsent(level.dimension(), key -> new HashMap<>()).put(entity.getUUID(), TRAIL_TICKS);
         }
     }
@@ -102,7 +117,9 @@ public final class Springblooms {
         }
         server.blockEvent(pos, SkyseamBlocks.SPRINGBLOOM.get(), SpringbloomBlock.SQUISH, 0);
         float volume = Mth.clamp(0.55f + fallDistance * 0.05f, 0.55f, 1.2f);
-        float pitch = Mth.clamp(1.15f - fallDistance * 0.02f, 0.75f, 1.2f) + (server.random.nextFloat() - 0.5f) * 0.15f;
+        float scale = SpringbloomBlock.scale(server.getBlockState(pos).is(SkyseamBlocks.SPRINGBLOOM.get()) ? server.getBlockState(pos)
+                : SkyseamBlocks.SPRINGBLOOM.get().defaultBlockState());
+        float pitch = (Mth.clamp(1.15f - fallDistance * 0.02f, 0.75f, 1.2f) + (server.random.nextFloat() - 0.5f) * 0.15f) / Mth.sqrt(scale);
         server.playSound(null, pos, SkyseamSounds.SPRINGBLOOM_SQUISH.get(), SoundSource.BLOCKS, volume, pitch);
     }
 
