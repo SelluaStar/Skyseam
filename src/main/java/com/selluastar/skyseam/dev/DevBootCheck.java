@@ -7,6 +7,8 @@ import java.util.List;
 
 import com.selluastar.skyseam.Skyseam;
 import com.selluastar.skyseam.halcyon.LanternSun;
+import com.selluastar.skyseam.halcyon.vortex.FluxVortex;
+import com.selluastar.skyseam.halcyon.vortex.VortexField;
 import com.selluastar.skyseam.external.SableBridge;
 import com.selluastar.skyseam.registry.SkyseamBlocks;
 import com.selluastar.skyseam.world.HalcyonLayout;
@@ -186,7 +188,36 @@ public final class DevBootCheck {
         glowCensus(level, "by the Spindle", 14, -6, problems);
         glowCensus(level, "in the archipelago", (int) (-plan.landmarks.outZ * 1000) >> 4, (int) (plan.landmarks.outX * 1000) >> 4, problems);
         glowCensus(level, "in the Highlands", (int) (plan.landmarks.outX * 3000) >> 4, (int) (plan.landmarks.outZ * 3000) >> 4, problems);
+        vortexCensus(level, plan, problems);
         return problems;
+    }
+
+    /**
+     * Flux vortices (docs/DECISIONS.md K97): over the next ten slots, how many form within 3,000 blocks of the Spindle,
+     * how high their feet stand above the sea, and that none stands on a mountain.
+     */
+    private static void vortexCensus(ServerLevel level, HalcyonPlan plan, List<String> problems) {
+        int count = 0;
+        int lowland = 0;
+        int highest = Integer.MIN_VALUE;
+        long now = level.getGameTime();
+        for (int s = 0; s < 10; s++) {
+            long time = (Math.floorDiv(now, VortexField.SLOT_TICKS) + s) * VortexField.SLOT_TICKS + VortexField.SLOT_TICKS / 2;
+            for (FluxVortex vortex : VortexField.around(plan, 0, 0, 3000, time, 0)) {
+                count++;
+                int above = vortex.baseY() - HalcyonLayout.SEA_LEVEL;
+                lowland += above <= 20 ? 1 : 0;
+                highest = Math.max(highest, above);
+            }
+        }
+        Skyseam.LOGGER.info("Skyseam boot check: {} flux vortices raging at the middle of the next ten slots within 3,000 blocks of the Spindle, "
+                + "{} of them within 20 blocks of the sea, the highest foot {} above it", count, lowland, highest == Integer.MIN_VALUE ? 0 : highest);
+        if (count == 0) {
+            problems.add("no flux vortex formed within 3,000 blocks of the Spindle in ten slots");
+        }
+        if (highest > 61) {
+            problems.add("a flux vortex stands " + highest + " blocks above the sea, on a mountain");
+        }
     }
 
     /**

@@ -53,6 +53,16 @@ public final class SkyseamSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> MIRROR_SEA_SPLASH = local("mirror_sea.splash");
     public static final DeferredHolder<SoundEvent, SoundEvent> MIRROR_SEA_REBOUND = local("mirror_sea.rebound");
 
+    // The flux vortex (docs/DECISIONS.md K97). The loop, the forming and the unravelling are played by each client
+    // from the vortex list it is sent; the throw is played by the server where it happens.
+    /** A vortex's roar, a loop the client plays from the nearest point of the nearest vortex. */
+    public static final DeferredHolder<SoundEvent, SoundEvent> FLUX_VORTEX_LOOP = local("flux_vortex.loop");
+    public static final DeferredHolder<SoundEvent, SoundEvent> FLUX_VORTEX_APPEAR = local("flux_vortex.appear");
+    public static final DeferredHolder<SoundEvent, SoundEvent> FLUX_VORTEX_DISSIPATE = local("flux_vortex.dissipate");
+    /** Something walks into a vortex and is thrown up. Heard 64 blocks away. */
+    public static final DeferredHolder<SoundEvent, SoundEvent> FLUX_VORTEX_LAUNCH = SOUNDS.register("flux_vortex.launch",
+            () -> SoundEvent.createFixedRangeEvent(Skyseam.id("flux_vortex.launch"), 64));
+
     private SkyseamSounds() {}
 
     public static void register(IEventBus modBus) {

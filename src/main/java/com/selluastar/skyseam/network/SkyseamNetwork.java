@@ -20,6 +20,8 @@ public final class SkyseamNetwork {
                 (payload, context) -> com.selluastar.skyseam.client.skychart.ClientSkychart.accept(payload));
         registrar.playToClient(LanternSunPayload.TYPE, LanternSunPayload.STREAM_CODEC,
                 (payload, context) -> com.selluastar.skyseam.client.halcyon.ClientLanternSun.accept(payload.offset()));
+        registrar.playToClient(VortexPayload.TYPE, VortexPayload.STREAM_CODEC,
+                (payload, context) -> com.selluastar.skyseam.client.halcyon.vortex.ClientVortices.accept(payload.vortices()));
     }
 
     public static void flash(ServerPlayer player, int holdTicks) {

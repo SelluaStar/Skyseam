@@ -42,6 +42,15 @@ public final class SkyseamConfig {
     public static final ModConfigSpec.DoubleValue FLOATING_ISLAND_DENSITY;
     public static final ModConfigSpec.DoubleValue TREE_DENSITY;
     public static final ModConfigSpec.BooleanValue VEIL_ENABLED;
+    public static final ModConfigSpec.BooleanValue VORTEX_ENABLED;
+    public static final ModConfigSpec.IntValue VORTEX_CELL_SIZE;
+    public static final ModConfigSpec.DoubleValue VORTEX_CHANCE;
+    public static final ModConfigSpec.IntValue VORTEX_TOP_Y;
+    public static final ModConfigSpec.IntValue VORTEX_MIN_SECONDS;
+    public static final ModConfigSpec.IntValue VORTEX_MAX_SECONDS;
+    public static final ModConfigSpec.IntValue VORTEX_LAUNCH_HEIGHT;
+    public static final ModConfigSpec.DoubleValue VORTEX_SHIP_SPEED;
+    public static final ModConfigSpec.BooleanValue VORTEX_SCRAMBLE;
     public static final ModConfigSpec.DoubleValue VEIL_PLAYER_PUSH;
     public static final ModConfigSpec.DoubleValue VEIL_SHIP_PUSH;
     public static final ModConfigSpec.IntValue REBOUND_HEIGHT;
@@ -143,6 +152,30 @@ public final class SkyseamConfig {
                 .defineInRange("rebound_slow_falling_seconds", 8, 0, 120);
         REBOUND_WEAKNESS_SECONDS = b.comment("Seconds of Weakness once the Slow Falling ends.")
                 .defineInRange("rebound_weakness_seconds", 10, 0, 120);
+        b.pop();
+
+        b.push("flux_vortex");
+        VORTEX_ENABLED = b.comment("Flux vortices form over the Halcyon's low ground: columns of turning wind and light that throw "
+                + "creatures up and drive ships down.")
+                .define("enabled", true);
+        VORTEX_CELL_SIZE = b.comment("The Halcyon is cut into square cells this many blocks wide. Each may hold one vortex at a time,",
+                "at a different place each time it forms.")
+                .defineInRange("cell_size", 640, 256, 4096);
+        VORTEX_CHANCE = b.comment("The chance a cell has a vortex in each ten-minute slot. It forms at a random moment in the slot.")
+                .defineInRange("chance", 0.55, 0.0, 1.0);
+        VORTEX_TOP_Y = b.comment("The height a vortex reaches, a little above the highest floating islands.")
+                .defineInRange("top_y", 400, 200, 600);
+        VORTEX_MIN_SECONDS = b.comment("The shortest a vortex lasts, in seconds, forming and unravelling included.")
+                .defineInRange("min_seconds", 150, 20, 3600);
+        VORTEX_MAX_SECONDS = b.comment("The longest a vortex lasts, in seconds. At most nine and a half minutes, as it lives inside its slot.")
+                .defineInRange("max_seconds", 360, 20, 570);
+        VORTEX_LAUNCH_HEIGHT = b.comment("How high a vortex throws a creature that walks into it, in blocks. It lands with Slow Falling.")
+                .defineInRange("launch_height", 40, 4, 120);
+        VORTEX_SHIP_SPEED = b.comment("How fast a vortex drives a ship down, in blocks per second, at full strength.")
+                .defineInRange("ship_down_speed", 16.0, 0.0, 60.0);
+        VORTEX_SCRAMBLE = b.comment("Inside a vortex, every spinning part of a ship (propellers, shafts, gears) turns a random way at a",
+                "random speed until the ship leaves. Off: ships are only driven down.")
+                .define("scramble_spinning_parts", true);
         b.pop();
         SPEC = b.build();
     }

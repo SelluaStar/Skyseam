@@ -91,6 +91,15 @@ They are test scaffolding, not world structures. Structure checks skip them, and
 | Smoothing for the soft glows | `textures/environment/{halo,sun_corona,swirl,nebula,nebula_teal,aurora,meteor}.png.mcmeta` | `"blur": true` so they stay smooth stretched over the sky. The bodies keep their crisp pixels |
 | Wisp particle | `textures/particle/wisp.png` | 32×32: a small bright core in a faint glow, so it no longer shows its pixels up close |
 
+### Added with the flux vortex
+
+| Asset | Path under `assets/skyseam/` | Notes for a replacement |
+|---|---|---|
+| Vortex textures | `textures/environment/{flux_ribbon,flux_core,flux_haze,flux_mist,flux_ground}.png` and their `.png.mcmeta` | White, the brightness in the alpha, tinted by code (`client/halcyon/vortex/VortexRenderer`). `flux_ribbon` (64×256) runs up the column and tiles top to bottom; `flux_core` (32×128) the same; `flux_haze` and `flux_mist` (128×128) tile both ways; `flux_ground` (128×128) is the swirl on the ground, faint in the middle. The `.mcmeta` turns on `blur`. Painted by `tools/textures/make_flux_vortex_textures.py` |
+| Vortex particles | `textures/particle/{flux_mote,flux_spark,flux_dust}.png`, `particles/{flux_mote,flux_spark,flux_dust}.json` | White, tinted by code. The mote circles up the column, the dust is swept round its foot, the spark flashes as it forms |
+| Vortex sounds | `sounds/flux_vortex/{loop,appear,dissipate,launch}.ogg`, entries in `sounds.json` | `loop` must loop seamlessly (6 s): the client plays it from the column's nearest point. `appear` (4 s) and `dissipate` (4 s) are played as it forms and unravels, `launch` when it throws something. Synthesized by `tools/audio/synth.py flux_vortex` |
+| Floating rocks | none | Real blocks drawn by code: Duskstone, cobbled Duskstone, Shoalrock, Hornstone, Cliffstone and now and then a Prismite lamp, some topped with moss or grass |
+
 ## Source files (outside the resources folder)
 
 | Kind | Folder | Notes |
