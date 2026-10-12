@@ -15,6 +15,8 @@ Writes, under src/main/resources/assets/skyseam/textures/:
   environment/flux_band.png     16x4   a band, for ripples
   environment/flux_slice.png    32x32  a slice across one vortex of the pair, seen from above or below: a glow brighter
                                        towards its middle with three pixel arms winding out of it (clamped)
+  gui/map/flux_vortex.png       16x16  the map icon (Xaero's maps can't take one; JourneyMap does): the two vortices
+                                       winding round each other up from a pool, under a crown, outlined dark
   particle/flux_mote_{0..3}.png 8x8    a twinkling mote, four frames from a dot to a cross
   particle/flux_spark.png       8x8    a four-pointed spark
   particle/flux_dust.png        8x8    a puff of mist
@@ -172,6 +174,36 @@ def dust():
     return white(out * 0.8)
 
 
+def map_icon():
+    from PIL import Image
+    size = 16
+    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    px = img.load()
+    cyan = (90, 225, 255, 255)
+    violet = (170, 120, 255, 255)
+    white = (235, 250, 255, 255)
+    for y in range(2, 14):
+        t = (13 - y) / 11.0
+        a = t * np.pi * 2.2
+        for k, colour in ((0, cyan), (1, violet)):
+            x = 7.5 + np.sin(a + k * np.pi) * (2.6 + 0.8 * t)
+            px[int(round(x)), y] = colour
+        px[8 if y % 3 else 7, y] = white if y > 3 else px[8, y]
+    for x in range(4, 12):
+        px[x, 1] = white if 6 <= x <= 9 else cyan
+    for x in range(3, 13):
+        px[x, 14] = cyan if x % 2 else violet
+    # A dark outline round everything, so it reads on any map.
+    out = img.copy()
+    po = out.load()
+    for y in range(size):
+        for x in range(size):
+            if px[x, y][3] == 0 and any(0 <= x + dx < size and 0 <= y + dy < size and px[x + dx, y + dy][3] > 0
+                                        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                po[x, y] = (16, 22, 48, 230)
+    return out
+
+
 def main():
     environment = {"flux_tube": tube(), "flux_strand": strand(), "flux_glow": glow(), "flux_pool": pool(), "flux_crown": crown(),
                    "flux_band": band(), "flux_slice": slice_()}
@@ -191,6 +223,10 @@ def main():
         path = TEX / "particle" / f"{name}.png"
         img.save(path)
         print("wrote", path.relative_to(ROOT))
+    icon_path = TEX / "gui" / "map" / "flux_vortex.png"
+    icon_path.parent.mkdir(parents=True, exist_ok=True)
+    map_icon().save(icon_path)
+    print("wrote", icon_path.relative_to(ROOT))
     for name in GONE:
         for path in (TEX / "environment" / f"{name}.png", TEX / "environment" / f"{name}.png.mcmeta"):
             if path.exists():

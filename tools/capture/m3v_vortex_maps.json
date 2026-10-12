@@ -1,0 +1,23 @@
+{
+ "settle": 200,
+ "steps": [
+  {"command": "gamemode spectator"},
+  {"command": "gamerule sendCommandFeedback false"},
+  {"command": "skyseam halcyon time set noon"},
+  {"command": "skyseam halcyon tp arrival"},
+  {"wait": 60},
+  {"command": "skyseam halcyon tp arrival"},
+  {"wait": 100},
+  {"command": "tp @s ~ ~ ~ 0 10"},
+  {"command": "execute positioned ^ ^ ^80 run skyseam halcyon vortex here 600"},
+  {"command": "execute positioned ^40 ^ ^160 run skyseam halcyon vortex here 600"},
+  {"wait": 200},
+  {"gui": true},
+  {"wait": 40},
+  {"shot": "maps_hud"},
+  {"command": "tp @s ~ ~ ~ 90 10"},
+  {"wait": 40},
+  {"shot": "maps_hud_turned"},
+  {"quit": true}
+ ]
+}
