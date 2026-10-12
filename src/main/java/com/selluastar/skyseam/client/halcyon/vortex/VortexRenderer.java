@@ -7,8 +7,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.joml.Matrix4fStack;
 import org.joml.Vector3f;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -60,9 +62,22 @@ import net.neoforged.neoforge.client.model.data.ModelData;
  * other, each with a bright head; at the top the crown bursts open, and the rocks lift into place. Unravelling: the
  * vortices let go of the ground and stream up into the crown, which fades last; the pool dims and the rocks sink.
  *
- * <p>It is drawn only where the world is: within the render distance, once the chunk under it has loaded, fading out
- * towards the edge of the view, so terrain and islands in front of it hide it. Beyond that, with Distant Horizons, a
- * simpler version is drawn among its far terrain ({@code client/compat/DistantHorizonsVortices}).
+ * <p>Each vortex is drawn as strips turned to face the camera, which read as a column from the side; looking along
+ * one (from above or below) the strips fade out and slices across it fade in, which read as a column end-on, so it
+ * never shows as flat sheets.
+ *
+ * <p>Its light is drawn after the whole world, shader pack and all ({@code AFTER_LEVEL}), tested against the finished
+ * depth (docs/DECISIONS.md K101): drawn any earlier, things drawn after it (water and the other see-through terrain,
+ * which Sodium and Iris draw late; clouds; a shader pack's clouds, water and fog) were laid over it, so it faded behind
+ * loaded water and vanished behind clouds even where it stood in front of them. Under a shader pack its clouds write no
+ * depth, so they don't hide the vortex either.
+ *
+ * <p>It is drawn where the world is: within the render distance once the chunk under it has loaded (or, with Distant
+ * Horizons, once that has terrain there), fading in over a second rather than popping in, so terrain and islands in
+ * front of it hide it. With Distant Horizons, a simpler version is drawn among its far terrain beyond that, the two
+ * crossfading over {@link #HANDOVER} blocks just past the render distance ({@code client/compat/DistantHorizonsVortices}).
+ * The handover is outside the render distance on purpose: Distant Horizons draws before the game's own terrain, which
+ * covers whatever it drew, so a far version inside the render distance is hidden by loaded terrain even behind it.
  */
 public final class VortexRenderer {
     private static final ResourceLocation TUBE = Skyseam.id("textures/environment/flux_tube.png");
@@ -71,6 +86,11 @@ public final class VortexRenderer {
     private static final ResourceLocation POOL = Skyseam.id("textures/environment/flux_pool.png");
     private static final ResourceLocation CROWN = Skyseam.id("textures/environment/flux_crown.png");
     private static final ResourceLocation BAND = Skyseam.id("textures/environment/flux_band.png");
+    private static final ResourceLocation SLICE = Skyseam.id("textures/environment/flux_slice.png");
+    /** Over this many blocks just past the render distance the near vortex fades out and the far one in. */
+    public static final double HANDOVER = 64;
+    /** A slice across each vortex every this many blocks up it. */
+    private static final double SLICE_STEP = 3;
 
     /** The two vortices of the pair. */
     public static final int HELIX = 2;
@@ -118,6 +138,7 @@ public final class VortexRenderer {
 
     private static float lightScale = 1;
     private static float daylight = 1;
+    private static float partialTick;
 
     private VortexRenderer() {}
 
@@ -126,12 +147,34 @@ public final class VortexRenderer {
         return Minecraft.getInstance().options.getEffectiveRenderDistance() * 16.0;
     }
 
-    /** True if the vortex is in the part of the world being drawn: within the render distance, its chunk loaded. */
-    public static boolean inView(ClientLevel level, FluxVortex vortex, Vec3 camera) {
-        if (flat(vortex, camera) > viewRange()) {
+    /**
+     * How much of a vortex this far off is drawn by Distant Horizons rather than here: 0 anywhere within the render
+     * distance, rising smoothly to 1 {@link #HANDOVER} blocks past it.
+     */
+    public static float farShare(FluxVortex vortex, Vec3 camera) {
+        double t = Mth.clamp((flat(vortex, camera) - viewRange()) / HANDOVER, 0, 1);
+        return (float) (t * t * (3 - 2 * t));
+    }
+
+    /** How far off, flat, a vortex may be drawn here: the render distance and the handover past it. */
+    public static double nearReach() {
+        return viewRange() + HANDOVER;
+    }
+
+    /** True if the chunk under the vortex has loaded. */
+    public static boolean chunkLoaded(ClientLevel level, FluxVortex vortex) {
+        return level.getChunkSource().hasChunk(SectionPos.blockToSectionCoord(vortex.x()), SectionPos.blockToSectionCoord(vortex.z()));
+    }
+
+    /**
+     * True if the vortex may be drawn here: within the render distance and the handover past it, where the world is
+     * drawn under it (the chunk under it loaded, or {@code farTerrain}: Distant Horizons has terrain there).
+     */
+    public static boolean inView(ClientLevel level, FluxVortex vortex, Vec3 camera, boolean farTerrain) {
+        if (flat(vortex, camera) > nearReach()) {
             return false;
         }
-        return level.getChunkSource().hasChunk(SectionPos.blockToSectionCoord(vortex.x()), SectionPos.blockToSectionCoord(vortex.z()));
+        return farTerrain || chunkLoaded(level, vortex);
     }
 
     public static double flat(FluxVortex vortex, Vec3 camera) {
@@ -165,6 +208,12 @@ public final class VortexRenderer {
         return centre(vortex, tubesOf(vortex)[strand], above, time);
     }
 
+    /** How far round its middle the strands of vortex {@code strand} of the pair have turned, {@code above} blocks over the foot. */
+    public static double swirlAngle(FluxVortex vortex, int strand, double above, double time) {
+        Tube tube = tubesOf(vortex)[strand];
+        return tube.swirlTwist * above - tube.spin * time;
+    }
+
     /** How thick vortex {@code strand} of the pair is {@code above} blocks over the foot. */
     public static double helixWidth(FluxVortex vortex, int strand, double above, double time) {
         return tubeWidth(vortex, tubesOf(vortex)[strand], above, time);
@@ -172,7 +221,8 @@ public final class VortexRenderer {
 
     public static void onRenderLevel(RenderLevelStageEvent event) {
         RenderLevelStageEvent.Stage stage = event.getStage();
-        if (stage != RenderLevelStageEvent.Stage.AFTER_ENTITIES && stage != RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
+        // The rocks with the entities; the light after the whole world, so nothing drawn later is laid over it.
+        if (stage != RenderLevelStageEvent.Stage.AFTER_ENTITIES && stage != RenderLevelStageEvent.Stage.AFTER_LEVEL) {
             return;
         }
         Minecraft minecraft = Minecraft.getInstance();
@@ -182,11 +232,13 @@ public final class VortexRenderer {
             return;
         }
         float partial = event.getPartialTick().getGameTimeDeltaPartialTick(false);
+        partialTick = partial;
         double time = level.getGameTime() + partial;
         Vec3 camera = event.getCamera().getPosition();
         List<FluxVortex> shown = new ArrayList<>();
         for (FluxVortex vortex : vortices) {
-            if (vortex.alive(time) && inView(level, vortex, camera)) {
+            // Still drawn while it fades out, after its chunk has gone.
+            if (vortex.alive(time) && flat(vortex, camera) <= nearReach() && ClientVortices.nearShown(vortex.id(), partial) > 0.005f) {
                 shown.add(vortex);
             }
         }
@@ -207,7 +259,22 @@ public final class VortexRenderer {
         }
         lightScale = ShaderPack.active() ? SHADER_LIGHT : 1;
         daylight = daylight(level, partial);
-        PoseStack.Pose matrix = pose.last();
+        // After the level the game has taken the camera's turn back off its model-view matrix (and hands over no pose):
+        // put it back on for the light, as it was through the level.
+        Matrix4fStack modelView = RenderSystem.getModelViewStack();
+        modelView.pushMatrix();
+        modelView.mul(event.getModelViewMatrix());
+        RenderSystem.applyModelViewMatrix();
+        try {
+            light(buffers, new PoseStack().last(), shown, time, camera);
+        } finally {
+            modelView.popMatrix();
+            RenderSystem.applyModelViewMatrix();
+        }
+    }
+
+    /** The light of every vortex shown, a pass for each texture. */
+    private static void light(MultiBufferSource.BufferSource buffers, PoseStack.Pose matrix, List<FluxVortex> shown, double time, Vec3 camera) {
         for (FluxVortex vortex : shown) {
             pool(buffers.getBuffer(SkyseamRenderTypes.flux(POOL)), matrix, vortex, time, camera);
         }
@@ -226,6 +293,10 @@ public final class VortexRenderer {
             bodies(buffers.getBuffer(SkyseamRenderTypes.flux(TUBE)), matrix, vortex, time, camera);
         }
         buffers.endBatch(SkyseamRenderTypes.flux(TUBE));
+        for (FluxVortex vortex : shown) {
+            slices(buffers.getBuffer(SkyseamRenderTypes.flux(SLICE)), matrix, vortex, time, camera);
+        }
+        buffers.endBatch(SkyseamRenderTypes.flux(SLICE));
         for (FluxVortex vortex : shown) {
             VertexConsumer strands = buffers.getBuffer(SkyseamRenderTypes.flux(STRAND));
             strands(strands, matrix, vortex, time, camera);
@@ -270,10 +341,12 @@ public final class VortexRenderer {
         return time - vortex.start();
     }
 
-    /** Fades towards the edge of the view distance, and dims under a shader pack. */
+    /**
+     * Fades in over a second once the world under it is drawn, out past the render distance as the far one fades in,
+     * and dims under a shader pack.
+     */
     private static float fade(FluxVortex vortex, Vec3 camera) {
-        double range = viewRange();
-        return (float) (1 - Mth.clamp((flat(vortex, camera) - (range - 64)) / 64, 0, 1)) * lightScale;
+        return (1 - farShare(vortex, camera)) * ClientVortices.nearShown(vortex.id(), partialTick) * lightScale;
     }
 
     /** How brightly the pool at the foot is lit: first of all as it forms, last of all as it unravels. */
@@ -466,32 +539,63 @@ public final class VortexRenderer {
 
     /**
      * A strip along a line of points, turned to face the camera, {@code widths[k]} wide at each; its texture runs
-     * across it (u) and along it (v, from {@code v0}, one repeat each {@code vScale} blocks). It fades out within a
-     * few blocks of the camera, so from inside a vortex it doesn't fill the view.
+     * across it (u) and along it (v, from {@code v0}, one repeat each {@code vScale} blocks). Each point is turned on
+     * its own, keeping the way the last one faced, so the strip stays one unbroken ribbon however it twists. It fades
+     * out where it is seen end-on (a flat strip seen along its length shows as a sheet; slices take over there), and
+     * within a few blocks of the camera, so from inside a vortex it doesn't fill the view.
      */
     private static void strip(VertexConsumer buffer, PoseStack.Pose pose, List<Vec3> points, Vec3 camera, double[] widths, float[] colour, float[] alphas,
             double v0, double vScale) {
+        int count = points.size();
+        if (count < 2) {
+            return;
+        }
+        Vec3[] sides = new Vec3[count];
+        float[] facing = new float[count];
+        Vec3 last = null;
+        for (int k = 0; k < count; k++) {
+            Vec3 point = points.get(k);
+            Vec3 tangent = points.get(Math.min(k + 1, count - 1)).subtract(points.get(Math.max(k - 1, 0)));
+            Vec3 toCamera = camera.subtract(point);
+            Vec3 side = tangent.cross(toCamera);
+            double size = tangent.length() * toCamera.length();
+            if (size < 1.0e-6 || side.lengthSqr() < 1.0e-12) {
+                sides[k] = last;
+                continue;
+            }
+            double sine = side.length() / size;
+            side = side.normalize();
+            if (last != null && side.dot(last) < 0) {
+                side = side.scale(-1);
+            }
+            sides[k] = side;
+            last = side;
+            facing[k] = sideOn(sine);
+        }
+        // Points before the first that could be turned take its way.
+        for (int k = count - 2; k >= 0; k--) {
+            if (sides[k] == null) {
+                sides[k] = sides[k + 1];
+            }
+        }
+        if (sides[0] == null) {
+            return;
+        }
         double along = 0;
-        for (int k = 0; k + 1 < points.size(); k++) {
+        for (int k = 0; k + 1 < count; k++) {
             Vec3 p0 = points.get(k);
             Vec3 p1 = points.get(k + 1);
-            Vec3 direction = p1.subtract(p0);
-            double length = direction.length();
+            double length = p1.distanceTo(p0);
             if (length < 1.0e-4) {
                 continue;
             }
-            Vec3 side = direction.cross(p0.add(p1).scale(0.5).subtract(camera));
-            if (side.lengthSqr() < 1.0e-8) {
-                continue;
-            }
-            side = side.normalize();
-            Vec3 s0 = side.scale(widths[k] / 2);
-            Vec3 s1 = side.scale(widths[k + 1] / 2);
+            Vec3 s0 = sides[k].scale(widths[k] / 2);
+            Vec3 s1 = sides[k + 1].scale(widths[k + 1] / 2);
             float v0k = (float) (v0 + along / vScale);
             float v1k = (float) (v0 + (along + length) / vScale);
             along += length;
-            float a0 = alphas[k] * near(p0, camera, widths[k]);
-            float a1 = alphas[k + 1] * near(p1, camera, widths[k + 1]);
+            float a0 = alphas[k] * near(p0, camera, widths[k]) * facing[k];
+            float a1 = alphas[k + 1] * near(p1, camera, widths[k + 1]) * facing[k + 1];
             if (a0 <= 0.002f && a1 <= 0.002f) {
                 continue;
             }
@@ -500,6 +604,15 @@ public final class VortexRenderer {
             vertex(buffer, pose, p1.x + s1.x, p1.y + s1.y, p1.z + s1.z, camera, colour, a1, 1, v1k);
             vertex(buffer, pose, p1.x - s1.x, p1.y - s1.y, p1.z - s1.z, camera, colour, a1, 0, v1k);
         }
+    }
+
+    /**
+     * How fully a strip shows, from the sine of the angle between it and the line of sight: all of it seen from the
+     * side, none of it seen end-on (within about 15 degrees of its length), smoothly between.
+     */
+    private static float sideOn(double sine) {
+        double t = Mth.clamp((sine - 0.25) / 0.33, 0, 1);
+        return (float) (t * t * (3 - 2 * t));
     }
 
     /** 0 for a point of a strip right at the camera (or within half the strip's width of it), 1 from some blocks off. */
@@ -598,6 +711,58 @@ public final class VortexRenderer {
             }
             strip(buffer, pose, points, camera, doubles(widths), colour(tube.colour, daylight), floats(alphas), -time * 0.45 / 32 + tube.phase, 32);
         }
+    }
+
+    /**
+     * Slices across each vortex, every few blocks up it, each turned to face along the vortex and spun like its
+     * strands: seen from above or below, where the strips fade out, they stack into a column of light seen end-on.
+     * From the side they are edge-on, and fade out.
+     */
+    private static void slices(VertexConsumer buffer, PoseStack.Pose pose, FluxVortex vortex, double time, Vec3 camera) {
+        float faded = fade(vortex, camera);
+        if (faded <= 0.01f) {
+            return;
+        }
+        float a = Mth.lerp(daylight, 0.16f, 0.12f) * faded;
+        for (Tube tube : tubesOf(vortex)) {
+            double[] span = span(vortex, tube, time);
+            if (span[1] - span[0] < 0.5) {
+                continue;
+            }
+            float[] colour = paler(colour(tube.colour, daylight), 0.2f);
+            // Slices stay put on the vortex as it rises, rather than sliding up it with its lit part.
+            for (double above = Math.ceil(span[0] / SLICE_STEP) * SLICE_STEP; above <= span[1]; above += SLICE_STEP) {
+                Vec3 middle = centre(vortex, tube, above, time);
+                Vec3 tangent = centre(vortex, tube, above + 1, time).subtract(centre(vortex, tube, above - 1, time));
+                Vec3 toCamera = camera.subtract(middle);
+                double size = tangent.length() * toCamera.length();
+                if (size < 1.0e-6) {
+                    continue;
+                }
+                float endOn = 1 - sideOn(tangent.cross(toCamera).length() / size);
+                double width = tubeWidth(vortex, tube, above, time);
+                float alpha = a * endOn * shows(vortex, above, span[0], span[1]) * near(middle, camera, width);
+                if (alpha <= 0.004f) {
+                    continue;
+                }
+                double turn = tube.swirlTwist * above - tube.spin * time;
+                disc(buffer, pose, middle, tangent.normalize(), turn, width * 0.62, camera, colour, alpha);
+            }
+        }
+    }
+
+    /** A square across {@code axis} at {@code middle}, {@code size} blocks from its middle to each side, turned {@code turn} about the axis. */
+    private static void disc(VertexConsumer buffer, PoseStack.Pose pose, Vec3 middle, Vec3 axis, double turn, double size, Vec3 camera, float[] colour,
+            float a) {
+        Vec3 across = Math.abs(axis.x) < 0.9 ? axis.cross(new Vec3(1, 0, 0)) : axis.cross(new Vec3(0, 0, 1));
+        across = across.normalize();
+        Vec3 other = axis.cross(across);
+        Vec3 u = across.scale(Math.cos(turn)).add(other.scale(Math.sin(turn))).scale(size);
+        Vec3 v = other.scale(Math.cos(turn)).subtract(across.scale(Math.sin(turn))).scale(size);
+        vertex(buffer, pose, middle.x - u.x - v.x, middle.y - u.y - v.y, middle.z - u.z - v.z, camera, colour, a, 0, 0);
+        vertex(buffer, pose, middle.x + u.x - v.x, middle.y + u.y - v.y, middle.z + u.z - v.z, camera, colour, a, 1, 0);
+        vertex(buffer, pose, middle.x + u.x + v.x, middle.y + u.y + v.y, middle.z + u.z + v.z, camera, colour, a, 1, 1);
+        vertex(buffer, pose, middle.x - u.x + v.x, middle.y - u.y + v.y, middle.z - u.z + v.z, camera, colour, a, 0, 1);
     }
 
     /** The core of each vortex, and the strands spinning round its middle; light running up each. */

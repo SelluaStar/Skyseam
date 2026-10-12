@@ -1,10 +1,12 @@
 package com.selluastar.skyseam.halcyon.vortex;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 import com.selluastar.skyseam.config.SkyseamConfig;
 import com.selluastar.skyseam.world.HalcyonLayout;
@@ -22,7 +24,8 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  * so vortices come and go at random times. Where it forms is chosen afresh each slot: the lowest ground among a
  * dozen random spots in the cell, preferring lowland just above the sea, then open water, never a mountain (more than
  * 60 blocks above the sea). Spots whose column would pass through a floating island, a sea stack or a blade of rock
- * are passed over, as are the Obelisk's waters, the Arrival Lane and the Spindle.
+ * are passed over, as are the Obelisk's waters, the Arrival Lane and the Spindle. This holds all over the Halcyon,
+ * however far out: only what is worked out round each player depends on where they are.
  */
 public final class VortexField {
     /** A slot: each cell holds at most one vortex in it. */
@@ -36,11 +39,14 @@ public final class VortexField {
     private static final int MOUNTAIN = 60;
     private static final int SEA = HalcyonLayout.SEA_LEVEL;
 
-    /** Chosen sites, by seed, cell, slot and settings: each is looked for once. */
-    private static final Map<String, Optional<FluxVortex>> CACHE = new LinkedHashMap<>(256, 0.75f, true) {
+    /**
+     * Chosen sites, by seed, cell, slot and settings: each is looked for once. Big enough for every cell within the
+     * send radius of a few players, for this slot and the next.
+     */
+    private static final Map<String, Optional<FluxVortex>> CACHE = new LinkedHashMap<>(4096, 0.75f, true) {
         @Override
         protected boolean removeEldestEntry(Map.Entry<String, Optional<FluxVortex>> eldest) {
-            return size() > 1024;
+            return size() > 16384;
         }
     };
 
@@ -56,29 +62,69 @@ public final class VortexField {
 
     /** Every vortex alive at {@code time} (or forming within the next {@code ahead} ticks) whose axis is within {@code radius}. */
     public static List<FluxVortex> around(HalcyonPlan plan, double x, double z, double radius, long time, long ahead) {
+        return around(plan, x, z, radius, time, ahead, new int[] {Integer.MAX_VALUE});
+    }
+
+    /**
+     * As above, but working out at most {@code budget[0]} cells not looked at yet (counting it down), nearest first;
+     * cells past the budget are left out this time. So a wide radius is worked out over a few calls rather than all
+     * at once (each cell's site takes a dozen looks at the plan).
+     */
+    public static List<FluxVortex> around(HalcyonPlan plan, double x, double z, double radius, long time, long ahead, int[] budget) {
         List<FluxVortex> out = new ArrayList<>();
         int cell = cellSize();
         long slot = Math.floorDiv(time, SLOT_TICKS);
+        long lastSlot = Math.floorDiv(time + ahead, SLOT_TICKS);
         int cx0 = Math.floorDiv((int) Math.floor(x - radius), cell);
         int cx1 = Math.floorDiv((int) Math.floor(x + radius), cell);
         int cz0 = Math.floorDiv((int) Math.floor(z - radius), cell);
         int cz1 = Math.floorDiv((int) Math.floor(z + radius), cell);
+        List<int[]> cells = new ArrayList<>();
         for (int cx = cx0; cx <= cx1; cx++) {
             for (int cz = cz0; cz <= cz1; cz++) {
-                for (long s = slot; s <= Math.floorDiv(time + ahead, SLOT_TICKS); s++) {
-                    at(plan, cx, cz, s).ifPresent(vortex -> {
-                        if (vortex.end() > time && vortex.start() <= time + ahead && Math.hypot(vortex.x() - x, vortex.z() - z) <= radius) {
-                            out.add(vortex);
-                        }
-                    });
+                cells.add(new int[] {cx, cz});
+            }
+        }
+        cells.sort(Comparator.comparingDouble(c -> Math.hypot((c[0] + 0.5) * cell - x, (c[1] + 0.5) * cell - z)));
+        for (int[] c : cells) {
+            for (long s = slot; s <= lastSlot; s++) {
+                Optional<FluxVortex> held = at(plan, c[0], c[1], s, budget);
+                if (held == null) {
+                    continue;
                 }
+                held.ifPresent(vortex -> {
+                    if (vortex.end() > time && vortex.start() <= time + ahead && Math.hypot(vortex.x() - x, vortex.z() - z) <= radius) {
+                        out.add(vortex);
+                    }
+                });
             }
         }
         return out;
     }
 
+    /**
+     * Where a vortex could stand at the column, if anywhere: its foot's height, by the same rules as the cells' own
+     * (clear of floating islands, rock and the landmarks, not on a mountain).
+     */
+    public static OptionalInt standAt(HalcyonPlan plan, int x, int z) {
+        int top = setting(SkyseamConfig.VORTEX_TOP_Y);
+        if (!open(plan, x, z, top)) {
+            return OptionalInt.empty();
+        }
+        int ground = (int) Math.round(plan.landHeight(x, z));
+        if (ground > SEA + MOUNTAIN) {
+            return OptionalInt.empty();
+        }
+        return OptionalInt.of(Math.max(ground + 1, SEA));
+    }
+
     /** The vortex cell {@code (cx, cz)} holds in {@code slot}, if any. */
     public static Optional<FluxVortex> at(HalcyonPlan plan, int cx, int cz, long slot) {
+        return at(plan, cx, cz, slot, new int[] {Integer.MAX_VALUE});
+    }
+
+    /** As above, or null if it isn't known yet and {@code budget[0]} has run out (a cell worked out counts it down). */
+    private static Optional<FluxVortex> at(HalcyonPlan plan, int cx, int cz, long slot, int[] budget) {
         int cell = cellSize();
         double chance = setting(SkyseamConfig.VORTEX_CHANCE);
         int top = setting(SkyseamConfig.VORTEX_TOP_Y);
@@ -91,6 +137,10 @@ public final class VortexField {
                 return known;
             }
         }
+        if (budget[0] <= 0) {
+            return null;
+        }
+        budget[0]--;
         Optional<FluxVortex> found = choose(plan, cx, cz, slot, cell, chance, top, minLife, maxLife);
         synchronized (CACHE) {
             CACHE.put(key, found);

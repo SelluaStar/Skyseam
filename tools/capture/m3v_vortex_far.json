@@ -1,0 +1,33 @@
+{
+ "settle": 200,
+ "steps": [
+  {"command": "gamemode spectator"},
+  {"command": "gamerule sendCommandFeedback false"},
+  {"command": "skyseam halcyon time set noon"},
+  {"command": "skyseam halcyon tp arrival"},
+  {"wait": 60},
+  {"command": "skyseam halcyon tp arrival"},
+  {"wait": 200},
+  {"command": "tp @s ~ ~ ~ 0 0"},
+  {"command": "execute positioned ^ ^ ^110 run skyseam halcyon vortex here 3000"},
+  {"wait": 400},
+  {"command": "skyseam halcyon vortex find"},
+  {"wait": 20},
+  {"command": "execute at @s run summon marker ^ ^ ^78.3 {Tags:[\"vx\"]}"},
+  {"wait": 5},
+  {"command": "execute at @e[tag=vx,limit=1] run tp @s ~-340 ~40 ~0 facing ~ ~20 ~"},
+  {"wait": 400},
+  {"shot": "far_340_noon"},
+  {"command": "tp @s ~-260 ~ ~"},
+  {"wait": 500},
+  {"shot": "far_600_noon"},
+  {"command": "skyseam halcyon time set midnight"},
+  {"wait": 60},
+  {"shot": "far_600_night"},
+  {"command": "tp @s ~260 ~ ~"},
+  {"wait": 200},
+  {"shot": "far_340_night"},
+  {"command": "skyseam halcyon vortex clear"},
+  {"quit": true}
+ ]
+}

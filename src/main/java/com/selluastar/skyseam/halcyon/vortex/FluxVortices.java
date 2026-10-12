@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
 
@@ -21,6 +22,8 @@ import com.selluastar.skyseam.network.VortexPayload;
 import com.selluastar.skyseam.registry.SkyseamSounds;
 import com.selluastar.skyseam.world.HalcyonLayout;
 import com.selluastar.skyseam.world.halcyon.HalcyonChunkGenerator;
+import com.selluastar.skyseam.world.halcyon.plan.HalcyonPlan;
+import com.selluastar.skyseam.world.halcyon.plan.Noise;
 
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.resources.ResourceKey;
@@ -28,6 +31,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
@@ -43,8 +47,12 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * The flux vortices at work on the server (docs/DECISIONS.md K97).
  *
  * <ul>
- * <li>Every second it gathers the vortices near the Halcyon's players ({@link VortexField}) and any summoned by
- * command, and sends each player those within {@link #SYNC_RADIUS}.</li>
+ * <li>Every second it gathers the vortices round the Halcyon's players ({@link VortexField}) and any summoned, and
+ * sends each player those within {@code flux_vortex.send_radius} (4,608 blocks), so they can be seen from far off;
+ * the far cells are worked out a few at a time, nearest first. Only those within {@link #PHYSICS_RADIUS} of a player
+ * (or summoned) are ticked.</li>
+ * <li>Once each ten-minute slot, at a moment of its own, each player with no vortex within {@link #NEARBY_AREA} blocks
+ * has a chance ({@code nearby_chance}) of one forming 32 to 50 blocks from them ({@link #nearby}).</li>
  * <li>Each tick, a creature that walks into a column is thrown up ({@code launch_height}) and a little outward, so it
  * comes down beside it, with Slow Falling for the landing. Riders aboard a ship stay with their ship.</li>
  * <li>A ship in a column is driven down (towards {@code ship_down_speed}) and swept round it, and its spinning parts
@@ -52,8 +60,15 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * </ul>
  */
 public final class FluxVortices {
-    /** Players are sent the vortices this close, to draw them from far away. */
-    public static final double SYNC_RADIUS = 2048;
+    /** Vortices this close to a player (or summoned) are ticked: they throw creatures and drive ships. */
+    public static final double PHYSICS_RADIUS = 640;
+    /** A player with no vortex this close may have one form near them. */
+    public static final double NEARBY_AREA = 640;
+    /** How far from the player such a vortex forms. */
+    private static final double NEARBY_MIN = 32;
+    private static final double NEARBY_MAX = 50;
+    /** Far cells worked out per second, all players together. */
+    private static final int CELLS_PER_SECOND = 96;
     /** Ticks a thrown creature can't be thrown again. */
     private static final int THROW_COOLDOWN = 30;
     /** Seconds of Slow Falling after a throw. */
@@ -66,6 +81,8 @@ public final class FluxVortices {
     private static final Map<ResourceKey<Level>, List<FluxVortex>> ACTIVE = new HashMap<>();
     private static final Map<ResourceKey<Level>, List<FluxVortex>> SUMMONED = new HashMap<>();
     private static final Map<UUID, List<Long>> SENT = new HashMap<>();
+    /** The slot each player was last rolled for a vortex near them. */
+    private static final Map<UUID, Long> NEARBY_ROLLED = new HashMap<>();
     private static final Map<UUID, Long> THROWN = new HashMap<>();
     private static final Set<UUID> INSIDE = new HashSet<>();
     /** Each level's ships whose spinning parts are scrambled, by ship. */
@@ -257,9 +274,95 @@ public final class FluxVortices {
         }
     }
 
+    /** How far round each player vortices are sent. */
+    public static double sendRadius() {
+        try {
+            return SkyseamConfig.VORTEX_SEND_RADIUS.get();
+        } catch (IllegalStateException notLoaded) {
+            return SkyseamConfig.VORTEX_SEND_RADIUS.getDefault();
+        }
+    }
+
+    /**
+     * Once each ten-minute slot, at a moment of the player's own (so not everyone at once), a player in the Halcyon with
+     * no vortex within {@link #NEARBY_AREA} blocks has {@code nearby_chance} of one forming 32 to 50 blocks from them,
+     * where one could stand by the cells' own rules; it lasts as long as one of theirs would.
+     */
+    private static void nearby(ServerLevel level, HalcyonPlan plan, long time) {
+        double chance;
+        int minSeconds;
+        int maxSeconds;
+        try {
+            chance = SkyseamConfig.VORTEX_NEARBY_CHANCE.get();
+            minSeconds = SkyseamConfig.VORTEX_MIN_SECONDS.get();
+            maxSeconds = Math.max(minSeconds, SkyseamConfig.VORTEX_MAX_SECONDS.get());
+        } catch (IllegalStateException notLoaded) {
+            return;
+        }
+        if (chance <= 0) {
+            return;
+        }
+        long slot = Math.floorDiv(time, VortexField.SLOT_TICKS);
+        for (ServerPlayer player : level.players()) {
+            UUID id = player.getUUID();
+            long moment = slot * VortexField.SLOT_TICKS + Math.floorMod(Noise.mix(id.getMostSignificantBits(), id.getLeastSignificantBits(), slot, 0, 0x4E41),
+                    (long) VortexField.SLOT_TICKS);
+            Long rolled = NEARBY_ROLLED.get(id);
+            if (time < moment || (rolled != null && rolled == slot)) {
+                continue;
+            }
+            NEARBY_ROLLED.put(id, slot);
+            if (player.isSpectator()) {
+                continue;
+            }
+            boolean near = around(level, player.getX(), player.getZ(), NEARBY_AREA, time).stream().anyMatch(vortex -> vortex.end() > time)
+                    || !VortexField.around(plan, player.getX(), player.getZ(), NEARBY_AREA, time, 600).isEmpty();
+            if (near || level.random.nextDouble() >= chance) {
+                continue;
+            }
+            Optional<int[]> spot = nearbySpot(plan, player.getX(), player.getZ(), level.random);
+            if (spot.isEmpty()) {
+                continue;
+            }
+            int[] at = spot.get();
+            int seconds = minSeconds + level.random.nextInt(maxSeconds - minSeconds + 1);
+            int top = Math.max(at[2] + 40, SkyseamConfig.VORTEX_TOP_Y.get());
+            FluxVortex vortex = new FluxVortex(-(nextSummoned++), at[0] + 0.5, at[1] + 0.5, at[2], top, time, time + seconds * 20L);
+            SUMMONED.computeIfAbsent(level.dimension(), key -> new ArrayList<>()).add(vortex);
+            Skyseam.LOGGER.info("Skyseam: a flux vortex forms by {} at {}, {} ({} blocks off, {} s)", player.getName().getString(), at[0], at[1],
+                    Math.round(Math.hypot(at[0] + 0.5 - player.getX(), at[1] + 0.5 - player.getZ())), seconds);
+        }
+    }
+
+    /**
+     * A column 32 to 50 blocks from {@code (x, z)} where a vortex could stand by the cells' own rules, tried at two dozen
+     * random spots: {@code {x, z, foot's height}}, or empty if none would do (a mountain, the Spindle, islands overhead).
+     */
+    public static Optional<int[]> nearbySpot(HalcyonPlan plan, double x, double z, RandomSource random) {
+        for (int attempt = 0; attempt < 24; attempt++) {
+            double angle = random.nextDouble() * Mth.TWO_PI;
+            double distance = NEARBY_MIN + (NEARBY_MAX - NEARBY_MIN) * random.nextDouble();
+            int sx = Mth.floor(x + Math.cos(angle) * distance);
+            int sz = Mth.floor(z + Math.sin(angle) * distance);
+            double off = Math.hypot(sx + 0.5 - x, sz + 0.5 - z);
+            if (off < NEARBY_MIN || off > NEARBY_MAX) {
+                continue;
+            }
+            OptionalInt base = VortexField.standAt(plan, sx, sz);
+            if (base.isPresent()) {
+                return Optional.of(new int[] {sx, sz, base.getAsInt()});
+            }
+        }
+        return Optional.empty();
+    }
+
     /** Gathers the level's vortices and tells its players about those near them (always if {@code force}). */
     private static void refresh(ServerLevel level, boolean force) {
         long time = level.getGameTime();
+        boolean halcyon = level.dimension() == HalcyonLayout.LEVEL && VortexField.enabled();
+        if (halcyon) {
+            HalcyonChunkGenerator.plan(level).ifPresent(plan -> nearby(level, plan, time));
+        }
         Map<Long, FluxVortex> found = new LinkedHashMap<>();
         List<FluxVortex> summoned = SUMMONED.get(level.dimension());
         if (summoned != null) {
@@ -269,24 +372,36 @@ public final class FluxVortices {
                 SUMMONED.remove(level.dimension());
             }
         }
-        boolean halcyon = level.dimension() == HalcyonLayout.LEVEL && VortexField.enabled();
+        double radius = sendRadius();
         if (halcyon) {
             HalcyonChunkGenerator.plan(level).ifPresent(plan -> {
+                // Near cells always; far ones a few at a time, so a wide radius never stalls a tick.
+                int[] budget = {CELLS_PER_SECOND};
                 for (ServerPlayer player : level.players()) {
-                    for (FluxVortex vortex : VortexField.around(plan, player.getX(), player.getZ(), SYNC_RADIUS, time, 200)) {
+                    for (FluxVortex vortex : VortexField.around(plan, player.getX(), player.getZ(), PHYSICS_RADIUS, time, 200)) {
+                        found.put(vortex.id(), vortex);
+                    }
+                }
+                for (ServerPlayer player : level.players()) {
+                    for (FluxVortex vortex : VortexField.around(plan, player.getX(), player.getZ(), radius, time, 2400, budget)) {
                         found.put(vortex.id(), vortex);
                     }
                 }
             });
         }
-        if (found.isEmpty()) {
+        // Ticked: summoned ones, and those near a player.
+        Set<FluxVortex> summonedNow = new HashSet<>(SUMMONED.getOrDefault(level.dimension(), List.of()));
+        List<FluxVortex> ticked = found.values().stream().filter(vortex -> summonedNow.contains(vortex) || level.players().stream()
+                .anyMatch(player -> Math.hypot(vortex.x() - player.getX(), vortex.z() - player.getZ()) <= PHYSICS_RADIUS + vortex.radiusAt(vortex.baseY())))
+                .toList();
+        if (ticked.isEmpty()) {
             ACTIVE.remove(level.dimension());
         } else {
-            ACTIVE.put(level.dimension(), List.copyOf(found.values()));
+            ACTIVE.put(level.dimension(), ticked);
         }
         for (ServerPlayer player : level.players()) {
             List<FluxVortex> near = found.values().stream()
-                    .filter(vortex -> Math.hypot(vortex.x() - player.getX(), vortex.z() - player.getZ()) <= SYNC_RADIUS).toList();
+                    .filter(vortex -> Math.hypot(vortex.x() - player.getX(), vortex.z() - player.getZ()) <= radius).toList();
             List<Long> ids = near.stream().map(FluxVortex::id).toList();
             if (force || !ids.equals(SENT.get(player.getUUID()))) {
                 SENT.put(player.getUUID(), ids);
@@ -305,6 +420,7 @@ public final class FluxVortices {
 
     public static void onLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         SENT.remove(event.getEntity().getUUID());
+        NEARBY_ROLLED.remove(event.getEntity().getUUID());
     }
 
     /** Puts every scrambled ship's spinning parts back before the world is saved, and forgets the rest. */
@@ -314,6 +430,7 @@ public final class FluxVortices {
         ACTIVE.clear();
         SUMMONED.clear();
         SENT.clear();
+        NEARBY_ROLLED.clear();
         THROWN.clear();
         INSIDE.clear();
     }
