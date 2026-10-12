@@ -10,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 
 import com.selluastar.skyseam.Skyseam;
 import com.selluastar.skyseam.client.compat.DistantHorizonsVortices;
+import com.selluastar.skyseam.client.compat.VortexMapMarkers;
 import com.selluastar.skyseam.halcyon.vortex.FluxVortex;
 import com.selluastar.skyseam.registry.SkyseamParticles;
 import com.selluastar.skyseam.registry.SkyseamSounds;
@@ -103,6 +104,7 @@ public final class ClientVortices {
         vortices = List.of();
         dimension = null;
         NEAR_SHOWN.clear();
+        VortexMapMarkers.clear();
         HEARD_FORMING.clear();
         HEARD_UNRAVELLING.clear();
         loop = null;
@@ -125,6 +127,10 @@ public final class ClientVortices {
         double time = level.getGameTime();
         Vec3 camera = minecraft.gameRenderer.getMainCamera().getPosition();
         fadeNear(level, list, camera, time);
+        // Map mods' markers, once a second.
+        if (level.getGameTime() % 20 == 0) {
+            VortexMapMarkers.update(list, level.getGameTime(), level.dimension(), camera);
+        }
         if (distantHorizons) {
             try {
                 DistantHorizonsVortices.tick(level, list, camera, time);

@@ -43,6 +43,11 @@ repositories {
         }
     }
     maven {
+        name = 'JourneyMap (optional map markers)'
+        url = 'https://jm.gserv.me/repository/maven-public/'
+        content { includeGroup 'info.journeymap' }
+    }
+    maven {
         name = 'FTB (optional FTB Teams support)'
         url = 'https://maven.ftb.dev/releases'
         content { includeGroupAndSubgroups 'dev.ftb' }
@@ -105,6 +110,9 @@ dependencies {
     // Optional: the far flux vortices are drawn through Distant Horizons' API when it is installed (client/compat).
     // Never required, never shipped.
     compileOnly("maven.modrinth:distanthorizons:${distant_horizons_version}") { transitive = false }
+    // Optional: flux vortices marked on Xaero's Minimap and World Map, and on JourneyMap (client/compat). Never required.
+    compileOnly("maven.modrinth:xaeros-minimap:${xaeros_minimap_version}") { transitive = false }
+    compileOnly("info.journeymap:journeymap-api-neoforge:${journeymap_api_version}") { transitive = false }
 
     runMods "maven.modrinth:create:${create_version}"
     runMods "maven.modrinth:create-aeronautics:${aeronautics_version}"
@@ -120,8 +128,13 @@ dependencies {
     perfMods "maven.modrinth:ferrite-core:${ferritecore_version}"
     perfMods "maven.modrinth:immediatelyfast:${immediatelyfast_version}"
 
-    playtestMods "maven.modrinth:xaeros-minimap:${xaeros_minimap_version}"
-    playtestMods "maven.modrinth:xaeros-world-map:${xaeros_world_map_version}"
+    // gradlew runModdedClient -Pjourneymap: JourneyMap in place of Xaero's maps (two minimaps at once crowd the screen).
+    if (project.hasProperty('journeymap')) {
+        playtestMods "maven.modrinth:journeymap:${journeymap_version}"
+    } else {
+        playtestMods "maven.modrinth:xaeros-minimap:${xaeros_minimap_version}"
+        playtestMods "maven.modrinth:xaeros-world-map:${xaeros_world_map_version}"
+    }
     playtestMods "maven.modrinth:jade:${jade_version}"
     playtestMods "maven.modrinth:c2me-neoforge:${c2me_version}"
     playtestMods "maven.modrinth:yeetus-experimentus:${yeetus_experimentus_version}"
