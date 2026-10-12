@@ -1,0 +1,33 @@
+{
+ "settle": 120,
+ "steps": [
+  {"command": "gamerule sendCommandFeedback false"},
+  {"wait": 20},
+  {"config": true},
+  {"wait": 20},
+  {"shot": "cfg_0_top"},
+  {"press": "world settings"},
+  {"wait": 20},
+  {"shot": "cfg_1_world"},
+  {"press": "Flux vortices"},
+  {"wait": 20},
+  {"shot": "cfg_2_vortices"},
+  {"press": "Where and how often"},
+  {"wait": 20},
+  {"shot": "cfg_3_spawning"},
+  {"press": "Done"},
+  {"wait": 10},
+  {"press": "Near you"},
+  {"wait": 20},
+  {"shot": "cfg_4_near_you"},
+  {"press": "Done"},
+  {"wait": 10},
+  {"press": "Done"},
+  {"wait": 10},
+  {"press": "The Halcyon"},
+  {"wait": 20},
+  {"shot": "cfg_5_halcyon"},
+  {"close": true},
+  {"quit": true}
+ ]
+}

@@ -48,14 +48,6 @@ public final class VortexGameTests {
     private VortexGameTests() {}
 
     /**
-     * The field: the same seed and time give the same vortices; about the configured share of cells hold one each
-     * slot, each living inside its slot; they stand on low ground (never more than 60 above the sea, mostly within 20),
-     * clear of floating islands and rock and of the Obelisk, the Arrival Lane and the Spindle; they reach Y 400; a
-     * cell's vortex forms somewhere else from slot to slot. And a vortex's shape and strength: spreading at its foot,
-     * nearly even up its height, spreading a little at the top; nothing before it forms, full strength while it rages,
-     * nothing once it has unravelled.
-     */
-    /**
      * A vortex forming near a player with none in the area (docs/DECISIONS.md K101) stands 32 to 50 blocks from them,
      * where the cells' own rules would let one stand. Tried round a hundred spots of low ground in a fresh Halcyon.
      */
@@ -89,34 +81,49 @@ public final class VortexGameTests {
         helper.succeed();
     }
 
+    /**
+     * The field (docs/DECISIONS.md K103): the same seed and time give the same vortices; each cell holds one at a time,
+     * one after another, each lasting 3 to 7 minutes with a cooldown of 15 seconds to 2 minutes before the next (longer
+     * where a turn passes with none); about the configured share of turns hold one; cells keep their own times, so they
+     * don't all change at once; they stand on low ground (never more than 60 above the sea, mostly within 20), clear of
+     * floating islands and rock and of the Obelisk, the Arrival Lane and the Spindle; they reach Y 400; a cell's vortex
+     * forms somewhere else from turn to turn. And a vortex's shape and strength: spreading at its foot, nearly even up its
+     * height, spreading a little at the top; nothing before it forms, full strength while it rages, nothing once it has
+     * unravelled.
+     */
     @GameTest(template = EMPTY, batch = "m3_vortex", timeoutTicks = 1200)
     public static void vortexFieldFollowsTheRules(GameTestHelper helper) {
         HalcyonPlan plan = HalcyonPlan.fresh(4242L);
         HalcyonPlan again = HalcyonPlan.fresh(4242L);
         int cell = VortexField.cellSize();
-        int tries = 0;
+        // Three hours of each of 121 cells.
+        long from = 100_000L;
+        long to = from + 3 * 72_000L;
         int found = 0;
         List<FluxVortex> all = new ArrayList<>();
-        // Each cell's places, one per slot that held a vortex.
         Map<String, List<String>> places = new HashMap<>();
+        Set<Long> firstStarts = new HashSet<>();
+        long busyTicks = 0;
         for (int cx = -5; cx <= 5; cx++) {
             for (int cz = -5; cz <= 5; cz++) {
-                for (long slot = 3; slot < 9; slot++) {
-                    tries++;
-                    Optional<FluxVortex> vortex = VortexField.at(plan, cx, cz, slot);
-                    Optional<FluxVortex> same = VortexField.at(again, cx, cz, slot);
-                    helper.assertTrue(vortex.equals(same), "The same seed gave a different vortex in cell " + cx + ", " + cz + " slot " + slot);
-                    if (vortex.isEmpty()) {
-                        continue;
-                    }
+                List<FluxVortex> list = VortexField.inCell(plan, cx, cz, from, to);
+                List<FluxVortex> same = VortexField.inCell(again, cx, cz, from, to);
+                helper.assertTrue(list.equals(same), "The same seed gave different vortices in cell " + cx + ", " + cz);
+                FluxVortex last = null;
+                for (FluxVortex v : list) {
                     found++;
-                    FluxVortex v = vortex.get();
                     all.add(v);
+                    busyTicks += Math.min(v.end(), to) - Math.max(v.start(), from);
                     places.computeIfAbsent(cx + "," + cz, key -> new ArrayList<>()).add((int) v.x() + "," + (int) v.z());
                     String where = String.format("the vortex at %.0f, %d, %.0f", v.x(), v.baseY(), v.z());
-                    helper.assertTrue(v.start() >= slot * VortexField.SLOT_TICKS && v.end() <= (slot + 1) * VortexField.SLOT_TICKS,
-                            where + " outlives its slot");
-                    helper.assertTrue(v.end() - v.start() >= 150 * 20 && v.end() - v.start() <= 360 * 20, where + " lasts " + (v.end() - v.start()) / 20 + " s");
+                    long life = v.end() - v.start();
+                    helper.assertTrue(life >= 180 * 20 && life <= 420 * 20, where + " lasts " + life / 20 + " s");
+                    if (last != null) {
+                        helper.assertTrue(v.start() - last.end() >= 15 * 20, where + " formed " + (v.start() - last.end()) / 20 + " s after the last");
+                    } else {
+                        firstStarts.add(v.start());
+                    }
+                    last = v;
                     helper.assertTrue(Math.floorDiv((int) v.x(), cell) == cx && Math.floorDiv((int) v.z(), cell) == cz, where + " is outside its cell");
                     helper.assertTrue(v.baseY() >= SEA && v.baseY() <= SEA + 61, where + " stands at Y " + v.baseY() + ", not on low ground");
                     helper.assertTrue(v.topY() == 400, where + " reaches Y " + v.topY() + ", not 400");
@@ -129,14 +136,16 @@ public final class VortexGameTests {
                 }
             }
         }
-        double share = (double) found / tries;
-        helper.assertTrue(share > 0.25 && share < 0.65, "Vortices formed in " + found + " of " + tries + " cell slots");
+        double busy = (double) busyTicks / (121.0 * (to - from));
+        helper.assertTrue(busy > 0.3, "Cells held a vortex only " + Math.round(busy * 100) + "% of the time");
+        helper.assertTrue(firstStarts.size() > 100, "Cells' first vortices formed at only " + firstStarts.size() + " different moments");
+        int tries = 121;
         List<Integer> bases = all.stream().map(v -> v.baseY() - SEA).sorted().toList();
         int median = bases.get(bases.size() / 2);
         helper.assertTrue(median <= 20, "Half the vortices stand more than " + median + " blocks above the sea");
-        long busy = places.values().stream().filter(list -> list.size() >= 2).count();
+        long twice = places.values().stream().filter(list -> list.size() >= 2).count();
         long moved = places.values().stream().filter(list -> list.size() >= 2 && new HashSet<>(list).size() >= 2).count();
-        helper.assertTrue(busy > 0 && moved == busy, "Of " + busy + " cells with a vortex in two or more slots, only " + moved
+        helper.assertTrue(twice > 0 && moved == twice, "Of " + twice + " cells with two or more vortices, only " + moved
                 + " had them in different places");
 
         FluxVortex v = all.get(0);
@@ -148,8 +157,8 @@ public final class VortexGameTests {
         helper.assertTrue(v.strength(v.start() - 1) == 0 && v.strength(v.start() + 10) == 0, "It pulls before it has formed");
         helper.assertTrue(v.strength((v.start() + v.end()) / 2.0) == 1, "It isn't at full strength while it rages");
         helper.assertTrue(v.strength(v.end()) == 0 && v.strength(v.end() - 20) == 0, "It still pulls once it has unravelled");
-        Skyseam.LOGGER.info("Skyseam vortex field: {} of {} cell slots hold a vortex; ground above the sea: lowest {}, median {}, highest {}",
-                found, tries, bases.get(0), median, bases.get(bases.size() - 1));
+        Skyseam.LOGGER.info("Skyseam vortex field: {} vortices in three hours of {} cells, holding one {}% of the time; ground above the sea: "
+                + "lowest {}, median {}, highest {}", found, tries, Math.round(busy * 100), bases.get(0), median, bases.get(bases.size() - 1));
         helper.succeed();
     }
 

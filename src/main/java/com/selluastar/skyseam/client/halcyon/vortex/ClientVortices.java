@@ -183,6 +183,30 @@ public final class ClientVortices {
         NEAR_SHOWN.keySet().retainAll(alive);
     }
 
+    /** True if Distant Horizons' far terrain can be put into the depth buffer ({@link FarDepth}): it is on, and no shader pack. */
+    public static boolean farDepthAvailable() {
+        if (!distantHorizons) {
+            return false;
+        }
+        try {
+            return DistantHorizonsVortices.farDepthAvailable();
+        } catch (LinkageError mismatch) {
+            return false;
+        }
+    }
+
+    /** Puts Distant Horizons' far terrain into the depth buffer, if it can. */
+    static void writeFarDepth() {
+        if (!distantHorizons) {
+            return;
+        }
+        try {
+            DistantHorizonsVortices.writeFarDepth();
+        } catch (LinkageError mismatch) {
+            distantHorizons = false;
+        }
+    }
+
     /** True if Distant Horizons is drawing the terrain under the vortex (when its own chunk hasn't loaded). */
     private static boolean farTerrain(FluxVortex vortex) {
         if (!distantHorizons) {

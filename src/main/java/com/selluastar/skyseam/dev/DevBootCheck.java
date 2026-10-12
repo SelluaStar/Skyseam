@@ -247,8 +247,9 @@ public final class DevBootCheck {
     }
 
     /**
-     * Flux vortices (docs/DECISIONS.md K97): over the next ten slots, how many form within 3,000 blocks of the Spindle,
-     * how high their feet stand above the sea, and that none stands on a mountain.
+     * Flux vortices (docs/DECISIONS.md K97, K103): at ten moments five minutes apart, how many stand within 3,000 blocks
+     * of the Spindle (and the share of cells holding one), how high their feet stand above the sea, and that none
+     * stands on a mountain.
      */
     private static void vortexCensus(ServerLevel level, HalcyonPlan plan, List<String> problems) {
         int count = 0;
@@ -256,7 +257,7 @@ public final class DevBootCheck {
         int highest = Integer.MIN_VALUE;
         long now = level.getGameTime();
         for (int s = 0; s < 10; s++) {
-            long time = (Math.floorDiv(now, VortexField.SLOT_TICKS) + s) * VortexField.SLOT_TICKS + VortexField.SLOT_TICKS / 2;
+            long time = now + s * 6000L;
             for (FluxVortex vortex : VortexField.around(plan, 0, 0, 3000, time, 0)) {
                 count++;
                 int above = vortex.baseY() - HalcyonLayout.SEA_LEVEL;
@@ -264,10 +265,13 @@ public final class DevBootCheck {
                 highest = Math.max(highest, above);
             }
         }
-        Skyseam.LOGGER.info("Skyseam boot check: {} flux vortices raging at the middle of the next ten slots within 3,000 blocks of the Spindle, "
-                + "{} of them within 20 blocks of the sea, the highest foot {} above it", count, lowland, highest == Integer.MIN_VALUE ? 0 : highest);
+        int cell = VortexField.cellSize();
+        double cells = Math.PI * 3000 * 3000 / ((double) cell * cell);
+        Skyseam.LOGGER.info("Skyseam boot check: {} flux vortices at ten moments five minutes apart within 3,000 blocks of the Spindle ({} at a "
+                + "time, about {}% of its {} cells), {} of them within 20 blocks of the sea, the highest foot {} above it", count, count / 10,
+                Math.round(count / 10.0 / cells * 100), Math.round(cells), lowland, highest == Integer.MIN_VALUE ? 0 : highest);
         if (count == 0) {
-            problems.add("no flux vortex formed within 3,000 blocks of the Spindle in ten slots");
+            problems.add("no flux vortex formed within 3,000 blocks of the Spindle at ten moments");
         }
         if (highest > 61) {
             problems.add("a flux vortex stands " + highest + " blocks above the sea, on a mountain");

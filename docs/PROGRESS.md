@@ -1467,3 +1467,35 @@ a little more common, and to have one form near you now and then. DECISIONS K101
    flat sheets, and it should reach its pool on the water.
 4. Fly away from one past your render distance: it should hand over to the far version without a jump.
 5. Send screenshots and `logs/latest.log`.
+
+## Flux vortices: timing, settings screen, full detail further out, floating clumps (2026-10-12)
+
+DECISIONS K103, K104. The author asked for vortices lasting 3 to 7 minutes with a cooldown of up to 2 between them,
+varying so they don't all change at once; defaults of 460-block cells and a 0.65 chance; settings for all of it and a
+better settings screen; a working far version without shaders; full detail further out; and the old floating blocks
+back in place of the hanging mesas, in the far version too.
+
+**Built**
+- **Timing:** each cell runs its own chain of vortices, 3 to 7 minutes each with 15 s to 2 min between; cells keep
+  their own times. 32 spots tried per turn, so far fewer turns go empty.
+- **Settings screen:** named sections and entries with units, flux vortices in four pages. New settings: lifetimes,
+  cooldowns, near-you chance, area and interval; client `flux_vortices.detail_distance`.
+- **Full detail to 640 blocks** with Distant Horizons (no shader pack), Distant Horizons' far terrain put into the
+  depth buffer first so islands in front still hide it.
+- **Far version:** solid, shaded, the same detail at every distance.
+- **Floating clumps** of 1 to 4 blocks round each vortex, near and far.
+
+**Verified (actually run)**
+- **The milestone check:** build ✓, runData ✓, **55/55 GameTests** ✓ (the field: 1,832 vortices in three hours of 121
+  cells, none shorter than 3 minutes or longer than 7, at least 15 s between; cells hold one 41% of the time near the
+  Spindle). The server boot check's other counts pass (45% of cells hold one at a time, about 60 within 3,000 blocks),
+  but its chunk-speed check failed twice at 39 to 51 ms a chunk (12 ms this morning): a Modrinth-launched game was
+  running on the machine at the time; world generation itself didn't change.
+- **The screenshot client:** the settings screen's pages (`m3v_config_screen.json`); close up, the floating clumps
+  orbiting with their lamps; with Distant Horizons and no shaders, vortices drawn in full out to 640 blocks behind the
+  islands in front of them and the solid far version beyond; with shaders, the far versions all over the horizon.
+
+**Not seen yet**
+- **The phantom far version** the author saw: not reproduced. If it shows again, `logs/debug.log` says when each far
+  vortex was handed to Distant Horizons and removed.
+- **Your own client and world.**
