@@ -83,6 +83,9 @@ dependencies {
     compileOnly files("libs/fealty-${fealty_version}+api.${fealty_api_version}-api.jar")
     // Optional: Aperture teammates in packs that run FTB Teams. Never required, never shipped (compat/ftbteams).
     compileOnly("dev.ftb.mods:ftb-teams-neoforge:${ftb_teams_version}") { transitive = false }
+    // Optional: the far flux vortices are drawn through Distant Horizons' API when it is installed (client/compat).
+    // Never required, never shipped.
+    compileOnly("maven.modrinth:distanthorizons:${distant_horizons_version}") { transitive = false }
 
     runMods "maven.modrinth:create:${create_version}"
     runMods "maven.modrinth:create-aeronautics:${aeronautics_version}"

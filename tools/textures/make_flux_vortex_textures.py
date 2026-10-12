@@ -1,19 +1,22 @@
-"""The flux vortex's textures (the author's request after M3: a Pandora-like vortex of wind, light and floating rock).
+"""The flux vortex's textures (docs/DECISIONS.md K97), after the author's reference stills of the flux vortices of
+Pandora (kept locally, not in the repository) and their wish for a double helix: thick strands of light twisting up
+out of the water.
 
 Writes, under src/main/resources/assets/skyseam/textures/:
-  environment/flux_ribbon.png   64x256  one strand of the vortex's spiral: bright filaments running up it, twisting
-                                        and braiding, fading at its edges; tiles top to bottom
-  environment/flux_core.png     32x128  the column's glowing heart: a soft bright middle streaked with light; tiles top
-                                        to bottom
-  environment/flux_haze.png     128x128 turbulent veils of air for the haze round the column; tiles both ways
-  environment/flux_mist.png     128x128 the vortex's body: a soft veil of mist, streaked and torn, mostly covering;
-                                        tiles both ways
-  environment/flux_ground.png   128x128 the ring of swirling light on the ground at the vortex's foot
-  particle/flux_mote.png        16x16   a soft mote with a bright heart, drawn circling up the column
-  particle/flux_spark.png       16x16   a four-pointed spark, for the flashes as it forms and the sparks off its rocks
-  particle/flux_dust.png        8x8     a soft puff of dust, swept round the vortex's foot
-Everything is white, its brightness in its alpha, so the code tints it (teal, cyan and violet). The four environment
-textures get a `.png.mcmeta` with "blur", as they are stretched over a column hundreds of blocks tall. Deterministic.
+  environment/flux_strand.png   32x256  one strand: a fine bright core in a faint halo, broken along its length into long
+                                        streaks and wisps of light with gaps between; tiles top to bottom
+  environment/flux_helix.png    32x256  a thick strand of the helix: a broad bright band with a brighter line down its
+                                        middle and soft edges, light rippling along it; tiles top to bottom
+  environment/flux_glow.png     32x32   a soft glow across, for the column's glow
+  environment/flux_pool.png     128x128 the pool of light where the column meets the water or the ground: brightest in
+                                        the middle, a few soft ripples, fading out
+  environment/flux_band.png     64x16   a soft band, for ripples running out over the water
+  particle/flux_mote.png        16x16   a soft mote with a bright heart
+  particle/flux_spark.png       16x16   a four-pointed spark
+  particle/flux_dust.png        8x8     a soft puff of mist
+Everything is white, its brightness in its alpha, so the code tints it (white and pale blue by day, cyan, blue and
+violet by night). The environment textures get a `.png.mcmeta` with "blur". Textures of the earlier vortex designs
+are deleted. Deterministic.
 """
 import json
 import sys
@@ -27,6 +30,7 @@ from make_sky_textures import fbm, grid, rgba, smoothstep  # noqa: E402
 ROOT = Path(__file__).resolve().parents[2]
 TEX = ROOT / "src" / "main" / "resources" / "assets" / "skyseam" / "textures"
 PREVIEW = ROOT / "build" / "previews" / "flux_vortex_textures.png"
+GONE = ("flux_ribbon", "flux_core", "flux_haze", "flux_mist", "flux_thread", "flux_ring", "flux_ground", "flux_veil")
 
 
 def white(alpha):
@@ -34,72 +38,65 @@ def white(alpha):
     return rgba(np.full((h, w, 3), 255.0), np.clip(alpha, 0, 1) * 255)
 
 
-def ribbon():
-    """Filaments along the strand: each a thin bright line wandering across it, braiding with the others, with
-    brighter knots travelling up; the whole strand fades to its edges."""
-    w, h = 64, 256
+def streaks(h, seed, count, length=(0.08, 0.35)):
+    """Brightness along a strand: long streaks of light with soft ends and gaps between, wrapping round."""
+    rng = np.random.default_rng(seed)
+    v = np.arange(h) / h
+    out = np.zeros(h)
+    for _ in range(count):
+        start = rng.random()
+        size = rng.uniform(*length)
+        d = (v - start) % 1
+        inside = d < size
+        t = np.where(inside, d / size, 0)
+        out = np.maximum(out, inside * np.sin(np.pi * t) ** 0.6 * rng.uniform(0.5, 1.0))
+    return out
+
+
+def strand():
+    w, h = 32, 256
     xs, ys = grid(h, w)
-    u = xs / w
-    v = ys / h
-    out = np.zeros((h, w))
-    rng = np.random.default_rng(71)
-    for k in range(7):
-        centre = rng.uniform(0.2, 0.8)
-        amp = rng.uniform(0.05, 0.18)
-        waves = rng.integers(1, 4)
-        phase = rng.uniform(0, np.pi * 2)
-        width = rng.uniform(0.012, 0.035)
-        line = centre + amp * np.sin(2 * np.pi * waves * v + phase) + 0.05 * np.sin(2 * np.pi * (waves + 2) * v + phase * 2)
-        glow = np.exp(-((u - line) / width) ** 2) * rng.uniform(0.5, 1.0)
-        knots = 0.6 + 0.4 * np.sin(2 * np.pi * rng.integers(2, 6) * v + phase) ** 8
-        out = np.maximum(out, glow * knots)
-    wisps = fbm(h, w, 72, octaves=4, base=4) ** 2 * 0.35
-    edge = smoothstep(0.0, 0.2, u) * smoothstep(1.0, 0.8, u)
-    return white((out + wisps) * edge)
+    u = (xs / w - 0.5) * 2
+    along = streaks(h, 91, 9)[:, None]
+    core = np.exp(-(u / 0.16) ** 2)
+    halo = 0.3 * np.exp(-(u / 0.6) ** 2)
+    flicker = 0.8 + 0.2 * fbm(h, w, 92, octaves=3, base=4)
+    return white((core + halo) * (0.15 + 0.85 * along) * flicker)
 
 
-def core():
-    """A soft bright middle, streaked along its length."""
-    w, h = 32, 128
+def helix():
+    w, h = 32, 256
     xs, ys = grid(h, w)
-    u = xs / w
-    streaks = 0.65 + 0.35 * fbm(h, w, 73, octaves=3, base=8)
-    body = np.exp(-((u - 0.5) / 0.22) ** 2)
-    return white(body * streaks)
+    u = (xs / w - 0.5) * 2
+    along = streaks(h, 95, 12, length=(0.15, 0.45))[:, None]
+    band = np.clip(1 - np.abs(u) / 0.62, 0, 1) ** 0.7
+    line = np.exp(-(u / 0.14) ** 2)
+    halo = 0.35 * np.exp(-(u / 0.8) ** 2)
+    flicker = 0.85 + 0.15 * fbm(h, w, 96, octaves=3, base=4)
+    return white((0.55 * band + 0.6 * line + halo) * (0.55 + 0.45 * along) * flicker)
 
 
-def haze():
-    """Veils of air: turbulent noise, mostly clear with soft brighter folds."""
-    size = 128
-    n = fbm(size, size, 74, octaves=5, base=4)
-    folds = np.clip((n - 0.42) / 0.4, 0, 1) ** 1.5
-    return white(folds * 0.8)
+def glow():
+    w, h = 32, 32
+    xs, ys = grid(h, w)
+    u = (xs / w - 0.5) * 2
+    return white(np.exp(-(u / 0.45) ** 2))
 
 
-def mist():
-    """A veil of mist: soft, mostly covering, streaked along the turn of the vortex and torn in places."""
-    size = 128
-    streaks = fbm(size, size, 76, octaves=4, base=3)
-    torn = fbm(size, size, 77, octaves=5, base=6)
-    veil = np.clip(0.25 + 0.9 * streaks - 0.5 * np.clip((torn - 0.62) / 0.2, 0, 1), 0, 1)
-    return white(veil ** 1.3)
-
-
-def ground():
-    """A ring of light on the ground: spiral arms wound round the foot, brightest at the ring, faint in the middle
-    and fading to nothing at the edge."""
+def pool():
     size = 128
     xs, ys = grid(size)
-    c = size / 2
-    dx, dy = xs - c, ys - c
-    r = np.hypot(dx, dy) / c
-    a = np.arctan2(dy, dx)
-    detail = fbm(size, size, 75, octaves=4, base=6, wrap=False)
-    arms = 0.5 + 0.5 * np.sin(a * 5 - np.log(r + 0.05) * 6 + detail * 3)
-    ring = np.exp(-((r - 0.62) / 0.16) ** 2)
-    inner = 0.25 * smoothstep(0.1, 0.45, r)
-    fade = smoothstep(1.0, 0.82, r)
-    return white((arms ** 2 * (ring + inner) + 0.35 * ring) * fade)
+    r = np.hypot(xs - size / 2, ys - size / 2) / (size / 2)
+    centre = np.exp(-(r / 0.35) ** 2)
+    ripples = 0.25 * (0.5 + 0.5 * np.cos(r * 28)) * np.exp(-(r / 0.75) ** 2)
+    return white((centre + ripples) * smoothstep(1.0, 0.8, r))
+
+
+def band():
+    w, h = 64, 16
+    xs, ys = grid(h, w)
+    v = (ys / h - 0.5) * 2
+    return white(np.exp(-(v / 0.5) ** 2))
 
 
 def mote():
@@ -126,30 +123,32 @@ def dust():
 
 
 def main():
-    environment = {"flux_ribbon": ribbon(), "flux_core": core(), "flux_haze": haze(), "flux_mist": mist(), "flux_ground": ground()}
+    environment = {"flux_strand": strand(), "flux_helix": helix(), "flux_glow": glow(), "flux_pool": pool(), "flux_band": band()}
     particles = {"flux_mote": mote(), "flux_spark": spark(), "flux_dust": dust()}
     for name, img in environment.items():
         path = TEX / "environment" / f"{name}.png"
         img.save(path)
         meta = path.with_name(path.name + ".mcmeta")
-        meta.write_text(json.dumps({"texture": {"blur": True, "clamp": name == "flux_ground"}}, indent=1) + "\n", encoding="utf-8")
+        meta.write_text(json.dumps({"texture": {"blur": True, "clamp": name == "flux_pool"}}, indent=1) + "\n", encoding="utf-8")
         print("wrote", path.relative_to(ROOT), "and its .mcmeta")
     for name, img in particles.items():
         path = TEX / "particle" / f"{name}.png"
         img.save(path)
         print("wrote", path.relative_to(ROOT))
+    for name in GONE:
+        for path in (TEX / "environment" / f"{name}.png", TEX / "environment" / f"{name}.png.mcmeta"):
+            if path.exists():
+                path.unlink()
+                print("removed", path.relative_to(ROOT))
     from PIL import Image
-    sheet = Image.new("RGBA", (64 * 3 + 32 + 138 * 3 + 16 * 4 * 3 + 70, 260), (12, 18, 36, 255))
+    sheet = Image.new("RGBA", (32 + 32 + 32 + 128 + 64 + 3 * 70 + 80, 270), (12, 18, 36, 255))
     x = 10
-    for name in ("flux_ribbon", "flux_core"):
+    for name in ("flux_strand", "flux_helix", "flux_glow", "flux_pool", "flux_band"):
         img = environment[name]
-        sheet.alpha_composite(img, (x, 2))
+        sheet.alpha_composite(img, (x, 4))
         x += img.width + 10
-    for name in ("flux_haze", "flux_mist", "flux_ground"):
-        sheet.alpha_composite(environment[name], (x, 2))
-        x += 138
-    for name in particles:
-        sheet.alpha_composite(particles[name].resize((64, 64), Image.NEAREST), (x, 2))
+    for img in particles.values():
+        sheet.alpha_composite(img.resize((64, 64), Image.NEAREST), (x, 4))
         x += 70
     PREVIEW.parent.mkdir(parents=True, exist_ok=True)
     sheet.save(PREVIEW)

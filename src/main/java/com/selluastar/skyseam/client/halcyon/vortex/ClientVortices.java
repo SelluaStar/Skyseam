@@ -6,6 +6,8 @@ import java.util.Set;
 
 import org.jetbrains.annotations.Nullable;
 
+import com.selluastar.skyseam.Skyseam;
+import com.selluastar.skyseam.client.compat.DistantHorizonsVortices;
 import com.selluastar.skyseam.halcyon.vortex.FluxVortex;
 import com.selluastar.skyseam.registry.SkyseamParticles;
 import com.selluastar.skyseam.registry.SkyseamSounds;
@@ -25,12 +27,14 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 /**
  * The flux vortices the server says are near (docs/DECISIONS.md K97), and what the client makes of them each tick:
- * light circling up the column and dust swept round its foot (debris, or spray over water) when the camera is near,
- * sparks as it forms, its roar from the nearest one, and the sound of each forming and unravelling.
+ * motes of light streaming up along its helix, mist rising off the water or the ground at its foot (with spray
+ * over water, grit over land) when the camera is near, sparks as it forms, its sound from the nearest one, the sound
+ * of each forming and unravelling, and with Distant Horizons the far ones ({@link DistantHorizonsVortices}).
  */
 public final class ClientVortices {
     /** Particles are made for vortices this close to the camera. */
@@ -47,6 +51,8 @@ public final class ClientVortices {
     private static final Set<Long> HEARD_UNRAVELLING = new HashSet<>();
     @Nullable
     private static VortexLoopSound loop;
+    /** Distant Horizons is loaded, and drawing the far vortices through it has not failed. */
+    private static boolean distantHorizons = ModList.get().isLoaded("distanthorizons");
 
     private ClientVortices() {}
 
@@ -81,6 +87,13 @@ public final class ClientVortices {
         HEARD_FORMING.clear();
         HEARD_UNRAVELLING.clear();
         loop = null;
+        if (distantHorizons) {
+            try {
+                DistantHorizonsVortices.clear();
+            } catch (LinkageError mismatch) {
+                distantHorizons = false;
+            }
+        }
     }
 
     public static void onClientTick(ClientTickEvent.Post event) {
@@ -90,11 +103,19 @@ public final class ClientVortices {
             return;
         }
         List<FluxVortex> list = all();
+        double time = level.getGameTime();
+        Vec3 camera = minecraft.gameRenderer.getMainCamera().getPosition();
+        if (distantHorizons) {
+            try {
+                DistantHorizonsVortices.tick(level, list, camera, time);
+            } catch (LinkageError mismatch) {
+                distantHorizons = false;
+                Skyseam.LOGGER.warn("Skyseam: this Distant Horizons doesn't have the API the far flux vortices need; they are left out", mismatch);
+            }
+        }
         if (list.isEmpty()) {
             return;
         }
-        double time = level.getGameTime();
-        Vec3 camera = minecraft.gameRenderer.getMainCamera().getPosition();
         FluxVortex nearest = null;
         double nearestDistance = Double.MAX_VALUE;
         for (FluxVortex vortex : list) {
@@ -149,40 +170,47 @@ public final class ClientVortices {
         if (shown < 0.05f) {
             return;
         }
-        // Light circling up the column, mostly round the camera's height.
-        int motes = Math.round(5 * shown);
+        // Motes of light streaming up along the helix, and a few loose in the column, mostly near the camera's height.
+        int motes = Math.round(8 * shown);
         for (int k = 0; k < motes; k++) {
-            double y = Mth.clamp(camera.y + (random.nextDouble() - 0.4) * 90, vortex.baseY(), vortex.topY());
-            double r = vortex.radiusAt(y) * (0.6 + 0.8 * random.nextDouble());
-            double a = random.nextDouble() * Math.PI * 2;
-            level.addParticle(SkyseamParticles.FLUX_MOTE.get(), vortex.x() + Math.cos(a) * r, y, vortex.z() + Math.sin(a) * r, vortex.x(),
-                    0.15 + 0.35 * random.nextDouble(), vortex.z());
+            double y = Mth.clamp(camera.y + (random.nextDouble() - 0.4) * 100, vortex.baseY(), vortex.topY() - 10);
+            double px;
+            double pz;
+            if (k % 4 != 3) {
+                Vec3 on = VortexRenderer.helixPoint(vortex, k % VortexRenderer.HELIX, y - vortex.baseY(), time);
+                px = on.x + (random.nextDouble() - 0.5) * 2.5;
+                pz = on.z + (random.nextDouble() - 0.5) * 2.5;
+            } else {
+                double a = random.nextDouble() * Math.PI * 2;
+                double r = vortex.radiusAt(y) * Math.sqrt(random.nextDouble()) * 0.95;
+                px = vortex.x() + Math.cos(a) * r;
+                pz = vortex.z() + Math.sin(a) * r;
+            }
+            level.addParticle(SkyseamParticles.FLUX_MOTE.get(), px, y, pz, vortex.x(), 0.45 + 0.6 * random.nextDouble(), vortex.z());
         }
         if (Math.abs(camera.y - vortex.baseY()) > 120) {
             return;
         }
-        // Dust swept round the foot and drawn in; debris torn off the ground, or spray off the water.
+        // Mist rising off the water or the ground at the foot; spray off the water, or grit off the ground.
         BlockPos below = BlockPos.containing(vortex.x(), vortex.baseY() - 1, vortex.z());
         BlockState ground = level.getBlockState(below);
         boolean water = ground.getFluidState().isSource() || level.getBlockState(below.above()).getFluidState().isSource();
-        for (int k = 0; k < Math.round(4 * shown); k++) {
-            double r = vortex.radiusAt(vortex.baseY()) + 1 + 9 * random.nextDouble();
+        for (int k = 0; k < Math.round(5 * shown); k++) {
+            double r = vortex.radiusAt(vortex.baseY()) * 1.3 * Math.sqrt(random.nextDouble());
             double a = random.nextDouble() * Math.PI * 2;
-            level.addParticle(SkyseamParticles.FLUX_DUST.get(), vortex.x() + Math.cos(a) * r, vortex.baseY() + 0.2 + 1.5 * random.nextDouble(),
-                    vortex.z() + Math.sin(a) * r, vortex.x(), 0.02 + 0.04 * random.nextDouble(), vortex.z());
+            level.addParticle(SkyseamParticles.FLUX_DUST.get(), vortex.x() + Math.cos(a) * r, vortex.baseY() + 0.2 + 2 * random.nextDouble(),
+                    vortex.z() + Math.sin(a) * r, vortex.x(), 0.04 + 0.08 * random.nextDouble(), vortex.z());
         }
-        if (random.nextFloat() < 0.6f * shown) {
-            double r = vortex.radiusAt(vortex.baseY()) * (0.5 + 0.8 * random.nextDouble());
+        if (random.nextFloat() < 0.7f * shown) {
+            double r = vortex.radiusAt(vortex.baseY()) * (0.3 + 0.7 * random.nextDouble());
             double a = random.nextDouble() * Math.PI * 2;
             double px = vortex.x() + Math.cos(a) * r;
             double pz = vortex.z() + Math.sin(a) * r;
             if (water) {
                 level.addParticle(ParticleTypes.SPLASH, px, vortex.baseY() + 0.1, pz, 0, 0.4, 0);
-                level.addParticle(ParticleTypes.CLOUD, px, vortex.baseY() + 0.5, pz, -Math.sin(a) * 0.15, 0.25 + 0.2 * random.nextDouble(),
-                        Math.cos(a) * 0.15);
+                level.addParticle(ParticleTypes.CLOUD, px, vortex.baseY() + 0.5, pz, 0, 0.12 + 0.1 * random.nextDouble(), 0);
             } else if (!ground.isAir()) {
-                level.addParticle(new BlockParticleOption(ParticleTypes.BLOCK, ground), px, vortex.baseY() + 0.3, pz, -Math.sin(a) * 0.4,
-                        0.5 + 0.6 * random.nextDouble(), Math.cos(a) * 0.4);
+                level.addParticle(new BlockParticleOption(ParticleTypes.BLOCK, ground), px, vortex.baseY() + 0.3, pz, 0, 0.35 + 0.3 * random.nextDouble(), 0);
             }
         }
     }

@@ -30,8 +30,8 @@ public final class VortexField {
     /** A vortex never stands this close to its cell's edge, so two never touch. */
     private static final int MARGIN = 64;
     private static final int CANDIDATES = 12;
-    /** Half the side of the square round a spot that must be clear of floating islands and rock stacks. */
-    private static final int CLEAR = 16;
+    /** Half the side of the square round a spot that must be clear of floating islands and rock stacks: the column's width and a little. */
+    private static final int CLEAR = 20;
     /** Ground higher than this above the sea is a mountain: no vortex. */
     private static final int MOUNTAIN = 60;
     private static final int SEA = HalcyonLayout.SEA_LEVEL;
