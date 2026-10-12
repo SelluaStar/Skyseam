@@ -51,8 +51,9 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * sends each player those within {@code flux_vortex.send_radius} (4,608 blocks), so they can be seen from far off;
  * the far cells are worked out a few at a time, nearest first. Only those within {@link #PHYSICS_RADIUS} of a player
  * (or summoned) are ticked.</li>
- * <li>Once each ten-minute slot, at a moment of its own, each player with no vortex within {@link #NEARBY_AREA} blocks
- * has a chance ({@code nearby_chance}) of one forming 32 to 50 blocks from them ({@link #nearby}).</li>
+ * <li>Every so often ({@code flux_vortices.near_you.every_seconds}), at a moment of their own, each player with no vortex
+ * in the area round them ({@code area}) has a chance ({@code chance}) of one forming 32 to 50 blocks from them
+ * ({@link #nearby}).</li>
  * <li>Each tick, a creature that walks into a column is thrown up ({@code launch_height}) and a little outward, so it
  * comes down beside it, with Slow Falling for the landing. Riders aboard a ship stay with their ship.</li>
  * <li>A ship in a column is driven down (towards {@code ship_down_speed}) and swept round it, and its spinning parts
@@ -62,8 +63,6 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public final class FluxVortices {
     /** Vortices this close to a player (or summoned) are ticked: they throw creatures and drive ships. */
     public static final double PHYSICS_RADIUS = 640;
-    /** A player with no vortex this close may have one form near them. */
-    public static final double NEARBY_AREA = 640;
     /** How far from the player such a vortex forms. */
     private static final double NEARBY_MIN = 32;
     private static final double NEARBY_MAX = 50;
@@ -81,7 +80,7 @@ public final class FluxVortices {
     private static final Map<ResourceKey<Level>, List<FluxVortex>> ACTIVE = new HashMap<>();
     private static final Map<ResourceKey<Level>, List<FluxVortex>> SUMMONED = new HashMap<>();
     private static final Map<UUID, List<Long>> SENT = new HashMap<>();
-    /** The slot each player was last rolled for a vortex near them. */
+    /** The round each player was last checked in for a vortex near them. */
     private static final Map<UUID, Long> NEARBY_ROLLED = new HashMap<>();
     private static final Map<UUID, Long> THROWN = new HashMap<>();
     private static final Set<UUID> INSIDE = new HashSet<>();
@@ -284,16 +283,20 @@ public final class FluxVortices {
     }
 
     /**
-     * Once each ten-minute slot, at a moment of the player's own (so not everyone at once), a player in the Halcyon with
-     * no vortex within {@link #NEARBY_AREA} blocks has {@code nearby_chance} of one forming 32 to 50 blocks from them,
-     * where one could stand by the cells' own rules; it lasts as long as one of theirs would.
+     * Every so often, at a moment of the player's own in each round (so not everyone at once), a player in the Halcyon
+     * with no vortex in the area round them has a chance of one forming 32 to 50 blocks from them, where one could
+     * stand by the cells' own rules; it lasts as long as one of theirs would.
      */
     private static void nearby(ServerLevel level, HalcyonPlan plan, long time) {
         double chance;
+        double area;
+        long every;
         int minSeconds;
         int maxSeconds;
         try {
             chance = SkyseamConfig.VORTEX_NEARBY_CHANCE.get();
+            area = SkyseamConfig.VORTEX_NEARBY_AREA.get();
+            every = SkyseamConfig.VORTEX_NEARBY_EVERY_SECONDS.get() * 20L;
             minSeconds = SkyseamConfig.VORTEX_MIN_SECONDS.get();
             maxSeconds = Math.max(minSeconds, SkyseamConfig.VORTEX_MAX_SECONDS.get());
         } catch (IllegalStateException notLoaded) {
@@ -302,21 +305,20 @@ public final class FluxVortices {
         if (chance <= 0) {
             return;
         }
-        long slot = Math.floorDiv(time, VortexField.SLOT_TICKS);
+        long round = Math.floorDiv(time, every);
         for (ServerPlayer player : level.players()) {
             UUID id = player.getUUID();
-            long moment = slot * VortexField.SLOT_TICKS + Math.floorMod(Noise.mix(id.getMostSignificantBits(), id.getLeastSignificantBits(), slot, 0, 0x4E41),
-                    (long) VortexField.SLOT_TICKS);
+            long moment = round * every + Math.floorMod(Noise.mix(id.getMostSignificantBits(), id.getLeastSignificantBits(), round, 0, 0x4E41), every);
             Long rolled = NEARBY_ROLLED.get(id);
-            if (time < moment || (rolled != null && rolled == slot)) {
+            if (time < moment || (rolled != null && rolled == round)) {
                 continue;
             }
-            NEARBY_ROLLED.put(id, slot);
+            NEARBY_ROLLED.put(id, round);
             if (player.isSpectator()) {
                 continue;
             }
-            boolean near = around(level, player.getX(), player.getZ(), NEARBY_AREA, time).stream().anyMatch(vortex -> vortex.end() > time)
-                    || !VortexField.around(plan, player.getX(), player.getZ(), NEARBY_AREA, time, 600).isEmpty();
+            boolean near = around(level, player.getX(), player.getZ(), area, time).stream().anyMatch(vortex -> vortex.end() > time)
+                    || !VortexField.around(plan, player.getX(), player.getZ(), area, time, 600).isEmpty();
             if (near || level.random.nextDouble() >= chance) {
                 continue;
             }

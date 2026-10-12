@@ -17,6 +17,7 @@ import com.selluastar.skyseam.client.halcyon.HalcyonFog;
 import com.selluastar.skyseam.client.halcyon.HalcyonSky;
 import com.selluastar.skyseam.client.halcyon.VeilMuffle;
 import com.selluastar.skyseam.client.halcyon.vortex.ClientVortices;
+import com.selluastar.skyseam.client.halcyon.vortex.FarDepth;
 import com.selluastar.skyseam.client.halcyon.vortex.VortexRenderer;
 import com.selluastar.skyseam.client.particle.GlowParticle;
 import com.selluastar.skyseam.client.particle.VortexParticle;
@@ -39,6 +40,7 @@ import net.neoforged.neoforge.client.event.RegisterDimensionSpecialEffectsEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
+import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
@@ -76,6 +78,11 @@ public final class SkyseamClient {
         event.registerEntityRenderer(SkyseamEntities.SEAM.get(), SeamRenderer::new);
         event.registerBlockEntityRenderer(SkyseamBlockEntities.APERTURE.get(), ApertureRenderer::new);
         event.registerBlockEntityRenderer(SkyseamBlockEntities.SPRINGBLOOM.get(), SpringbloomRenderer::new);
+    }
+
+    @SubscribeEvent
+    public static void registerShaders(RegisterShadersEvent event) throws java.io.IOException {
+        FarDepth.register(event);
     }
 
     @SubscribeEvent

@@ -16,6 +16,7 @@ public final class SkyseamClientConfig {
     public static final ModConfigSpec.DoubleValue SCREEN_FLASH;
     public static final ModConfigSpec.BooleanValue DISTANT_HORIZONS_HIDE_GLOW_BLOCKS;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> DISTANT_HORIZONS_HIDDEN_BLOCKS;
+    public static final ModConfigSpec.IntValue VORTEX_DETAIL_DISTANCE;
 
     /**
      * The Halcyon's small glowing decorations: Prismite, Prismite lamps, glow moss, lantern vines and the small glow
@@ -32,6 +33,13 @@ public final class SkyseamClientConfig {
                 .defineInRange("camera_shake", 1.0, 0.0, 1.0);
         SCREEN_FLASH = b.comment("Strength of the white flash when your ship crosses a Seam. 0 turns it off.")
                 .defineInRange("screen_flash", 1.0, 0.0, 1.0);
+        b.pop();
+        b.push("flux_vortices");
+        VORTEX_DETAIL_DISTANCE = b.comment("With Distant Horizons, how far off flux vortices are drawn in full, in blocks, before its simpler far",
+                        "version takes over (docs/DECISIONS.md K104). Never less than your render distance, and never past the game's",
+                        "own far limit (four times the render distance). Far islands in front still hide them; not under a shader pack,",
+                        "where they are drawn in full out to the render distance.")
+                .defineInRange("detail_distance", 640, 0, 4096);
         b.pop();
         b.push("compat");
         DISTANT_HORIZONS_HIDE_GLOW_BLOCKS = b.comment("With Distant Horizons installed, add the blocks below to its ignored blocks "

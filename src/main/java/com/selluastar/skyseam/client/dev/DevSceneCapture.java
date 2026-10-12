@@ -15,6 +15,10 @@ import com.google.gson.JsonParser;
 import com.selluastar.skyseam.Skyseam;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.AbstractButton;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.events.ContainerEventHandler;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.screens.TitleScreen;
@@ -33,7 +37,9 @@ import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.minecraft.world.level.storage.LevelStorageSource;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -49,7 +55,9 @@ import net.neoforged.neoforge.common.NeoForge;
  * {@code "off"}) right-clicks with that hand, on the block looked at if there is one; screens it opens stay open
  * until a {@code {"close": true}} step. {@code {"jump": true}} makes the player jump, if they stand on something,
  * {@code {"walk": 20}} holds the forward key for that many ticks (and waits them out), and
- * {@code {"camera": "back"}} (or {@code "front"}, {@code "first"}) switches to that view.
+ * {@code {"camera": "back"}} (or {@code "front"}, {@code "first"}) switches to that view. {@code {"config": true}} opens
+ * Skyseam's settings screen, and {@code {"press": "Flux vortices"}} presses the first button on the open screen whose
+ * label holds that text (for its pages); both keep the screen open until a {@code close} step.
  */
 public final class DevSceneCapture {
     public static final String PROPERTY = "skyseam.dev.capture";
@@ -95,6 +103,10 @@ public final class DevSceneCapture {
                     STEPS.add(new Step("gui", step.get("gui").getAsString(), 0));
                 } else if (step.has("use")) {
                     STEPS.add(new Step("use", step.get("use").getAsString(), 0));
+                } else if (step.has("config")) {
+                    STEPS.add(new Step("config", "", 0));
+                } else if (step.has("press")) {
+                    STEPS.add(new Step("press", step.get("press").getAsString(), 0));
                 } else if (step.has("close")) {
                     STEPS.add(new Step("close", "", 0));
                 } else if (step.has("walk")) {
@@ -181,6 +193,18 @@ public final class DevSceneCapture {
                     keepScreen = true;
                     return;
                 }
+                case "config" -> {
+                    ModList.get().getModContainerById(Skyseam.MOD_ID)
+                            .ifPresent(container -> minecraft.setScreen(new ConfigurationScreen(container, minecraft.screen)));
+                    keepScreen = true;
+                    return;
+                }
+                case "press" -> {
+                    if (minecraft.screen != null && !press(minecraft.screen, step.value())) {
+                        Skyseam.LOGGER.warn("Skyseam capture: no button '{}' on {}", step.value(), minecraft.screen.getClass().getSimpleName());
+                    }
+                    return;
+                }
                 case "close" -> {
                     keepScreen = false;
                     // Close a menu the way Esc does, so the server closes it too and sends the inventory again.
@@ -198,6 +222,38 @@ public final class DevSceneCapture {
                 default -> {}
             }
         }
+    }
+
+    /**
+     * Presses the first button inside {@code parent} whose label holds {@code label}, or the button in the first row
+     * with a text that holds it (a settings page's "Edit..." beside its section's name); false if there is none.
+     */
+    private static boolean press(ContainerEventHandler parent, String label) {
+        String wanted = label.toLowerCase();
+        AbstractButton rowButton = null;
+        boolean rowNamed = false;
+        for (GuiEventListener child : parent.children()) {
+            if (child instanceof AbstractButton button && button.getMessage().getString().toLowerCase().contains(wanted)) {
+                button.onPress();
+                return true;
+            }
+            if (child instanceof AbstractButton button && rowButton == null) {
+                rowButton = button;
+            }
+            if (child instanceof AbstractWidget widget && !(child instanceof AbstractButton) && widget.getMessage().getString().toLowerCase().contains(wanted)) {
+                rowNamed = true;
+            }
+        }
+        if (rowNamed && rowButton != null) {
+            rowButton.onPress();
+            return true;
+        }
+        for (GuiEventListener child : parent.children()) {
+            if (child instanceof ContainerEventHandler inner && press(inner, label)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

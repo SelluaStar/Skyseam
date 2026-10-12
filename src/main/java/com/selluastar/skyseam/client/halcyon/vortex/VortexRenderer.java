@@ -17,6 +17,7 @@ import com.mojang.math.Axis;
 import com.selluastar.skyseam.Skyseam;
 import com.selluastar.skyseam.client.SkyseamRenderTypes;
 import com.selluastar.skyseam.client.halcyon.sky.ShaderPack;
+import com.selluastar.skyseam.config.SkyseamClientConfig;
 import com.selluastar.skyseam.halcyon.vortex.FluxVortex;
 import com.selluastar.skyseam.registry.SkyseamBlocks;
 
@@ -100,7 +101,8 @@ public final class VortexRenderer {
     private static final int CROWN_ARCS = 18;
     /** The crown is the top share of the column. */
     private static final double CROWN_SHARE = 0.16;
-    private static final int MESAS = 8;
+    /** Clumps of rock floating round each vortex (docs/DECISIONS.md K104). */
+    private static final int CLUMPS = 60;
     private static final double ROCK_RANGE = 360;
     /** A ripple runs out from the foot this often, in ticks, and lasts this long. */
     private static final int RIPPLE_EVERY = 46;
@@ -126,15 +128,18 @@ public final class VortexRenderer {
     private record Tube(double phase, double twist, double speed, double reach, double[] waves, double width, int colour, double delay,
             double climb, double leave, double spin, double swirlTwist) {}
 
-    /** One hanging rock: where it hangs and the blocks it is made of, round its middle. */
-    private record Mesa(double angle, double distance, double fraction, double yaw, double phase, List<Piece> pieces, double delay, double reach,
-            int layers) {}
+    /** One block of a floating clump, from the clump's first block. */
+    public record Bit(int dx, int dy, int dz, BlockState state) {}
 
-    /** One block of a rock, and the faces of it that show (a bit for each {@link Direction}). */
-    private record Piece(float x, float y, float z, BlockState state, int faces) {}
+    /** A floating clump's make, fixed for its vortex: where it orbits, how it turns, and its blocks. */
+    private record Clump(double home, double orbit, double speed, double angle, double scale, double yaw, double spin, double tilt, double phase,
+            double delay, List<Bit> bits) {}
+
+    /** A floating clump now: where its middle is, how big and how turned, and its blocks. */
+    public record Floater(double x, double y, double z, double scale, double yaw, double tilt, List<Bit> bits) {}
 
     private static final Map<Long, Tube[]> TUBES_OF = new HashMap<>();
-    private static final Map<Long, Mesa[]> MESAS_OF = new HashMap<>();
+    private static final Map<Long, Clump[]> CLUMPS_OF = new HashMap<>();
 
     private static float lightScale = 1;
     private static float daylight = 1;
@@ -148,17 +153,37 @@ public final class VortexRenderer {
     }
 
     /**
-     * How much of a vortex this far off is drawn by Distant Horizons rather than here: 0 anywhere within the render
-     * distance, rising smoothly to 1 {@link #HANDOVER} blocks past it.
+     * How far off vortices are drawn in full: the render distance; with Distant Horizons (and no shader pack), out to
+     * {@code flux_vortices.detail_distance} (docs/DECISIONS.md K104), as its far terrain is put into the depth buffer
+     * first ({@link FarDepth}) so far islands in front still hide them. Never past the game's own far limit.
+     */
+    public static double detailRange() {
+        double range = viewRange();
+        if (!ClientVortices.farDepthAvailable()) {
+            return range;
+        }
+        double wanted;
+        try {
+            wanted = SkyseamClientConfig.VORTEX_DETAIL_DISTANCE.get();
+        } catch (IllegalStateException notLoaded) {
+            wanted = SkyseamClientConfig.VORTEX_DETAIL_DISTANCE.getDefault();
+        }
+        double limit = Minecraft.getInstance().gameRenderer.getDepthFar() - HANDOVER - 16;
+        return Math.max(range, Math.min(wanted, limit));
+    }
+
+    /**
+     * How much of a vortex this far off is drawn by Distant Horizons rather than here: 0 anywhere within the full
+     * detail range, rising smoothly to 1 {@link #HANDOVER} blocks past it.
      */
     public static float farShare(FluxVortex vortex, Vec3 camera) {
-        double t = Mth.clamp((flat(vortex, camera) - viewRange()) / HANDOVER, 0, 1);
+        double t = Mth.clamp((flat(vortex, camera) - detailRange()) / HANDOVER, 0, 1);
         return (float) (t * t * (3 - 2 * t));
     }
 
-    /** How far off, flat, a vortex may be drawn here: the render distance and the handover past it. */
+    /** How far off, flat, a vortex may be drawn here: the full detail range and the handover past it. */
     public static double nearReach() {
-        return viewRange() + HANDOVER;
+        return detailRange() + HANDOVER;
     }
 
     /** True if the chunk under the vortex has loaded. */
@@ -259,6 +284,11 @@ public final class VortexRenderer {
         }
         lightScale = ShaderPack.active() ? SHADER_LIGHT : 1;
         daylight = daylight(level, partial);
+        // Past the render distance, Distant Horizons' far terrain goes into the depth buffer first, so its islands hide them.
+        double range = viewRange();
+        if (shown.stream().anyMatch(vortex -> flat(vortex, camera) > range - 32)) {
+            ClientVortices.writeFarDepth();
+        }
         // After the level the game has taken the camera's turn back off its model-view matrix (and hands over no pose):
         // put it back on for the light, as it was through the level.
         Matrix4fStack modelView = RenderSystem.getModelViewStack();
@@ -316,7 +346,7 @@ public final class VortexRenderer {
 
     /** Drops the cached makes of vortices no longer near. */
     private static void forget(List<FluxVortex> vortices) {
-        if (TUBES_OF.size() + MESAS_OF.size() < 24) {
+        if (TUBES_OF.size() + CLUMPS_OF.size() < 24) {
             return;
         }
         Set<Long> ids = new HashSet<>();
@@ -324,7 +354,7 @@ public final class VortexRenderer {
             ids.add(vortex.id());
         }
         TUBES_OF.keySet().retainAll(ids);
-        MESAS_OF.keySet().retainAll(ids);
+        CLUMPS_OF.keySet().retainAll(ids);
     }
 
     // ---- Timing --------------------------------------------------------------------------------------------------
@@ -400,101 +430,104 @@ public final class VortexRenderer {
         });
     }
 
-    private static Mesa[] mesasOf(FluxVortex vortex) {
-        return MESAS_OF.computeIfAbsent(vortex.id(), id -> {
+    private static Clump[] clumpsOf(FluxVortex vortex) {
+        return CLUMPS_OF.computeIfAbsent(vortex.id(), id -> {
             RandomSource random = RandomSource.create(id * 341873128712L + 132897987541L);
-            Mesa[] out = new Mesa[MESAS];
-            for (int i = 0; i < MESAS; i++) {
-                int width = 10 + random.nextInt(10);
-                int depth = 8 + random.nextInt(8);
-                int layers = 5 + random.nextInt(4);
-                List<Piece> pieces = mesa(random, width, depth, layers);
-                double fraction = 0.12 + 0.72 * (i + 0.2 + 0.6 * random.nextDouble()) / MESAS;
-                double angle = i * 2.39996 + random.nextDouble() * 0.6;
-                double distance = 3 + Math.max(width, depth) * 0.5 + 18 * random.nextDouble() * random.nextDouble();
-                out[i] = new Mesa(angle, distance, fraction, random.nextDouble() * Mth.TWO_PI, random.nextDouble() * Mth.TWO_PI, pieces,
-                        20 + i * 3 + 10 * random.nextDouble(), Math.max(width, depth) * 0.5 + 1, layers);
+            Clump[] out = new Clump[CLUMPS];
+            for (int i = 0; i < CLUMPS; i++) {
+                double home = 4 + Math.pow(random.nextDouble(), 1.6) * vortex.height() * 0.7;
+                double orbit = 3 + random.nextDouble() * 14;
+                double speed = 0.004 + 0.01 * random.nextDouble();
+                double scale = 0.8 + 0.7 * random.nextDouble() * random.nextDouble();
+                out[i] = new Clump(home, orbit, speed, random.nextDouble() * Mth.TWO_PI, scale, random.nextDouble() * Mth.TWO_PI,
+                        (random.nextDouble() - 0.5) * 0.02, (random.nextDouble() - 0.5) * 0.8, random.nextDouble() * Mth.TWO_PI, 10 + i * 0.8,
+                        bits(random));
             }
             return out;
         });
     }
 
     /**
-     * The blocks of one hanging rock: a broad, thick mesa of the Halcyon's stone, its bottom flat and tucked in, its
-     * sides rough, its top grassed or mossed, a crag or two standing on it. Blocks hidden on every side are left out,
-     * and only the faces that show are kept.
+     * A clump's blocks: one to four of the Halcyon's rock, each next to the one before, now and then turf on the top
+     * block, and one in twelve a glowing Prismite lamp (as the vortices first had them).
      */
-    private static List<Piece> mesa(RandomSource random, int width, int depth, int layers) {
-        BlockState[] stones = {SkyseamBlocks.CLIFFSTONE.get().defaultBlockState(), SkyseamBlocks.CLIFFSTONE.get().defaultBlockState(),
-                SkyseamBlocks.SHOALROCK.get().defaultBlockState(), SkyseamBlocks.HORNSTONE.get().defaultBlockState()};
-        BlockState[] streaks = {SkyseamBlocks.OCHRE_CLIFFSTONE.get().defaultBlockState(), SkyseamBlocks.UMBER_CLIFFSTONE.get().defaultBlockState(),
-                SkyseamBlocks.MOSSY_CLIFFSTONE.get().defaultBlockState()};
-        BlockState stone = stones[random.nextInt(stones.length)];
-        BlockState streak = streaks[random.nextInt(streaks.length)];
-        BlockState cover = random.nextFloat() < 0.6f ? Blocks.GRASS_BLOCK.defaultBlockState()
-                : random.nextFloat() < 0.6f ? Blocks.MOSS_BLOCK.defaultBlockState() : SkyseamBlocks.MOSSY_CLIFFSTONE.get().defaultBlockState();
-        Map<Long, BlockState> blocks = new HashMap<>();
-        double rx = width / 2.0;
-        double rz = depth / 2.0;
-        // Each layer's outline wobbles a little round the rock, so its sides are rough and not quite round.
-        double wobblePhase = random.nextDouble() * Mth.TWO_PI;
-        for (int y = 0; y < layers; y++) {
-            double scale = y == 0 ? 0.68 : y == 1 ? 0.84 : y == 2 ? 0.94 : y == layers - 1 ? 0.96 : 1.0;
-            double shift = (random.nextDouble() - 0.5) * 0.12;
-            for (int x = -width; x <= width; x++) {
-                for (int z = -depth; z <= depth; z++) {
-                    double angle = Math.atan2(z, x);
-                    double edge = scale * (1 + shift + 0.1 * Math.sin(3 * angle + wobblePhase + y * 0.7) + 0.07 * Math.sin(5 * angle - wobblePhase));
-                    double d = Mth.square(x / (rx * edge + 0.3)) + Mth.square(z / (rz * edge + 0.3));
-                    if (d > 1 + 0.2 * (random.nextFloat() - 0.5)) {
-                        continue;
-                    }
-                    BlockState state = y == layers - 1 ? cover : random.nextFloat() < 0.12f ? streak : stone;
-                    blocks.put(key(x, y, z), state);
+    private static List<Bit> bits(RandomSource random) {
+        float pick = random.nextFloat();
+        BlockState rock = pick < 0.3f ? SkyseamBlocks.DUSKSTONE.get().defaultBlockState()
+                : pick < 0.5f ? SkyseamBlocks.COBBLED_DUSKSTONE.get().defaultBlockState()
+                : pick < 0.66f ? SkyseamBlocks.SHOALROCK.get().defaultBlockState()
+                : pick < 0.8f ? SkyseamBlocks.HORNSTONE.get().defaultBlockState()
+                : pick < 0.92f ? SkyseamBlocks.CLIFFSTONE.get().defaultBlockState()
+                : SkyseamBlocks.PRISMITE_LAMP.get().defaultBlockState();
+        int count = random.nextFloat() < 0.35f ? 1 : 2 + random.nextInt(3);
+        List<Bit> out = new ArrayList<>();
+        Set<Long> taken = new HashSet<>();
+        int x = 0;
+        int y = 0;
+        int z = 0;
+        for (int k = 0; k < count; k++) {
+            out.add(new Bit(x, y, z, rock));
+            taken.add(key(x, y, z));
+            for (int tries = 0; tries < 8; tries++) {
+                Direction step = Direction.values()[random.nextInt(6)];
+                int nx = x + step.getStepX();
+                int ny = y + step.getStepY();
+                int nz = z + step.getStepZ();
+                if (!taken.contains(key(nx, ny, nz))) {
+                    x = nx;
+                    y = ny;
+                    z = nz;
+                    break;
                 }
             }
         }
-        // Crags: knobs of rock a few blocks across standing on the top, grassed over.
-        int crags = 1 + random.nextInt(3);
-        for (int c = 0; c < crags; c++) {
-            int cx = (int) Math.round((random.nextDouble() - 0.5) * width * 0.55);
-            int cz = (int) Math.round((random.nextDouble() - 0.5) * depth * 0.55);
-            int size = 1 + random.nextInt(3);
-            int tall = 1 + random.nextInt(3);
-            for (int x = cx - size; x <= cx + size; x++) {
-                for (int z = cz - size; z <= cz + size; z++) {
-                    int high = tall - (Math.abs(x - cx) + Math.abs(z - cz) > size ? 1 : 0);
-                    if (high <= 0 || !blocks.containsKey(key(x, layers - 1, z))) {
-                        continue;
-                    }
-                    blocks.put(key(x, layers - 1, z), stone);
-                    for (int y = 0; y < high; y++) {
-                        blocks.put(key(x, layers + y, z), y == high - 1 ? cover : stone);
-                    }
-                }
+        // Turf on the highest block now and then.
+        float topping = random.nextFloat();
+        if (topping < 0.4f && !rock.is(SkyseamBlocks.PRISMITE_LAMP.get())) {
+            Bit top = out.stream().max(java.util.Comparator.comparingInt(Bit::dy)).orElseThrow();
+            if (!taken.contains(key(top.dx(), top.dy() + 1, top.dz()))) {
+                out.add(new Bit(top.dx(), top.dy() + 1, top.dz(), topping < 0.25f ? Blocks.MOSS_BLOCK.defaultBlockState() : Blocks.GRASS_BLOCK.defaultBlockState()));
             }
         }
-        List<Piece> pieces = new ArrayList<>();
-        for (Map.Entry<Long, BlockState> entry : blocks.entrySet()) {
-            long k = entry.getKey();
-            int x = (int) ((k >> 40) & 0xFFFFF) - 0x80000;
-            int y = (int) ((k >> 20) & 0xFFFFF) - 0x80000;
-            int z = (int) (k & 0xFFFFF) - 0x80000;
-            int faces = 0;
-            for (Direction direction : Direction.values()) {
-                if (!blocks.containsKey(key(x + direction.getStepX(), y + direction.getStepY(), z + direction.getStepZ()))) {
-                    faces |= 1 << direction.ordinal();
-                }
-            }
-            if (faces != 0) {
-                pieces.add(new Piece(x - 0.5f, y - layers / 2f, z - 0.5f, entry.getValue(), faces));
-            }
-        }
-        return pieces;
+        return out;
     }
 
     private static long key(int x, int y, int z) {
         return ((long) (x + 0x80000) << 40) | ((long) (y + 0x80000) << 20) | (z + 0x80000);
+    }
+
+    /**
+     * The clumps floating round a vortex now: orbiting the column slowly at every height, bobbing and turning, rising off
+     * the ground as it forms and falling away as it unravels. Also drawn far off by Distant Horizons.
+     */
+    public static List<Floater> floaters(FluxVortex vortex, double time) {
+        List<Floater> out = new ArrayList<>();
+        double since = since(vortex, time);
+        double falling = time - (vortex.end() - FluxVortex.DISSIPATE_TICKS);
+        int i = 0;
+        for (Clump clump : clumpsOf(vortex)) {
+            i++;
+            double lift = smooth((since - clump.delay()) / 60);
+            if (lift <= 0) {
+                continue;
+            }
+            double home = vortex.baseY() + clump.home();
+            double orbit = vortex.radiusAt(home) + clump.orbit();
+            double angle = clump.angle() + time * clump.speed() * (1 + 6 / (orbit + 2));
+            double y = vortex.baseY() + clump.home() * lift + Math.sin(time * 0.03 + i) * 1.2 * lift;
+            double scale = clump.scale();
+            if (falling > 0) {
+                y -= 0.02 * falling * falling;
+                orbit += falling * 0.12;
+                scale *= Math.max(0, 1 - falling / FluxVortex.DISSIPATE_TICKS);
+            }
+            if (scale < 0.03 || y < vortex.baseY() - 3) {
+                continue;
+            }
+            out.add(new Floater(vortex.x() + Math.cos(angle) * orbit, y, vortex.z() + Math.sin(angle) * orbit, scale, clump.yaw() + time * clump.spin(),
+                    clump.tilt() + Math.sin(time * 0.01 + i) * 0.15, clump.bits()));
+        }
+        return out;
     }
 
     // ---- Shape ---------------------------------------------------------------------------------------------------
@@ -1113,82 +1146,39 @@ public final class VortexRenderer {
 
     // ---- The rocks -----------------------------------------------------------------------------------------------
 
-    /**
-     * The great rocks hanging round the column: lifting into place as it forms, barely moving, sinking as it unravels.
-     * Each is drawn face by face from its blocks' models, only the faces that show.
-     */
+    /** The clumps floating round the column, drawn from their blocks' models, lit where they float (lamps glowing). */
     private static void rocks(Minecraft minecraft, ClientLevel level, MultiBufferSource buffers, PoseStack pose, FluxVortex vortex, double time,
             Vec3 camera) {
         BlockRenderDispatcher blocks = minecraft.getBlockRenderer();
         VertexConsumer buffer = buffers.getBuffer(Sheets.cutoutBlockSheet());
         RandomSource random = RandomSource.create();
-        double since = since(vortex, time);
-        double falling = time - (vortex.end() - FluxVortex.DISSIPATE_TICKS * 0.8);
-        Mesa[] mesas = mesasOf(vortex);
-        for (int i = 0; i < mesas.length; i++) {
-            Mesa mesa = mesas[i];
-            double lift = smooth((since - mesa.delay) / 60);
-            if (lift <= 0) {
+        for (Floater floater : floaters(vortex, time)) {
+            if (Mth.square(floater.x() - camera.x) + Mth.square(floater.y() - camera.y) + Mth.square(floater.z() - camera.z) > ROCK_RANGE * ROCK_RANGE) {
                 continue;
             }
-            double rest = vortex.baseY() + vortex.height() * mesa.fraction;
-            double reach = vortex.radiusAt(rest) + mesa.distance;
-            double x = vortex.x() + Math.cos(mesa.angle) * reach;
-            double z = vortex.z() + Math.sin(mesa.angle) * reach;
-            if (blocked(level, x, rest, z, mesa)) {
-                continue;
-            }
-            double y = rest - 26 * (1 - lift) + Math.sin(time * 0.011 + mesa.phase) * 0.5;
-            double scale = 0.35 + 0.65 * smooth(lift * 1.6);
-            if (falling > 0) {
-                y -= 0.01 * falling * falling;
-                scale *= 1 - smooth((falling - 40) / 40);
-            }
-            if (scale < 0.03) {
-                continue;
-            }
-            if (Mth.square(x - camera.x) + Mth.square(y - camera.y) + Mth.square(z - camera.z) > ROCK_RANGE * ROCK_RANGE) {
-                continue;
-            }
-            BlockPos at = BlockPos.containing(x, y + 4, z);
+            BlockPos at = BlockPos.containing(floater.x(), floater.y(), floater.z());
             int light = LevelRenderer.getLightColor(level, at);
             pose.pushPose();
-            pose.translate(x - camera.x, y - camera.y, z - camera.z);
-            pose.mulPose(Axis.YP.rotation((float) (mesa.yaw + 0.04 * Math.sin(time * 0.002 + mesa.phase))));
-            pose.mulPose(Axis.XP.rotation((float) (0.025 * Math.sin(time * 0.006 + mesa.phase * 2))));
-            pose.scale((float) scale, (float) scale, (float) scale);
-            for (Piece piece : mesa.pieces) {
-                BakedModel model = blocks.getBlockModel(piece.state);
+            pose.translate(floater.x() - camera.x, floater.y() - camera.y, floater.z() - camera.z);
+            pose.mulPose(Axis.YP.rotation((float) floater.yaw()));
+            pose.mulPose(Axis.XP.rotation((float) floater.tilt()));
+            pose.scale((float) floater.scale(), (float) floater.scale(), (float) floater.scale());
+            pose.translate(-0.5, -0.5, -0.5);
+            for (Bit bit : floater.bits()) {
+                BakedModel model = blocks.getBlockModel(bit.state());
+                int bitLight = bit.state().is(SkyseamBlocks.PRISMITE_LAMP.get()) ? LightTexture.FULL_BRIGHT : light;
                 pose.pushPose();
-                pose.translate(piece.x, piece.y, piece.z);
+                pose.translate(bit.dx(), bit.dy(), bit.dz());
                 for (Direction direction : Direction.values()) {
-                    if ((piece.faces & (1 << direction.ordinal())) != 0) {
-                        random.setSeed(42);
-                        quads(minecraft, level, buffer, pose, piece.state, at, model.getQuads(piece.state, direction, random, ModelData.EMPTY, null), light);
-                    }
+                    random.setSeed(42);
+                    quads(minecraft, level, buffer, pose, bit.state(), at, model.getQuads(bit.state(), direction, random, ModelData.EMPTY, null), bitLight);
                 }
                 random.setSeed(42);
-                quads(minecraft, level, buffer, pose, piece.state, at, model.getQuads(piece.state, null, random, ModelData.EMPTY, null), light);
+                quads(minecraft, level, buffer, pose, bit.state(), at, model.getQuads(bit.state(), null, random, ModelData.EMPTY, null), bitLight);
                 pose.popPose();
             }
             pose.popPose();
         }
-    }
-
-    /** True if the world has blocks where a rock would hang: it is left out rather than drawn through them. */
-    private static boolean blocked(ClientLevel level, double x, double y, double z, Mesa mesa) {
-        BlockPos.MutableBlockPos at = new BlockPos.MutableBlockPos();
-        for (int k = 0; k <= 8; k++) {
-            double r = k == 0 ? 0 : mesa.reach;
-            double angle = k * Mth.TWO_PI / 8;
-            for (double dy : new double[] {-mesa.layers / 2.0, mesa.layers / 2.0 + 2}) {
-                at.set(x + Math.cos(angle) * r, y + dy, z + Math.sin(angle) * r);
-                if (!level.getBlockState(at).isAir()) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     private static void quads(Minecraft minecraft, ClientLevel level, VertexConsumer buffer, PoseStack pose, BlockState state, BlockPos at,
