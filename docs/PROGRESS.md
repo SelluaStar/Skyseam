@@ -1304,3 +1304,59 @@ flux vortices in Avatar (kept in the gitignored `reference/local/`, not in the r
    double helix in boxes, hidden behind any island in front of it, and turn into the full one as you fly closer.
    Islands in front of a near one should hide it too.
 7. Send screenshots and `logs/latest.log`.
+
+## The Springbloom (2026-10-12)
+
+The author, with three reference images of glowing launch plants: "make something like this. it spawns on both
+floating islands and normal islands and when hitting it its kind of like a boost pad. first when you land on it it
+kind of like squishes down and makes kind of like a farting sound, and then when jumping while on it it launches you
+up. make sure its a 3d model with animations (you can use block bench.) ... also make sure it looks good and has
+particles and animations". The images are kept in the gitignored `reference/local/` (18 to 20).
+
+**Built** (DECISIONS K98)
+- **The plant** (`halcyon/flora/SpringbloomBlock`, a GeckoLib block entity): five broad teal leaves with glowing
+  veins and five violet-pink inner leaves round a squat glowing violet bulb, four stalks tipped with glowing pink
+  cubes. Model `art/models/springbloom.bbmodel`, built with the headless Blockbench tools; pixel-art textures with a
+  glowmask (`tools/textures/make_springbloom_textures.py`). Each plant is turned and sized a little differently.
+- **Animations:** `idle` (sways, the bulb breathes, the tips pulse), `squish` (the bulb flattens, the stalks drop and
+  splay, all spring back) and `launch` (compresses, then stretches up with leaves and stalks flung up, and wobbles).
+- **Landing on it:** no fall damage; it squishes, puffs spores and makes a rude raspberry noise (three takes).
+- **Jumping on it:** a launch about 16 blocks up (`springbloom.launch_height`), with a boing and whoosh, a burst of
+  spores and a spore trail behind you. Mobs are launched too. Crouch to step on and off without a launch. The first
+  landing within twenty seconds of a launch does no harm.
+- **Particles:** a new glowing spore cube (`springbloom_spore`, two twinkle frames), drifting off its tips all the
+  time, puffing out as it squishes, bursting up as it launches, and trailing behind what it launches.
+- **Where it grows:** the grass of the Halcyon's islands, grounded and floating: one spot per 11-block cell may hold
+  one (`springbloom.chance`, 0.45), where the grass is flat and open. It drops itself when broken and can be planted
+  on any solid top. In the Skyseam creative tab.
+- **Also:** `/skyseam halcyon springbloom find`; hidden from Distant Horizons' far terrain like the other small
+  glowing blocks (the default list only; an existing client config keeps its own list); the capture tool gained
+  `jump` and `camera` steps.
+
+**Verified (actually run)**
+- **The milestone check:** build ✓, runData ✓, **52/52 GameTests** ✓, server boot ✓.
+- **`springbloomLaunchesWhatJumpsOffIt`:** a pig on a Springbloom (in open air near the End's origin) jumped and
+  was thrown from Y 201.5 past Y 210 at 1.76 blocks a tick.
+- **`springbloomTakesTheFall`:** a pig dropped twelve blocks onto one landed unhurt.
+- **`springbloomSparesTheLandingAfterALaunch`:** a launched pig whose Springbloom was swapped for stone while it was
+  in the air came down on the stone unhurt.
+- **The boot check** (a real Halcyon) counts them in 300 chunks: 8 with the first chance of 0.2, so the default went
+  up to 0.45, which grows 22, 3 of them on floating islands.
+- **The real client** (`tools/capture/m4_springbloom.json`): three planted on a patch of grass, by day and by night; a
+  survival player dropped onto one (it squishes, spores puff out, no damage), then jumping (launched high with a spore
+  trail, and back down onto it); and a natural one found with `find`. Contact sheet
+  [`docs/previews/m4-springbloom.png`](previews/m4-springbloom.png).
+
+**Not seen yet**
+- **The sounds** have only been checked for level, not listened to: the "rude noise" is a synthesized stand-in.
+- **A natural one close up:** the capture's `find` shot shows one at the edge of the frame.
+- **Multiplayer:** a launched player's own client moves them; other players see the launch through the server.
+  Not tried with two players.
+
+**Author's in-game test**
+1. In the Halcyon, `/skyseam halcyon springbloom find` (or take one from the creative tab and plant it).
+2. Drop onto one from a few blocks up: it should squish with a rude noise and spores, and not hurt.
+3. Jump while standing on it: you should be launched high with a trail of spores, and land unhurt.
+4. Crouch-walk onto and off one: no launch.
+5. Look at them at night: the bulb, veins and tips glow.
+6. Send screenshots and `logs/latest.log`.

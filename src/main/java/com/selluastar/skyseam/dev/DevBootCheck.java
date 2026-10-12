@@ -189,7 +189,55 @@ public final class DevBootCheck {
         glowCensus(level, "in the archipelago", (int) (-plan.landmarks.outZ * 1000) >> 4, (int) (plan.landmarks.outX * 1000) >> 4, problems);
         glowCensus(level, "in the Highlands", (int) (plan.landmarks.outX * 3000) >> 4, (int) (plan.landmarks.outZ * 3000) >> 4, problems);
         vortexCensus(level, plan, problems);
+        springbloomCensus(level, plan, problems);
         return problems;
+    }
+
+    /**
+     * Springblooms (docs/DECISIONS.md K98) in the middle 10 by 10 of the same three sets of chunks as the glow census:
+     * how many grew, and how many of them on floating islands (with air under the island below them) rather than on
+     * the ground.
+     */
+    private static void springbloomCensus(ServerLevel level, HalcyonPlan plan, List<String> problems) {
+        int[][] origins = {{14, -6}, {(int) (-plan.landmarks.outZ * 1000) >> 4, (int) (plan.landmarks.outX * 1000) >> 4},
+                {(int) (plan.landmarks.outX * 3000) >> 4, (int) (plan.landmarks.outZ * 3000) >> 4}};
+        int count = 0;
+        int floating = 0;
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        for (int[] origin : origins) {
+            for (int cx = origin[0] + 1; cx < origin[0] + 11; cx++) {
+                for (int cz = origin[1] + 1; cz < origin[1] + 11; cz++) {
+                    LevelChunk chunk = level.getChunk(cx, cz);
+                    LevelChunkSection[] sections = chunk.getSections();
+                    for (int s = 0; s < sections.length; s++) {
+                        LevelChunkSection section = sections[s];
+                        if (section.hasOnlyAir() || !section.getStates().maybeHas(state -> state.is(SkyseamBlocks.SPRINGBLOOM.get()))) {
+                            continue;
+                        }
+                        int y0 = SectionPos.sectionToBlockCoord(chunk.getSectionYFromSectionIndex(s));
+                        for (int y = 0; y < 16; y++) {
+                            for (int z = 0; z < 16; z++) {
+                                for (int x = 0; x < 16; x++) {
+                                    if (!section.getBlockState(x, y, z).is(SkyseamBlocks.SPRINGBLOOM.get())) {
+                                        continue;
+                                    }
+                                    count++;
+                                    pos.set(chunk.getPos().getMinBlockX() + x, y0 + y - 2, chunk.getPos().getMinBlockZ() + z);
+                                    while (pos.getY() > HalcyonLayout.SEA_LEVEL && !level.getBlockState(pos).isAir()) {
+                                        pos.move(Direction.DOWN);
+                                    }
+                                    floating += pos.getY() > HalcyonLayout.SEA_LEVEL ? 1 : 0;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Skyseam.LOGGER.info("Skyseam boot check: in 300 chunks, {} Springblooms, {} of them on floating islands", count, floating);
+        if (count == 0) {
+            problems.add("no Springbloom grew in 300 chunks");
+        }
     }
 
     /**

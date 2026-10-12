@@ -22,7 +22,8 @@ public final class SkyseamClientConfig {
      * shrooms. The giant Glowcap mushrooms are left out, so they still glow far away.
      */
     public static final List<String> GLOW_DECORATIONS = List.of("skyseam:small_prismite_bud", "skyseam:large_prismite_bud",
-            "skyseam:prismite_cluster", "skyseam:prismite_lamp", "skyseam:glow_moss", "skyseam:lantern_vine", "skyseam:glow_shroom");
+            "skyseam:prismite_cluster", "skyseam:prismite_lamp", "skyseam:glow_moss", "skyseam:lantern_vine", "skyseam:glow_shroom",
+            "skyseam:springbloom");
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();

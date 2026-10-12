@@ -60,6 +60,8 @@ import net.minecraft.world.level.levelgen.Heightmap;
 public final class HalcyonDecorator {
     private static final int SEA = HalcyonLayout.SEA_LEVEL;
     private static final int TREE_CELL = 7;
+    /** One spot per 11-block cell of the map may hold a Springbloom (docs/DECISIONS.md K98). */
+    private static final int SPRINGBLOOM_CELL = 11;
     /** A surface with something solid this close overhead is under a roof (a cave, an overhang). */
     private static final int ROOFED = 40;
     private static final BlockState FALLING_WATER = Blocks.WATER.defaultBlockState().setValue(LiquidBlock.LEVEL, 8);
@@ -135,6 +137,27 @@ public final class HalcyonDecorator {
         return sx == x && sz == z;
     }
 
+    /**
+     * One spot per 11-block cell of the map may hold a Springbloom, with the configured chance; it grows there on the
+     * grass of whichever island tops the spot, grounded or floating, where the ground is flat and open.
+     */
+    private static boolean isSpringbloomSpot(Noise noise, int x, int z) {
+        int cx = Math.floorDiv(x, SPRINGBLOOM_CELL);
+        int cz = Math.floorDiv(z, SPRINGBLOOM_CELL);
+        long h = noise.cellHash(cx, cz, 93);
+        int sx = cx * SPRINGBLOOM_CELL + (int) Math.floorMod(h, SPRINGBLOOM_CELL);
+        int sz = cz * SPRINGBLOOM_CELL + (int) Math.floorMod(h >>> 16, SPRINGBLOOM_CELL);
+        return sx == x && sz == z && ((h >>> 32) & 0xFFFF) / 65536.0 < springbloomChance();
+    }
+
+    private static double springbloomChance() {
+        try {
+            return SkyseamConfig.SPRINGBLOOM_CHANCE.get();
+        } catch (IllegalStateException notLoaded) {
+            return SkyseamConfig.SPRINGBLOOM_CHANCE.getDefault();
+        }
+    }
+
     private static boolean nearGiant(List<Flora.Big> giants, int x, int z) {
         for (Flora.Big big : giants) {
             if (Math.abs(big.x() - x) <= big.kind().reach && Math.abs(big.z() - z) <= big.kind().reach) {
@@ -169,6 +192,10 @@ public final class HalcyonDecorator {
         double roll = noise.hash(x, y, z, 11);
         if (turf && treeDensity > 0 && roll < treeChance(region) * treeDensity && flat(level, ground)) {
             Trees.grow(level, noise, region, up, noise.hash(x, y, z, 12));
+            return;
+        }
+        if (turf && isSpringbloomSpot(noise, x, z) && flat(level, ground)) {
+            set(level, up, SkyseamBlocks.SPRINGBLOOM.get().defaultBlockState());
             return;
         }
         if (turf) {

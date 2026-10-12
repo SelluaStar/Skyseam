@@ -8,6 +8,7 @@ import com.selluastar.skyseam.block.BloomcoralBlock;
 import com.selluastar.skyseam.block.CloudBlock;
 import com.selluastar.skyseam.block.LanternVineBlock;
 import com.selluastar.skyseam.block.SmallShroomBlock;
+import com.selluastar.skyseam.halcyon.flora.SpringbloomBlock;
 
 import net.minecraft.world.level.block.AmethystClusterBlock;
 import net.minecraft.world.level.block.Block;
@@ -186,6 +187,14 @@ public final class SkyseamBlocks {
     public static final DeferredBlock<LanternVineBlock> HANGING_IVY = BLOCKS.register("hanging_ivy",
             () -> new LanternVineBlock(BlockBehaviour.Properties.of().mapColor(MapColor.PLANT).noCollission().instabreak()
                     .sound(SoundType.CAVE_VINES).pushReaction(PushReaction.DESTROY)));
+
+    /**
+     * The Springbloom (docs/DECISIONS.md K98): a bouncy, glowing plant of the Halcyon's islands. It squishes when
+     * landed on and launches whatever jumps off it. Drawn by GeckoLib, so it has its own block entity and item.
+     */
+    public static final DeferredBlock<SpringbloomBlock> SPRINGBLOOM = BLOCKS.register("springbloom",
+            () -> new SpringbloomBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(0.4f).sound(SoundType.SLIME_BLOCK)
+                    .lightLevel(state -> 9).noOcclusion().pushReaction(PushReaction.DESTROY)));
 
     /** Every Halcyon block, in creative tab order. */
     public static List<DeferredBlock<? extends Block>> halcyonBlocks() {

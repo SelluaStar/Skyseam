@@ -63,6 +63,12 @@ public final class SkyseamSounds {
     public static final DeferredHolder<SoundEvent, SoundEvent> FLUX_VORTEX_LAUNCH = SOUNDS.register("flux_vortex.launch",
             () -> SoundEvent.createFixedRangeEvent(Skyseam.id("flux_vortex.launch"), 64));
 
+    // The Springbloom (docs/DECISIONS.md K98), played by the server where it happens.
+    /** Something lands on a Springbloom and it squishes: a rude, wet, rubbery noise. */
+    public static final DeferredHolder<SoundEvent, SoundEvent> SPRINGBLOOM_SQUISH = local("springbloom.squish");
+    /** Something jumps off a Springbloom and it springs: a boing and a whoosh. */
+    public static final DeferredHolder<SoundEvent, SoundEvent> SPRINGBLOOM_LAUNCH = local("springbloom.launch");
+
     private SkyseamSounds() {}
 
     public static void register(IEventBus modBus) {

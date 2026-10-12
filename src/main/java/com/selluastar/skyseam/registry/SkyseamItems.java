@@ -19,6 +19,9 @@ public final class SkyseamItems {
     public static final DeferredItem<SkychartItem> SKYCHART = ITEMS.register("skychart",
             () -> new SkychartItem(new Item.Properties().stacksTo(1).rarity(Rarity.UNCOMMON)));
 
+    public static final DeferredItem<BlockItem> SPRINGBLOOM = ITEMS.register("springbloom",
+            () -> new BlockItem(SkyseamBlocks.SPRINGBLOOM.get(), new Item.Properties()));
+
     private SkyseamItems() {}
 
     static {

@@ -555,6 +555,50 @@ FLUX_VORTEX = [("loop", flux_vortex_loop), ("appear", flux_vortex_appear), ("dis
                ("launch", flux_vortex_launch)]
 
 
+# ---- The Springbloom (docs/DECISIONS.md K98) ------------------------------------------------------------------------
+
+
+def springbloom_squish(k):
+    """Landing on a Springbloom: a rude, rubbery raspberry. A buzzy, fluttering low tone (a soft square wave, its pitch
+    jittering and sagging, its loudness flapping like lips), through a wet squelch at the start, a breathy hiss under
+    it and a little "pft" as it runs out. Three takes: medium, long and low, short and high."""
+    seconds = (0.46, 0.62, 0.34)[k]
+    f0 = (112.0, 88.0, 138.0)[k]
+    flutter_rate = (27.0, 22.0, 33.0)[k]
+    gen = np.random.default_rng(700 + k)
+    t = t_axis(seconds)
+    jitter = one_pole_lowpass(gen.standard_normal(len(t)), 40) * 4.0
+    freq = f0 * (1 - 0.32 * (t / seconds) ** 1.3) * (1 + 0.05 * np.sin(2 * np.pi * 6.5 * t)) * (1 + 0.04 * jitter)
+    phase = 2 * np.pi * np.cumsum(freq) / RATE
+    buzz = np.tanh(3.5 * np.sin(phase)) + 0.35 * np.tanh(2 * np.sin(2 * phase + 0.6))
+    flap = 0.55 + 0.45 * np.clip(np.sin(2 * np.pi * flutter_rate * t + gen.uniform(0, 6)), -0.2, 1)
+    buzz = svf(buzz * flap, 850, q=0.8, mode="low") + 0.5 * svf(buzz * flap, 320, q=1.6)
+    breath = svf(gen.standard_normal(len(t)), 1100, q=0.9) * 0.18
+    squelch = svf(gen.standard_normal(len(t)), 240 + 500 * np.exp(-t / 0.03), q=3) * np.exp(-t / 0.035) * 1.4
+    pft = svf(gen.standard_normal(len(t)), 1800, q=1.2) * np.exp(-np.maximum(0, seconds - 0.05 - t) / 0.012) * (t > seconds - 0.09) * 0.6
+    body = (buzz + breath) * np.minimum(1, t / 0.012) * np.clip((seconds - t) / 0.08, 0, 1) ** 0.6
+    return finish_level(body + squelch + pft, -16, fade_out=0.02)
+
+
+def springbloom_launch(k):
+    """Jumping off a Springbloom: a springy boing that rises and wobbles away, over a deep bump and a whoosh of air
+    climbing after you. Two takes, the second a little higher and quicker."""
+    seconds = 1.1
+    t = t_axis(seconds)
+    lift = (1.0, 1.15)[k]
+    freq = lift * (170 + 260 * (1 - np.exp(-t / 0.05))) * (1 + 0.09 * np.exp(-t / 0.22) * np.sin(2 * np.pi * 15 * t))
+    phase = 2 * np.pi * np.cumsum(freq) / RATE
+    boing = (np.sin(phase) + 0.35 * np.sin(2 * phase) + 0.12 * np.sin(3 * phase)) * env_exp(t, 0.28, attack=0.004)
+    whoosh = swept_noise(t, 350 + 2800 * np.clip(t / 0.6, 0, 1) ** 1.3, q=1.8, seed=81 + k)
+    whoosh *= np.sin(np.pi * np.clip(t / 0.9, 0, 1)) ** 2 * 0.8
+    bump = sub_boom(t, start=95, end=55, decay=0.09)
+    return finish_level(reverb(boing * 0.8 + whoosh + bump * 0.9, seconds=0.9, wet=0.18), -16, fade_out=0.2)
+
+
+SPRINGBLOOM = ([(f"squish_{k + 1}", (lambda k=k: springbloom_squish(k))) for k in range(3)]
+               + [(f"launch_{k + 1}", (lambda k=k: springbloom_launch(k))) for k in range(2)])
+
+
 APERTURE = [("charge", aperture_charge), ("ready", aperture_ready), ("mount", aperture_mount)]
 MIRROR_SEA = [("rebound", mirror_sea_rebound)]
 SKYCHART = [("unfold", skychart_unfold)]
@@ -569,7 +613,7 @@ LOOPS = {"seam/hum", "aperture/charge", "flux_vortex/loop"}
 # The Seam's closing crackle has its own folder (sounds/closing/), see docs/CLOSING-AUDIO.md.
 CLOSING = [("close", seam_close)]
 GROUPS = {"seam": SEAM, "closing": CLOSING, "aperture": APERTURE, "skychart": SKYCHART, "mirror_sea": MIRROR_SEA,
-          "flux_vortex": FLUX_VORTEX}
+          "flux_vortex": FLUX_VORTEX, "springbloom": SPRINGBLOOM}
 
 
 def main(argv):

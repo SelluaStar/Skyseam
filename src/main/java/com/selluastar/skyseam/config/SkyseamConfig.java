@@ -51,6 +51,8 @@ public final class SkyseamConfig {
     public static final ModConfigSpec.IntValue VORTEX_LAUNCH_HEIGHT;
     public static final ModConfigSpec.DoubleValue VORTEX_SHIP_SPEED;
     public static final ModConfigSpec.BooleanValue VORTEX_SCRAMBLE;
+    public static final ModConfigSpec.IntValue SPRINGBLOOM_LAUNCH_HEIGHT;
+    public static final ModConfigSpec.DoubleValue SPRINGBLOOM_CHANCE;
     public static final ModConfigSpec.DoubleValue VEIL_PLAYER_PUSH;
     public static final ModConfigSpec.DoubleValue VEIL_SHIP_PUSH;
     public static final ModConfigSpec.IntValue REBOUND_HEIGHT;
@@ -176,6 +178,14 @@ public final class SkyseamConfig {
         VORTEX_SCRAMBLE = b.comment("Inside a vortex, every spinning part of a ship (propellers, shafts, gears) turns a random way at a",
                 "random speed until the ship leaves. Off: ships are only driven down.")
                 .define("scramble_spinning_parts", true);
+        b.pop();
+
+        b.push("springbloom");
+        SPRINGBLOOM_LAUNCH_HEIGHT = b.comment("How high a Springbloom throws whatever jumps off it, in blocks. The first landing after does no harm.")
+                .defineInRange("launch_height", 16, 2, 64);
+        SPRINGBLOOM_CHANCE = b.comment("Springblooms grow on the grass of the Halcyon's islands, grounded and floating: one spot in each",
+                "11-block square of the map may hold one, with this chance. 0 grows none (it only applies to new chunks).")
+                .defineInRange("chance", 0.45, 0.0, 1.0);
         b.pop();
         SPEC = b.build();
     }

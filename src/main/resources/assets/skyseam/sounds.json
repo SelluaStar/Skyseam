@@ -86,5 +86,20 @@
   "flux_vortex.launch": {
     "subtitle": "subtitles.skyseam.flux_vortex.launch",
     "sounds": [{"name": "skyseam:flux_vortex/launch", "attenuation_distance": 48}]
+  },
+  "springbloom.squish": {
+    "subtitle": "subtitles.skyseam.springbloom.squish",
+    "sounds": [
+      {"name": "skyseam:springbloom/squish_1", "attenuation_distance": 24},
+      {"name": "skyseam:springbloom/squish_2", "attenuation_distance": 24},
+      {"name": "skyseam:springbloom/squish_3", "attenuation_distance": 24}
+    ]
+  },
+  "springbloom.launch": {
+    "subtitle": "subtitles.skyseam.springbloom.launch",
+    "sounds": [
+      {"name": "skyseam:springbloom/launch_1", "attenuation_distance": 32},
+      {"name": "skyseam:springbloom/launch_2", "attenuation_distance": 32}
+    ]
   }
 }
