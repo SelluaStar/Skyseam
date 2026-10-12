@@ -1,7 +1,9 @@
 package com.selluastar.skyseam.client.halcyon.vortex;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.jetbrains.annotations.Nullable;
@@ -35,7 +37,8 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
  * motes twinkling up inside its two vortices, sparkles bursting out of its crown and falling away, light drawn in
  * over the water to its foot, mist rising off the water or the ground there (with spray over water, grit over land)
  * when the camera is near, sparks as it forms, its sound from the nearest one, the sound of each forming and
- * unravelling, and with Distant Horizons the far ones ({@link DistantHorizonsVortices}).
+ * unravelling, how far each near one has faded in ({@link #nearShown}), and with Distant Horizons the far ones
+ * ({@link DistantHorizonsVortices}), which also says where it has terrain under a vortex whose chunk hasn't loaded.
  */
 public final class ClientVortices {
     /** Particles are made for vortices this close to the camera: up the column within the first, at the crown within the second. */
@@ -51,6 +54,10 @@ public final class ClientVortices {
     private static ResourceKey<Level> dimension;
     private static final Set<Long> HEARD_FORMING = new HashSet<>();
     private static final Set<Long> HEARD_UNRAVELLING = new HashSet<>();
+    /** How far each near vortex has faded in, last tick and this. */
+    private static final Map<Long, float[]> NEAR_SHOWN = new HashMap<>();
+    /** It fades in over a second once its chunk has loaded, and out as fast once the chunk has gone. */
+    private static final float NEAR_FADE = 0.05f;
     @Nullable
     private static VortexLoopSound loop;
     /** Distant Horizons is loaded, and drawing the far vortices through it has not failed. */
@@ -83,9 +90,19 @@ public final class ClientVortices {
         return null;
     }
 
+    /**
+     * How far the near drawing of a vortex has faded in, 0 to 1, between ticks: in over a second once the chunk under
+     * it has loaded and it is within the render distance, so it never pops in; out as fast when it leaves.
+     */
+    public static float nearShown(long id, float partialTick) {
+        float[] shown = NEAR_SHOWN.get(id);
+        return shown == null ? 0 : Mth.lerp(partialTick, shown[0], shown[1]);
+    }
+
     public static void clear() {
         vortices = List.of();
         dimension = null;
+        NEAR_SHOWN.clear();
         HEARD_FORMING.clear();
         HEARD_UNRAVELLING.clear();
         loop = null;
@@ -107,6 +124,7 @@ public final class ClientVortices {
         List<FluxVortex> list = all();
         double time = level.getGameTime();
         Vec3 camera = minecraft.gameRenderer.getMainCamera().getPosition();
+        fadeNear(level, list, camera, time);
         if (distantHorizons) {
             try {
                 DistantHorizonsVortices.tick(level, list, camera, time);
@@ -147,6 +165,33 @@ public final class ClientVortices {
             }
             loop = new VortexLoopSound(nearest.id());
             minecraft.getSoundManager().play(loop);
+        }
+    }
+
+    private static void fadeNear(ClientLevel level, List<FluxVortex> list, Vec3 camera, double time) {
+        Set<Long> alive = new HashSet<>();
+        for (FluxVortex vortex : list) {
+            if (!vortex.alive(time)) {
+                continue;
+            }
+            alive.add(vortex.id());
+            float[] shown = NEAR_SHOWN.computeIfAbsent(vortex.id(), id -> new float[2]);
+            shown[0] = shown[1];
+            float target = VortexRenderer.inView(level, vortex, camera, farTerrain(vortex)) ? 1 : 0;
+            shown[1] = target > shown[1] ? Math.min(target, shown[1] + NEAR_FADE) : Math.max(target, shown[1] - NEAR_FADE);
+        }
+        NEAR_SHOWN.keySet().retainAll(alive);
+    }
+
+    /** True if Distant Horizons is drawing the terrain under the vortex (when its own chunk hasn't loaded). */
+    private static boolean farTerrain(FluxVortex vortex) {
+        if (!distantHorizons) {
+            return false;
+        }
+        try {
+            return DistantHorizonsVortices.hasTerrain(vortex.id());
+        } catch (LinkageError mismatch) {
+            return false;
         }
     }
 

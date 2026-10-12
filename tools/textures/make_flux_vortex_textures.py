@@ -13,6 +13,8 @@ Writes, under src/main/resources/assets/skyseam/textures/:
   environment/flux_pool.png     32x32  the pool of light at the foot: a bright middle and pixel rings (clamped)
   environment/flux_crown.png    32x32  the crown at the top: a glow with rays bursting out of it (clamped)
   environment/flux_band.png     16x4   a band, for ripples
+  environment/flux_slice.png    32x32  a slice across one vortex of the pair, seen from above or below: a glow brighter
+                                       towards its middle with three pixel arms winding out of it (clamped)
   particle/flux_mote_{0..3}.png 8x8    a twinkling mote, four frames from a dot to a cross
   particle/flux_spark.png       8x8    a four-pointed spark
   particle/flux_dust.png        8x8    a puff of mist
@@ -110,6 +112,18 @@ def crown():
     return white(steps(core + rays))
 
 
+def slice_():
+    size = 32
+    xs, ys = grid(size)
+    dx = xs + 0.5 - size / 2
+    dy = ys + 0.5 - size / 2
+    r = np.hypot(dx, dy) / (size / 2)
+    angle = np.arctan2(dy, dx)
+    body = np.clip(1 - r / 0.9, 0, 1) ** 1.1 * 0.5
+    arms = np.clip(np.cos(3 * angle - 6 * r) * 0.5 + 0.5, 0, 1) ** 4 * np.clip(1 - r / 0.8, 0, 1) * 0.8
+    return white(steps(body + arms))
+
+
 def band():
     return white(np.array([[0.35] * 16, [1.0] * 16, [1.0] * 16, [0.35] * 16]))
 
@@ -160,8 +174,8 @@ def dust():
 
 def main():
     environment = {"flux_tube": tube(), "flux_strand": strand(), "flux_glow": glow(), "flux_pool": pool(), "flux_crown": crown(),
-                   "flux_band": band()}
-    clamped = {"flux_pool", "flux_crown"}
+                   "flux_band": band(), "flux_slice": slice_()}
+    clamped = {"flux_pool", "flux_crown", "flux_slice"}
     particles = {f"flux_mote_{k}": mote(k) for k in range(4)}
     particles.update({"flux_spark": spark(), "flux_dust": dust()})
     for name, img in environment.items():

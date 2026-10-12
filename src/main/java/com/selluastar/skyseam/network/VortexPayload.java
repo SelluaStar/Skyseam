@@ -33,7 +33,7 @@ public record VortexPayload(List<FluxVortex> vortices) implements CustomPacketPa
     }
 
     private static VortexPayload read(FriendlyByteBuf buf) {
-        int count = Math.min(buf.readVarInt(), 256);
+        int count = Math.min(buf.readVarInt(), 2048);
         List<FluxVortex> vortices = new ArrayList<>(count);
         for (int k = 0; k < count; k++) {
             vortices.add(new FluxVortex(buf.readLong(), buf.readDouble(), buf.readDouble(), buf.readVarInt(), buf.readVarInt(), buf.readVarLong(),

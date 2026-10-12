@@ -45,6 +45,8 @@ public final class SkyseamConfig {
     public static final ModConfigSpec.BooleanValue VORTEX_ENABLED;
     public static final ModConfigSpec.IntValue VORTEX_CELL_SIZE;
     public static final ModConfigSpec.DoubleValue VORTEX_CHANCE;
+    public static final ModConfigSpec.DoubleValue VORTEX_NEARBY_CHANCE;
+    public static final ModConfigSpec.IntValue VORTEX_SEND_RADIUS;
     public static final ModConfigSpec.IntValue VORTEX_TOP_Y;
     public static final ModConfigSpec.IntValue VORTEX_MIN_SECONDS;
     public static final ModConfigSpec.IntValue VORTEX_MAX_SECONDS;
@@ -164,7 +166,13 @@ public final class SkyseamConfig {
                 "at a different place each time it forms.")
                 .defineInRange("cell_size", 640, 256, 4096);
         VORTEX_CHANCE = b.comment("The chance a cell has a vortex in each ten-minute slot. It forms at a random moment in the slot.")
-                .defineInRange("chance", 0.55, 0.0, 1.0);
+                .defineInRange("slot_chance", 0.65, 0.0, 1.0);
+        VORTEX_NEARBY_CHANCE = b.comment("Once each ten-minute slot, at a moment of their own, a player in the Halcyon with no vortex within",
+                "640 blocks has this chance of one forming 32 to 50 blocks from them. 0 turns it off.")
+                .defineInRange("nearby_chance", 0.35, 0.0, 1.0);
+        VORTEX_SEND_RADIUS = b.comment("Players are sent the vortices this many blocks round them, so they can be seen from far off with",
+                "Distant Horizons. A little past its default distance (256 chunks); raise it with Distant Horizons' own.")
+                .defineInRange("send_radius", 4608, 1024, 16384);
         VORTEX_TOP_Y = b.comment("The height a vortex reaches, a little above the highest floating islands.")
                 .defineInRange("top_y", 400, 200, 600);
         VORTEX_MIN_SECONDS = b.comment("The shortest a vortex lasts, in seconds, forming and unravelling included.")

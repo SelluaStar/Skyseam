@@ -55,6 +55,40 @@ public final class VortexGameTests {
      * nearly even up its height, spreading a little at the top; nothing before it forms, full strength while it rages,
      * nothing once it has unravelled.
      */
+    /**
+     * A vortex forming near a player with none in the area (docs/DECISIONS.md K101) stands 32 to 50 blocks from them,
+     * where the cells' own rules would let one stand. Tried round a hundred spots of low ground in a fresh Halcyon.
+     */
+    @GameTest(template = EMPTY, batch = "m3_vortex_nearby", timeoutTicks = 400)
+    public static void vortexFormsNearAPlayerWhereOneMayStand(GameTestHelper helper) {
+        HalcyonPlan plan = HalcyonPlan.fresh(4242L);
+        net.minecraft.util.RandomSource random = net.minecraft.util.RandomSource.create(7);
+        int tried = 0;
+        int formed = 0;
+        for (int k = 0; tried < 100 && k < 5000; k++) {
+            double x = 1500 + random.nextInt(6000) - 3000;
+            double z = random.nextInt(6000) - 3000;
+            if (VortexField.standAt(plan, (int) x, (int) z).isEmpty()) {
+                continue;
+            }
+            tried++;
+            Optional<int[]> spot = FluxVortices.nearbySpot(plan, x, z, random);
+            if (spot.isEmpty()) {
+                continue;
+            }
+            formed++;
+            int[] at = spot.get();
+            double off = Math.hypot(at[0] + 0.5 - x, at[1] + 0.5 - z);
+            helper.assertTrue(off >= 32 && off <= 50, "A vortex near a player formed " + off + " blocks off");
+            helper.assertTrue(VortexField.standAt(plan, at[0], at[1]).orElse(Integer.MIN_VALUE) == at[2],
+                    "A vortex near a player formed where none may stand, at " + at[0] + ", " + at[1]);
+        }
+        helper.assertTrue(tried >= 100, "Only " + tried + " spots of low ground were found to try");
+        helper.assertTrue(formed >= 80, "A vortex could form near only " + formed + " of " + tried + " players on low ground");
+        Skyseam.LOGGER.info("Skyseam vortex: one could form near {} of {} players on low ground", formed, tried);
+        helper.succeed();
+    }
+
     @GameTest(template = EMPTY, batch = "m3_vortex", timeoutTicks = 1200)
     public static void vortexFieldFollowsTheRules(GameTestHelper helper) {
         HalcyonPlan plan = HalcyonPlan.fresh(4242L);

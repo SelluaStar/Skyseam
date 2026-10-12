@@ -1417,3 +1417,53 @@ Yeetus Experimentus and ImmediatelyFast.
 3. Walk onto one holding W: you should step up onto it without jumping, and the bulb should sink under you.
 4. Jump on one of the usual size, then on a huge one: about 24 blocks, then about 48.
 5. Send screenshots and `logs/latest.log`.
+
+## Flux vortices: drawing fixed, smooth handover, far distances, spawning (2026-10-12)
+
+The author: clipping with clouds under shaders and with islands without, a rough handover to the far version, a hint
+that it shows close up and at an angle, that it goes faint where loaded chunks are behind it (not Distant Horizons'),
+that it hides water behind it; then that far vortices didn't seem to spawn or show with Distant Horizons, to make them
+a little more common, and to have one form near you now and then. DECISIONS K101, K102.
+
+**Built**
+- **Drawn last:** the vortex's light is drawn after the whole level (shader pack and all), against the finished depth,
+  so water, clouds and a shader pack's passes are no longer laid over it.
+- **Handover past the render distance:** the near vortex at full strength inside it, crossfading with the far one
+  over 64 blocks past it; both fade in over a second instead of popping in.
+- **Close up:** continuous strips that fade out end-on, and spinning slices (`flux_slice`) that fade in, so it never
+  shows as flat sheets.
+- **Far version:** a thick solid, slightly greyer column per vortex with two thin bright lines winding round it;
+  with a shader pack the column is plain and only the lines glow; thicker in proportion past 600 blocks.
+- **Far distances:** vortices sent out to `flux_vortex.send_radius` (4,608 blocks), worked out a few cells a second;
+  only those near players are ticked.
+- **Spawning:** `slot_chance` 0.65 (was 0.55); `nearby_chance` 0.35 of one forming 32 to 50 blocks from a player
+  with none within 640, once each ten-minute slot.
+
+**Verified (actually run)**
+- **The screenshot client** (Sodium, Iris, Distant Horizons; with and without Complementary Reimagined): close up from
+  above, the side and below (`tools/capture/m3v_vortex_close.json`); from 67 to 500 blocks, looking down over water
+  (`m3v_vortex_handover.json`): the column reaches its pool on the water at every distance, with and without shaders
+  (before, it vanished over loaded water with shaders and was cut off without); with shaders it stands in front of
+  the pack's clouds and behind the islands in front of it; the handover past the render distance shows no seam.
+- **Far distances** (`m3v_vortex_dh_far.json`, three vortices placed 800, 1,300 and 2,000 blocks off, five minutes
+  for Distant Horizons): 50 far vortices drawn, out to about 5,000 blocks (16 more still waiting on terrain); the one
+  2,000 blocks off reads clearly by day and night, with and without shaders, hidden by the islands in front of it.
+  Contact sheet [`docs/previews/m3v-vortex-fixes.png`](previews/m3v-vortex-fixes.png).
+- **The milestone check:** build ✓, runData ✓, **55/55 GameTests** ✓ (new: `vortexFormsNearAPlayerWhereOneMayStand`,
+  a vortex could form 32 to 50 blocks from 93 of 100 players on low ground, always where one may stand), server boot ✓.
+
+**Not seen yet**
+- **A vortex forming near you** in a real game: it is rolled once per ten-minute slot, so only the spot-finding was
+  tested. The log says "a flux vortex forms by <name>" when it happens.
+- **Your own world:** your `run/config/skyseam-server.toml` keeps your `cell_size` of 350 (the default is 640): with it
+  and the new chance there are about four times as many vortices as the defaults give.
+- **A depth problem left:** under a shader pack its clouds write no depth, so a cloud in front of a vortex doesn't
+  hide it.
+
+**Author's in-game test**
+1. `.\gradlew runShaderClient` (or `runClient`), in the Halcyon, with Distant Horizons' terrain generated round you.
+2. Look round from up high: vortices should stand on the horizon out to Distant Horizons' distance.
+3. Fly close to one, look at it from above, the side and below, over water and against clouds: no faint patches, no
+   flat sheets, and it should reach its pool on the water.
+4. Fly away from one past your render distance: it should hand over to the far version without a jump.
+5. Send screenshots and `logs/latest.log`.
