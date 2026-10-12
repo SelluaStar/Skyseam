@@ -58,24 +58,34 @@ configurations {
         canBeResolved = true
         transitive = false
     }
-    // gradlew runCaptureClient -Pshaders: Iris and Sodium, in the screenshot client only, to see the Halcyon's sky under
-    // a shader pack. Never shipped and never required (docs/DECISIONS.md K86).
+    // The author's three test clients (docs/DECISIONS.md K100), all in run/ so they share worlds. None of these mods is
+    // ever shipped or required, and runServer, the GameTests and runData never load them:
+    //   gradlew runClient         Distant Horizons and the performance mods (perfMods)
+    //   gradlew runShaderClient   the same, and Iris for shader packs
+    //   gradlew runModdedClient   the same with shaders, and the playtest mods (maps, Jade, C2ME, Yeetus Experimentus)
+    // The screenshot client (runCaptureClient) takes them by flag: -Pdh, -Pshaders, -Pperf, -Pplaytest.
+    //
+    // Iris (with Sodium, which it needs), to see the Halcyon's sky under a shader pack (K86).
     shaderMods {
         canBeConsumed = false
         canBeResolved = true
         transitive = false
     }
-    // gradlew runCaptureClient -Pdh: Distant Horizons too, in the screenshot client only, to check far terrain and the
-    // glow blocks Skyseam asks it to leave out (docs/DECISIONS.md K95). Never shipped and never required.
+    // Distant Horizons, to check far terrain and the glow blocks Skyseam asks it to leave out (K95).
     lodMods {
         canBeConsumed = false
         canBeResolved = true
         transitive = false
     }
-    // gradlew runClient: the author's test client also gets maps (Xaero's Minimap and World Map), Jade, and mods that
-    // make it run faster (Sodium, Lithium, C2ME, FerriteCore, ImmediatelyFast, Yeetus Experimentus). Only in runClient:
-    // never shipped, never required, and left out of runServer, the GameTests and the screenshot client.
-    // gradlew runClient -PplainClient starts it without them.
+    // Mods that make the game run faster, and are safe beside everything: Sodium, Lithium, FerriteCore, ImmediatelyFast.
+    perfMods {
+        canBeConsumed = false
+        canBeResolved = true
+        transitive = false
+    }
+    // Only in the modded client: Xaero's Minimap and World Map and Jade for easier testing, Yeetus Experimentus (no
+    // experimental-settings warning), and C2ME, an alpha that rewrites world generation's threading, kept out of the
+    // normal client so that one stays a clean check on Skyseam's own world generation.
     playtestMods {
         canBeConsumed = false
         canBeResolved = true
@@ -105,14 +115,15 @@ dependencies {
     shaderMods "maven.modrinth:sodium:${sodium_version}"
     lodMods "maven.modrinth:distanthorizons:${distant_horizons_version}"
 
+    perfMods "maven.modrinth:sodium:${sodium_version}"
+    perfMods "maven.modrinth:lithium:${lithium_version}"
+    perfMods "maven.modrinth:ferrite-core:${ferritecore_version}"
+    perfMods "maven.modrinth:immediatelyfast:${immediatelyfast_version}"
+
     playtestMods "maven.modrinth:xaeros-minimap:${xaeros_minimap_version}"
     playtestMods "maven.modrinth:xaeros-world-map:${xaeros_world_map_version}"
     playtestMods "maven.modrinth:jade:${jade_version}"
-    playtestMods "maven.modrinth:sodium:${sodium_version}"
-    playtestMods "maven.modrinth:lithium:${lithium_version}"
     playtestMods "maven.modrinth:c2me-neoforge:${c2me_version}"
-    playtestMods "maven.modrinth:ferrite-core:${ferritecore_version}"
-    playtestMods "maven.modrinth:immediatelyfast:${immediatelyfast_version}"
     playtestMods "maven.modrinth:yeetus-experimentus:${yeetus_experimentus_version}"
 }
 
@@ -136,9 +147,9 @@ dependencies {
     compileOnly("maven.modrinth:create:${create_version}") { transitive = false }
 }
 
-// run/mods is shared by runClient (with the playtest mods) and the other runs (without), and Gradle only tracks the
-// files a task wrote itself into a shared folder, so it would call a sync up to date with the other's extra jars in
-// it. Each sync runs every time instead.
+// run/mods is shared by the three test clients and the other runs, each with its own set of mods, and Gradle only
+// tracks the files a task wrote itself into a shared folder, so it would call a sync up to date with another's extra
+// jars in it. Each sync runs every time instead.
 def captureDir = file(project.findProperty('captureDir') ?: 'run/capture')
 def syncRunMods = tasks.register('syncRunMods', Sync) {
     outputs.upToDateWhen { false }
@@ -146,25 +157,36 @@ def syncRunMods = tasks.register('syncRunMods', Sync) {
     from configurations.runMods
     into file('run/mods')
 }
-def syncClientMods = tasks.register('syncClientMods', Sync) {
-    outputs.upToDateWhen { false }
-    description = 'Copies the runtime mods into run/mods for runClient, with the playtest mods (maps, Jade, performance) unless -PplainClient is set.'
-    from configurations.runMods
-    if (!project.hasProperty('plainClient')) {
-        from configurations.playtestMods
+// The sync for each test client, by its run task.
+def clientSyncs = [
+        runClient      : [configurations.lodMods, configurations.perfMods],
+        runShaderClient: [configurations.lodMods, configurations.perfMods, configurations.shaderMods],
+        runModdedClient: [configurations.lodMods, configurations.perfMods, configurations.shaderMods, configurations.playtestMods],
+].collectEntries { runTask, extras ->
+    def sync = tasks.register("sync${runTask.substring(3)}Mods", Sync) {
+        outputs.upToDateWhen { false }
+        description = "Copies the runtime mods and the ${runTask} test mods into run/mods."
+        // Sodium is in both perfMods and shaderMods.
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        from configurations.runMods
+        extras.each { from it }
+        into file('run/mods')
     }
-    into file('run/mods')
+    [(runTask): sync]
 }
 def syncCaptureMods = tasks.register('syncCaptureMods', Sync) {
     outputs.upToDateWhen { false }
-    description = 'Copies the runtime mods into run/capture/mods for the screenshot client (runCaptureClient), with Iris and Sodium when -Pshaders is set, Distant Horizons when -Pdh is set and the playtest mods when -Pplaytest is set.'
+    description = 'Copies the runtime mods into run/capture/mods for the screenshot client (runCaptureClient), with Iris and Sodium when -Pshaders is set, Distant Horizons when -Pdh is set, the performance mods when -Pperf is set, and those and the playtest mods when -Pplaytest is set.'
     // Sodium is in both shaderMods and playtestMods.
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from configurations.runMods
     if (project.hasProperty('shaders')) {
         from configurations.shaderMods
     }
-    // gradlew runCaptureClient -Pplaytest: the author's playtest mods too (maps, Jade, performance), to check they load.
+    // -Pperf: the performance mods; -Pplaytest: those and the modded client's playtest mods, to check they load.
+    if (project.hasProperty('perf') || project.hasProperty('playtest')) {
+        from configurations.perfMods
+    }
     if (project.hasProperty('playtest')) {
         from configurations.playtestMods
     }
@@ -183,7 +205,14 @@ neoForge {
     }
 
     runs {
+        // The author's three test clients (see the configurations above), sharing run/ and its worlds.
         client {
+            client()
+        }
+        shaderClient {
+            client()
+        }
+        moddedClient {
             client()
         }
         server {
@@ -255,11 +284,11 @@ sourceSets.main.resources.srcDir generateModMetadata
 neoForge.ideSyncTask generateModMetadata
 
 // runClient shares run/ with runServer and the GameTests, so each syncs run/mods to its own set as it starts.
-tasks.matching { it.name.startsWith('run') && it.name != 'runMods' && it.name != 'runClient' }.configureEach {
+tasks.matching { it.name.startsWith('run') && it.name != 'runMods' && !clientSyncs.containsKey(it.name) }.configureEach {
     dependsOn syncRunMods
 }
-tasks.matching { it.name == 'runClient' }.configureEach {
-    dependsOn syncClientMods
+tasks.matching { clientSyncs.containsKey(it.name) }.configureEach {
+    dependsOn clientSyncs[it.name]
 }
 tasks.matching { it.name == 'runCaptureClient' }.configureEach {
     dependsOn syncCaptureMods

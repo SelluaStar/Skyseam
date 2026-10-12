@@ -1378,10 +1378,12 @@ Yeetus Experimentus and ImmediatelyFast.
 - **Launches:** 24 blocks from one of the usual size (was 16), up to twice that from the biggest, each launch up to
   an eighth higher or lower. The setting is now `springbloom.base_launch_height` (renamed so old configs take the new
   default). Jumping while on it still launches you; walking on and off doesn't.
-- **Playtest mods** in `gradlew runClient` only (`build.gradle` `playtestMods`, versions in `gradle.properties`):
-  Xaero's Minimap 26.6.0, Xaero's World Map 1.47.0, Jade 15.10.6, Sodium 0.8.13, Lithium 0.15.4, C2ME 0.4.0 alpha
-  123, FerriteCore 7.0.3, ImmediatelyFast 1.6.14, Yeetus Experimentus 87.0.0. `-PplainClient` leaves them out.
-  `runServer`, the GameTests and `runData` clean them back out of `run/mods`.
+- **Three test clients** (after the author made clear what they wanted), all in `run/` so they share worlds:
+  `gradlew runClient` (Distant Horizons 3.3.3, Sodium 0.8.13, Lithium 0.15.4, FerriteCore 7.0.3, ImmediatelyFast
+  1.6.14), `gradlew runShaderClient` (the same and Iris 1.8.14 beta, with Complementary Reimagined switched on) and
+  `gradlew runModdedClient` (the same with shaders, and Xaero's Minimap 26.6.0, Xaero's World Map 1.47.0, Jade
+  15.10.6, Yeetus Experimentus 87.0.0 and C2ME 0.4.0 alpha 123). `runServer`, the GameTests and `runData` clean
+  them back out of `run/mods`.
 - **Also:** the capture tool's `walk` step (holds forward), `runCaptureClient -Pplaytest` and `-PcaptureDir=`.
 - **Fixed on the way:** Gradle had called the shared `run/mods` sync up to date with the playtest jars still in it,
   so the first data run loaded them; every sync now runs each time.
@@ -1403,12 +1405,14 @@ Yeetus Experimentus and ImmediatelyFast.
   about optional add-ons that aren't installed, and Xaero's version check failing offline.
 
 **Not seen yet**
-- **The playtest mods in your own `runClient`** with your saved worlds (only the screenshot client was run with them).
+- **The three clients in a world:** each was started to the title screen (`runClient` with its five mods, no errors;
+  `runShaderClient` loading Complementary; `runModdedClient` with C2ME, the maps, Jade and Yeetus, its only error
+  Xaero's online version check) and closed; only the screenshot client went into a world with these mods.
 - **A big one grown wild** up close: the boot check counts them, the capture's `find` shot landed in a hillside.
 - **Multiplayer**, as before.
 
 **Author's in-game test**
-1. Start the client: `.\gradlew runClient` (with the playtest mods), or `.\gradlew runClient -PplainClient`.
+1. Start a client: `.\gradlew runClient`, `.\gradlew runShaderClient` or `.\gradlew runModdedClient`.
 2. `/setblock ~ ~ ~2 skyseam:springbloom[size=4]` (or place some from the creative tab: each rolls a size).
 3. Walk onto one holding W: you should step up onto it without jumping, and the bulb should sink under you.
 4. Jump on one of the usual size, then on a huge one: about 24 blocks, then about 48.
