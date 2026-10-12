@@ -1172,14 +1172,16 @@ The author: "let's add a flux vortex type of thing (kinda like in the Avatar mov
   - **Creatures:** one walking in is thrown about 40 blocks up and out, with Slow Falling.
   - **Ships:** one flying in is dragged down (up to 16 blocks per second) and swept round. Every spinning part on it
     turns a random way at a random speed until it leaves, then gets its own speed back.
-- **What you see and hear** (`client/halcyon/vortex/`), sent to players within 2,048 blocks and drawn to 2,200:
-  - **The column:** misty, with counter-turning ribbons, a glowing core, a swirl of light on the ground and arcs of
-    lightning.
-  - **Rocks:** up to 60 chunks of rock and turf orbiting it.
-  - **Particles:** light circling up it, dust (or spray) round its foot, sparks.
+- **What you see and hear** (`client/halcyon/vortex/`), sent to players within 2,048 blocks. Redrawn after the
+  author's reference stills (see "Looks like Pandora's" below):
+  - **The column:** a double helix of two thick strands of light, uneven and wandering, with thinner strands coming
+    and going, wisps and arcs, spilling over the top like a fountain.
+  - **The foot:** a pool of light with ripples running out over the water.
+  - **Rocks:** eight great flat-bottomed mesas hanging round it.
+  - **Particles:** motes streaming up it, mist (or spray) off its foot, sparks.
   - **Sound:** a roar, and sounds as it forms and unravels.
-  - **Forming:** the glow gathers, a ring of light flashes out, and the column climbs to the sky.
-  - **Unravelling:** it flares out, lets go of the ground and fades; its rocks fall.
+  - **Forming:** the pool lights, a ripple runs out, the helix shoots up winding round itself and the rocks lift.
+  - **Unravelling:** the strands let go of the ground and stream away upward; the pool dims and the rocks sink.
 - **New files:** textures (`tools/textures/make_flux_vortex_textures.py`), three particles, four synthesized sounds.
 - **Commands:** `/skyseam halcyon vortex here [seconds]`, `at <x> <z> [seconds]`, `find`, `list`, `clear`.
 
@@ -1187,11 +1189,11 @@ The author: "let's add a flux vortex type of thing (kinda like in the Avatar mov
 - **The milestone check:** build ✓, runData ✓, **49/49 GameTests** ✓, server boot ✓, sounds ✓.
 - **`vortexFieldFollowsTheRules`:**
   - deterministic;
-  - 286 of 726 cell slots hold a vortex;
+  - 239 of 726 cell slots hold a vortex (286 before the column widened and the clearance from islands grew to 20);
   - each lives inside its slot and its cell;
-  - feet between 0 and 61 blocks above the sea, median 8;
+  - feet between 0 and 61 blocks above the sea, median 10;
   - clear of floating islands and rock, and of the Obelisk and the lane;
-  - a cell's vortex moves from slot to slot;
+  - every cell with a vortex in two or more slots had them in different places;
   - the shape and strength curve are right.
 - **`vortexThrowsCreaturesUp`:** a pig at a vortex's foot (in open air near the End's origin) was thrown from Y 230 past
   Y 243 and had Slow Falling.
@@ -1200,13 +1202,64 @@ The author: "let's add a flux vortex type of thing (kinda like in the Avatar mov
   - **The scramble:** the shaft its creative motor turns went from 16 rpm to a scrambled speed (16 to 27 or to -22.7 in
     different runs).
   - **The restore:** once the vortex was gone the shaft was back at exactly 16.
-- **The boot check** (a real Halcyon): at the middle of the next ten slots, 206 vortices within 3,000 blocks of the
-  Spindle, 147 of them within 20 blocks of the sea, the highest foot 61 above it.
+- **The boot check** (a real Halcyon): at the middle of the next ten slots, 184 vortices within 3,000 blocks of the
+  Spindle, 131 of them within 20 blocks of the sea, the highest foot 61 above it (206 and 147 before the clearance
+  grew).
 - **The real client** (`tools/capture/m3v_vortex.json`, and `m3v_vortex_shaders.json` with Complementary Reimagined):
   - **Shots:** forming, raging by day and night, among its rocks, unravelling, and a natural one found with `find`.
   - **Under Complementary:** the column stays see-through with its ribbons showing.
   - **Contact sheets:** [`docs/previews/m3v-vortex.png`](previews/m3v-vortex.png) and
     [`m3v-vortex-shaders.png`](previews/m3v-vortex-shaders.png).
+
+### Looks like Pandora's (2026-10-11)
+
+The author, on the first look: "it looks more like a tornado than a unique thing", "the animations just look like a
+tornado", "it renders in unrendered LODs and chunks (Distant Horizons compat)" and "it renders in front of islands and
+stuff". A second look (a thread with rings of field) was stopped: "IT LOOKS BAD". The author sent three stills of the
+flux vortices in Avatar (kept in the gitignored `reference/local/`, not in the repository) to work from.
+
+**What the stills show, and what was built** (DECISIONS K97)
+- **Strands, not wind:** strands of light flowing up, crossing. A first try with 44 fine braided strands was rejected
+  ("LOOKS BAD maybe like a double helix with thick lines and less lines aaand it looks cool aand random"). Built as a
+  double helix: two thick strands winding round each other, bent and swollen unevenly by slow waves, the twists
+  climbing slowly; four thinner wanderers that come and go at random; wisps peeling off; arcs jumping between the
+  two strands.
+- **Even width:** no funnel. The column is about 26 blocks across nearly all the way up.
+- **The foot:** the brightest part, glowing on the water. Built as a pool of light, ripples and rising mist.
+- **The top:** strands curling out and falling away. Built as a fountain of arcs.
+- **Colour:** white and see-through by day; cyan, blue and violet by night.
+- **Rocks:** great flat-bottomed rocks hanging round it, barely moving. Built as eight mesas, 10 to 19 blocks across
+  and 5 to 8 thick, grassed on top.
+- **Animations:** it forms with the helix shooting up out of the pool, and unravels with its strands streaming away
+  upward.
+
+**Verified (actually run)**
+- **The milestone check:** build ✓, runData ✓, **49/49 GameTests** ✓, server boot ✓.
+- **The real client, plain** (`tools/capture/m3v_vortex.json`, now with wide shots by day and night): the helix forms
+  out of the pool, rages among its rocks, is seen from inside while being thrown, unravels, and a natural one is
+  found with `find`. [`docs/previews/m3v-vortex.png`](previews/m3v-vortex.png).
+- **Under Complementary Reimagined** (`m3v_vortex_shaders.json`): the helix stays see-through, white by day, cyan and
+  violet by night. [`docs/previews/m3v-vortex-shaders.png`](previews/m3v-vortex-shaders.png).
+- **With Distant Horizons** (`m3v_vortex_dh.json`): vortices 500 blocks and more away are drawn among its far
+  terrain and hidden behind nearer islands; the near one is hidden behind islands in front of it.
+  [`docs/previews/m3v-vortex-dh.png`](previews/m3v-vortex-dh.png).
+- **A freeze found and fixed:** the first Distant Horizons capture froze the client right after arriving. Asking
+  Distant Horizons for its terrain on the game's thread was the likely cause (no thread dump was taken). Each
+  question is now asked on a short-lived thread of its own, with a ten-second limit in real time (the game's own
+  server falls far behind while Distant Horizons generates, so game ticks were no measure), only while a vortex
+  stands beyond the render distance, and never again once the answer is yes. The capture has run through five times
+  since. Each far vortex's answer is logged once (`Skyseam: far flux vortex at x, z: Distant Horizons has terrain
+  there: drawn`); in the last run the vortex 517 blocks out was answered within ten seconds of forming.
+- **`/skyseam halcyon vortex here`** where the chunk isn't loaded now stands the vortex on the Halcyon's planned
+  ground or sea, not at the caller's height.
+
+**Where it is drawn** (the author's points 2 and 4)
+- **Near:** only within the render distance and once the chunk under it has loaded, fading out over the last 64
+  blocks. Terrain and islands in front of it hide it.
+- **Far, with Distant Horizons:** handed to Distant Horizons as glowing see-through boxes, drawn among its far terrain
+  with its own depth, only where it has terrain, fading in where the near one fades out
+  (`client/compat/DistantHorizonsVortices`). Distant Horizons stays optional: compiled against its API, loaded only
+  when it is installed, and switched off for the session if anything fails.
 
 **Not seen yet**
 - **A real Aeronautics ship's propellers** in a vortex. The GameTest scrambles a Create shaft on a Sable raft.
@@ -1220,4 +1273,7 @@ The author: "let's add a flux vortex type of thing (kinda like in the Avatar mov
 3. Walk into one: you should be thrown up and float down.
 4. Fly an Aeronautics ship into one: it should be dragged down, its propellers spinning wildly, until it gets out.
 5. With shaders, check it by day and by night.
-6. Send screenshots and `logs/latest.log`.
+6. With Distant Horizons, look at one from beyond your render distance: it should stand among the far terrain, the
+   double helix in boxes, hidden behind any island in front of it, and turn into the full one as you fly closer.
+   Islands in front of a near one should hide it too.
+7. Send screenshots and `logs/latest.log`.

@@ -3,8 +3,8 @@ package com.selluastar.skyseam.halcyon.vortex;
 import net.minecraft.util.Mth;
 
 /**
- * One flux vortex (docs/DECISIONS.md K97): a column of turning wind and light from low ground up into the sky, like
- * the flux vortices of Pandora, that forms, rages for a few minutes and unravels.
+ * One flux vortex (docs/DECISIONS.md K97): a column of strands of light streaming up from low ground or the sea into
+ * the sky, like the flux vortices of Pandora, that forms, streams for a few minutes and unravels.
  *
  * <p>Shared by the server (which throws what walks in and drives ships down) and the client (which draws it), so both
  * agree on its shape and its life. Times are the level's game time in ticks.
@@ -18,7 +18,7 @@ import net.minecraft.util.Mth;
  * @param end   when it has unravelled
  */
 public record FluxVortex(long id, double x, double z, int baseY, int topY, long start, long end) {
-    /** Ticks it takes to form: a glow on the ground, then the column climbs to the sky. */
+    /** Ticks it takes to form: a glow on the water or the ground, then the strands shoot up to the sky. */
     public static final int APPEAR_TICKS = 80;
     /** Ticks it takes to unravel. */
     public static final int DISSIPATE_TICKS = 100;
@@ -71,13 +71,13 @@ public record FluxVortex(long id, double x, double z, int baseY, int topY, long 
     }
 
     /**
-     * The column's radius at a height: about 22 blocks at its foot where it sweeps the ground, a waist of about 9 up its
-     * middle, and a funnel opening to about 35 at the top.
+     * The column's radius at a height: nearly the same all the way up, about 13 blocks, spreading to about 22 where it
+     * leaves the water or the ground and to about 20 at the top, where its strands spill over.
      */
     public double radiusAt(double y) {
         double t = Mth.clamp((y - baseY) / Math.max(1, height()), 0, 1);
-        double funnel = Math.pow(smooth((float) Mth.clamp((t - 0.42) / 0.58, 0, 1)), 1.4);
-        return 9 + 13 * Math.exp(-t / 0.06) + 26 * funnel;
+        double spill = smooth((float) Mth.clamp((t - 0.88) / 0.12, 0, 1));
+        return 13 + 9 * Math.exp(-t / 0.05) + 7 * spill;
     }
 
     /** True if the point is inside the column, widened by {@code margin} blocks. */

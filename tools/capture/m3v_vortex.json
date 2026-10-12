@@ -62,6 +62,33 @@
    "shot": "v_raging_noon"
   },
   {
+   "command": "tp @s ~ ~ ~ ~ 0"
+  },
+  {
+   "command": "tp @s ^ ^ ^-50"
+  },
+  {
+   "command": "tp @s ~ ~70 ~ ~ -14"
+  },
+  {
+   "wait": 30
+  },
+  {
+   "shot": "v_wide_noon"
+  },
+  {
+   "command": "tp @s ~ ~-70 ~ ~ 0"
+  },
+  {
+   "command": "tp @s ^ ^ ^50"
+  },
+  {
+   "command": "tp @s ~ ~ ~ ~ 8"
+  },
+  {
+   "wait": 10
+  },
+  {
    "command": "tp @s ~ ~ ~ ~ -30"
   },
   {
@@ -96,6 +123,33 @@
   },
   {
    "shot": "v_raging_night"
+  },
+  {
+   "command": "tp @s ~ ~ ~ ~ 0"
+  },
+  {
+   "command": "tp @s ^ ^ ^-50"
+  },
+  {
+   "command": "tp @s ~ ~70 ~ ~ -14"
+  },
+  {
+   "wait": 30
+  },
+  {
+   "shot": "v_wide_night"
+  },
+  {
+   "command": "tp @s ~ ~-70 ~ ~ 0"
+  },
+  {
+   "command": "tp @s ^ ^ ^50"
+  },
+  {
+   "command": "tp @s ~ ~ ~ ~ 8"
+  },
+  {
+   "wait": 10
   },
   {
    "command": "tp @s ~ ~ ~ ~ -35"

@@ -45,8 +45,8 @@ public final class SkyseamRenderTypes {
                     .createCompositeState(false)));
 
     /**
-     * Textured additive light, for a flux vortex's ribbons, core, haze and ground glow (docs/DECISIONS.md K97), drawn
-     * from both sides without writing depth. It uses vanilla's eyes shader (texture times colour, faded by fog), which
+     * Textured additive light, for a flux vortex's helix, strands, glow, pool and ripples (docs/DECISIONS.md K97),
+     * drawn from both sides without writing depth. It uses vanilla's eyes shader (texture times colour, faded by fog), which
      * shader packs draw as glowing and keep see-through (Complementary's spider-eyes program); the beacon-beam shader
      * was tried first, but Complementary turns a beam's faint alpha into a solid dithered white.
      */
@@ -60,22 +60,7 @@ public final class SkyseamRenderTypes {
                     .setWriteMaskState(RenderStateShard.COLOR_WRITE)
                     .createCompositeState(false)));
 
-    /** Like {@link #FLUX} but blended, not added: a vortex's mist, which shows against a bright sky as well as a dark one. */
-    private static final Function<ResourceLocation, RenderType> FLUX_MIST = Util.memoize(texture -> RenderType.create("skyseam_flux_mist",
-            DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 16384, false, false,
-            RenderType.CompositeState.builder()
-                    .setShaderState(RenderStateShard.RENDERTYPE_EYES_SHADER)
-                    .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
-                    .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
-                    .setCullState(RenderStateShard.NO_CULL)
-                    .setWriteMaskState(RenderStateShard.COLOR_WRITE)
-                    .createCompositeState(false)));
-
     private SkyseamRenderTypes() {}
-
-    public static RenderType fluxMist(ResourceLocation texture) {
-        return FLUX_MIST.apply(texture);
-    }
 
     public static RenderType glow() {
         return GLOW;

@@ -1,8 +1,10 @@
 package com.selluastar.skyseam.gametest;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -49,8 +51,9 @@ public final class VortexGameTests {
      * The field: the same seed and time give the same vortices; about the configured share of cells hold one each
      * slot, each living inside its slot; they stand on low ground (never more than 60 above the sea, mostly within 20),
      * clear of floating islands and rock and of the Obelisk, the Arrival Lane and the Spindle; they reach Y 400; a
-     * cell's vortex forms somewhere else from slot to slot. And a vortex's shape and strength: wide at its foot, a
-     * waist, a funnel; nothing before it forms, full strength while it rages, nothing once it has unravelled.
+     * cell's vortex forms somewhere else from slot to slot. And a vortex's shape and strength: spreading at its foot,
+     * nearly even up its height, spreading a little at the top; nothing before it forms, full strength while it rages,
+     * nothing once it has unravelled.
      */
     @GameTest(template = EMPTY, batch = "m3_vortex", timeoutTicks = 1200)
     public static void vortexFieldFollowsTheRules(GameTestHelper helper) {
@@ -60,7 +63,8 @@ public final class VortexGameTests {
         int tries = 0;
         int found = 0;
         List<FluxVortex> all = new ArrayList<>();
-        Set<String> places = new HashSet<>();
+        // Each cell's places, one per slot that held a vortex.
+        Map<String, List<String>> places = new HashMap<>();
         for (int cx = -5; cx <= 5; cx++) {
             for (int cz = -5; cz <= 5; cz++) {
                 for (long slot = 3; slot < 9; slot++) {
@@ -74,9 +78,7 @@ public final class VortexGameTests {
                     found++;
                     FluxVortex v = vortex.get();
                     all.add(v);
-                    if (cx == 1 && cz == 1) {
-                        places.add((int) v.x() + "," + (int) v.z());
-                    }
+                    places.computeIfAbsent(cx + "," + cz, key -> new ArrayList<>()).add((int) v.x() + "," + (int) v.z());
                     String where = String.format("the vortex at %.0f, %d, %.0f", v.x(), v.baseY(), v.z());
                     helper.assertTrue(v.start() >= slot * VortexField.SLOT_TICKS && v.end() <= (slot + 1) * VortexField.SLOT_TICKS,
                             where + " outlives its slot");
@@ -98,12 +100,16 @@ public final class VortexGameTests {
         List<Integer> bases = all.stream().map(v -> v.baseY() - SEA).sorted().toList();
         int median = bases.get(bases.size() / 2);
         helper.assertTrue(median <= 20, "Half the vortices stand more than " + median + " blocks above the sea");
-        helper.assertTrue(places.size() >= 2, "One cell's vortex formed in the same place every slot");
+        long busy = places.values().stream().filter(list -> list.size() >= 2).count();
+        long moved = places.values().stream().filter(list -> list.size() >= 2 && new HashSet<>(list).size() >= 2).count();
+        helper.assertTrue(busy > 0 && moved == busy, "Of " + busy + " cells with a vortex in two or more slots, only " + moved
+                + " had them in different places");
 
         FluxVortex v = all.get(0);
-        helper.assertTrue(v.radiusAt(v.baseY()) > 18 && v.radiusAt(v.baseY() + v.height() * 0.3) < 11 && v.radiusAt(v.topY()) > 30,
-                "The column's shape is off: " + v.radiusAt(v.baseY()) + " / " + v.radiusAt(v.baseY() + v.height() * 0.3) + " / " + v.radiusAt(v.topY()));
-        helper.assertTrue(v.contains(v.x() + 5, v.baseY() + 2, v.z(), 0) && !v.contains(v.x() + 40, v.baseY() + 2, v.z(), 0),
+        double middle = v.radiusAt(v.baseY() + v.height() * 0.5);
+        helper.assertTrue(v.radiusAt(v.baseY()) > 18 && middle > 10 && middle < 16 && v.radiusAt(v.topY()) > 16 && v.radiusAt(v.topY()) < 26,
+                "The column's shape is off: " + v.radiusAt(v.baseY()) + " / " + middle + " / " + v.radiusAt(v.topY()));
+        helper.assertTrue(v.contains(v.x() + 5, v.baseY() + 2, v.z(), 0) && !v.contains(v.x() + 50, v.baseY() + 2, v.z(), 0),
                 "contains() is wrong at the foot");
         helper.assertTrue(v.strength(v.start() - 1) == 0 && v.strength(v.start() + 10) == 0, "It pulls before it has formed");
         helper.assertTrue(v.strength((v.start() + v.end()) / 2.0) == 1, "It isn't at full strength while it rages");

@@ -13,13 +13,13 @@ import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.Mth;
 
 /**
- * A particle caught in a flux vortex (docs/DECISIONS.md K97): it circles the vortex's axis, faster the closer it is,
- * and climbs. Spawned by the client only ({@code ClientVortices}), which passes the axis as the x and z speed and the
- * climb as the y speed.
+ * A particle carried up a flux vortex (docs/DECISIONS.md K97): it climbs, drifting only a little round the vortex's
+ * axis. Spawned by the client only ({@code ClientVortices}), which passes the axis as the x and z speed and the climb
+ * as the y speed.
  *
  * <ul>
- * <li>{@link Kind#MOTE}: full-bright light, teal, cyan, violet or white, circling up the column.</li>
- * <li>{@link Kind#DUST}: dust swept round the vortex's foot, drawn in towards it and up.</li>
+ * <li>{@link Kind#MOTE}: full-bright light, cyan, violet or white, streaming straight up the column with its strands.</li>
+ * <li>{@link Kind#DUST}: mist rising slowly off the water or the ground at the vortex's foot.</li>
  * </ul>
  */
 public class VortexParticle extends TextureSheetParticle {
@@ -47,17 +47,17 @@ public class VortexParticle extends TextureSheetParticle {
         this.radius = Math.max(0.5, Math.hypot(x - axisX, z - axisZ));
         this.angle = Math.atan2(z - axisZ, x - axisX);
         if (kind == Kind.MOTE) {
-            this.angular = (0.05 + 0.06 * random.nextDouble()) * (1 + 6 / (radius + 2));
+            this.angular = (random.nextDouble() - 0.5) * 0.012;
             this.inward = 0;
-            this.lifetime = 60 + random.nextInt(70);
-            this.quadSize = 0.18f + 0.3f * random.nextFloat();
+            this.lifetime = 50 + random.nextInt(60);
+            this.quadSize = 0.15f + 0.25f * random.nextFloat();
             float[] colour = LIGHT[random.nextInt(LIGHT.length)];
             setColor(colour[0], colour[1], colour[2]);
             this.startAlpha = 0.9f;
         } else {
-            this.angular = (0.07 + 0.06 * random.nextDouble()) * (1 + 6 / (radius + 2));
-            this.inward = 0.03 + 0.05 * random.nextDouble();
-            this.lifetime = 40 + random.nextInt(50);
+            this.angular = 0.003 + 0.005 * random.nextDouble();
+            this.inward = 0;
+            this.lifetime = 60 + random.nextInt(50);
             this.quadSize = 0.3f + 0.45f * random.nextFloat();
             float grey = 0.7f + 0.2f * random.nextFloat();
             setColor(grey, grey * 0.96f, grey * 1.04f);
@@ -80,7 +80,7 @@ public class VortexParticle extends TextureSheetParticle {
         radius = Math.max(0.6, radius - inward);
         x = axisX + Math.cos(angle) * radius;
         z = axisZ + Math.sin(angle) * radius;
-        y += climb * (kind == Kind.DUST ? 1 + age / 20.0 : 1);
+        y += climb;
         float life = (float) age / lifetime;
         alpha = startAlpha * Mth.clamp(Math.min(life / 0.15f, (1 - life) / 0.3f), 0, 1);
     }

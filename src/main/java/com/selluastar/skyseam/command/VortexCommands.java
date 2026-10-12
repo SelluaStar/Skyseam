@@ -13,6 +13,8 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.selluastar.skyseam.halcyon.Arrival;
 import com.selluastar.skyseam.halcyon.vortex.FluxVortex;
 import com.selluastar.skyseam.halcyon.vortex.FluxVortices;
+import com.selluastar.skyseam.world.HalcyonLayout;
+import com.selluastar.skyseam.world.halcyon.HalcyonChunkGenerator;
 
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -64,7 +66,9 @@ final class VortexCommands {
         ServerLevel level = source.getLevel();
         int ground = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Mth.floor(x), Mth.floor(z));
         if (ground <= level.getMinBuildHeight()) {
-            ground = Mth.floor(source.getPosition().y);
+            // Not loaded there: the Halcyon's plan knows its ground (or sea), elsewhere the caller's height will do.
+            ground = HalcyonChunkGenerator.plan(level).map(plan -> Math.max((int) Math.round(plan.landHeight(Mth.floor(x), Mth.floor(z))) + 1, HalcyonLayout.SEA_LEVEL))
+                    .orElse(Mth.floor(source.getPosition().y));
         }
         FluxVortex vortex = FluxVortices.summon(level, x, z, ground, seconds);
         source.sendSuccess(() -> Component.translatable("commands.skyseam.halcyon.vortex.here",
