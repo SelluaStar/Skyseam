@@ -1,0 +1,209 @@
+{
+ "settle": 200,
+ "steps": [
+  {
+   "command": "gamemode spectator"
+  },
+  {
+   "command": "gamerule sendCommandFeedback false"
+  },
+  {
+   "command": "skyseam halcyon time set noon"
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 240
+  },
+  {
+   "command": "tp @s ~ ~-50 ~ ~70 8"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "command": "execute positioned ^ ^ ^130 run skyseam halcyon vortex here 300"
+  },
+  {
+   "wait": 14
+  },
+  {
+   "shot": "v_forming_1"
+  },
+  {
+   "wait": 16
+  },
+  {
+   "shot": "v_forming_2"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "shot": "v_forming_3"
+  },
+  {
+   "wait": 30
+  },
+  {
+   "shot": "v_forming_4"
+  },
+  {
+   "wait": 100
+  },
+  {
+   "shot": "v_raging_noon"
+  },
+  {
+   "command": "tp @s ~ ~ ~ ~ -30"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "v_raging_up"
+  },
+  {
+   "command": "tp @s ^ ^ ^85"
+  },
+  {
+   "command": "tp @s ~ ~-20 ~ ~ 5"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "shot": "v_rocks_close"
+  },
+  {
+   "command": "tp @s ^ ^ ^-85"
+  },
+  {
+   "command": "tp @s ~ ~20 ~ ~ 8"
+  },
+  {
+   "command": "skyseam halcyon time set midnight"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "shot": "v_raging_night"
+  },
+  {
+   "command": "tp @s ~ ~ ~ ~ -35"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "v_night_up"
+  },
+  {
+   "command": "skyseam halcyon time set noon"
+  },
+  {
+   "command": "skyseam halcyon vortex clear"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "command": "tp @s ~ ~ ~ ~ 70"
+  },
+  {
+   "command": "gamemode survival"
+  },
+  {
+   "command": "skyseam halcyon vortex here 60"
+  },
+  {
+   "wait": 16
+  },
+  {
+   "shot": "v_launch_before"
+  },
+  {
+   "wait": 16
+  },
+  {
+   "shot": "v_launch_after_1"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "shot": "v_launch_after_2"
+  },
+  {
+   "wait": 30
+  },
+  {
+   "shot": "v_launch_after_3"
+  },
+  {
+   "command": "gamemode spectator"
+  },
+  {
+   "command": "skyseam halcyon vortex clear"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "command": "tp @s ~ ~ ~ ~ 8"
+  },
+  {
+   "command": "execute positioned ^ ^ ^130 run skyseam halcyon vortex here 20"
+  },
+  {
+   "wait": 320
+  },
+  {
+   "shot": "v_unravel_1"
+  },
+  {
+   "wait": 30
+  },
+  {
+   "shot": "v_unravel_2"
+  },
+  {
+   "wait": 30
+  },
+  {
+   "shot": "v_unravel_3"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "skyseam halcyon vortex find"
+  },
+  {
+   "wait": 200
+  },
+  {
+   "shot": "v_natural"
+  },
+  {
+   "command": "skyseam halcyon time set midnight"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "shot": "v_natural_night"
+  },
+  {
+   "quit": true
+  }
+ ]
+}

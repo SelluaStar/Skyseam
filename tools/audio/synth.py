@@ -471,6 +471,90 @@ def mirror_sea_rebound():
     return finish_level(reverb(whoosh + bubbles + chime * 0.5, seconds=1.4, wet=0.28), -20, fade_out=0.25)
 
 
+# ---- The flux vortex (the author's request after M3: a Pandora-like vortex of wind and light) ---------------------
+
+def swept_noise(t, centre, q=1.6, block=512, seed=5):
+    """Noise through a band-pass whose centre follows `centre` (an array, Hz), filtered in short blocks."""
+    noise = np.random.default_rng(seed).standard_normal(len(t))
+    out = np.zeros(len(t))
+    for start in range(0, len(t), block):
+        stop = min(len(t), start + block)
+        out[start:stop] = svf(noise[max(0, start - 2048):stop], centre[start], q)[-(stop - start):]
+    return out
+
+
+def flux_vortex_loop():
+    """The vortex's roar, a 6 second seamless loop: deep turning wind, a whistle of air circling high above it, and
+    a low magnetic hum (A1 and E2 with a slow beat), every tonal layer a whole number of cycles long and the noise
+    crossfaded over the loop point."""
+    seconds = 6.0
+    t = t_axis(seconds)
+    fade = int(0.6 * RATE)
+    long_t = t_axis(seconds + 0.6)
+    # The wind's band turns slowly round (two cycles a loop), so the roar seems to circle.
+    turn = np.sin(2 * np.pi * 2 * long_t / seconds)
+    wind = swept_noise(long_t, 260 + 120 * turn, q=0.9, seed=31) * 0.9
+    whistle = swept_noise(long_t, 1500 + 500 * np.sin(2 * np.pi * 3 * long_t / seconds + 1), q=4.0, seed=32) * 0.22
+    air = wind + whistle
+    head = air[:fade].copy()
+    air = air[fade:]
+    ramp = np.linspace(0, 1, fade)
+    air[-fade:] = air[-fade:] * (1 - ramp) + head * ramp
+    hum = np.zeros(len(t))
+    for cycles, amp in ((330, 1.0), (336, 0.7), (495, 0.45), (660, 0.25), (990, 0.1)):
+        hum += amp * np.sin(2 * np.pi * (cycles / seconds) * t)
+    hum *= 0.85 + 0.15 * np.sin(2 * np.pi * 3 * t / seconds)
+    x = air + hum * 0.32
+    x = x - np.mean(x)
+    return x / np.max(np.abs(x)) * PEAK * 0.85
+
+
+def flux_vortex_appear():
+    """A vortex forms: a deep boom, then a band of wind sweeping up from a rumble to a whistle as the column climbs,
+    the hum rising under it, and a bright shimmer as it reaches the sky."""
+    seconds = 4.0
+    t = t_axis(seconds)
+    rise = np.clip(t / 3.0, 0, 1)
+    wind = swept_noise(t, 160 + 2200 * rise ** 1.8, q=1.4, seed=41)
+    wind *= np.minimum(1, t / 0.4) * (1 - np.clip((t - 3.0) / 1.0, 0, 1)) ** 2
+    hum = sum(a * np.sin(2 * np.pi * np.cumsum(f * (0.6 + 0.4 * rise)) / RATE) for f, a in ((55, 1.0), (82.4, 0.6), (110, 0.4)))
+    hum *= np.minimum(1, t / 0.8) * np.exp(-np.clip(t - 3.0, 0, None) / 0.4)
+    shimmer = np.zeros(len(t))
+    for k, f0 in enumerate((880, 1318.5, 1760)):
+        n = int((2.6 + 0.12 * k) * RATE)
+        shimmer[n:] += bell(t, f0, decay=1.0)[: len(t) - n] * 0.25
+    boom = sub_boom(t, start=60, end=34, decay=0.9)
+    return finish_level(reverb(wind * 0.8 + hum * 0.35 + shimmer + boom * 0.9, seconds=2.2, wet=0.3), -16, fade_out=0.3)
+
+
+def flux_vortex_dissipate():
+    """A vortex unravels: the wind falls from a whistle to a sigh, the hum sinks away, and a last soft gust."""
+    seconds = 4.0
+    t = t_axis(seconds)
+    fall = np.clip(t / 3.2, 0, 1)
+    wind = swept_noise(t, 1900 - 1700 * fall ** 0.7, q=1.3, seed=51)
+    wind *= np.minimum(1, t / 0.15) * (1 - fall) ** 1.2
+    hum = sum(a * np.sin(2 * np.pi * np.cumsum(f * (1 - 0.45 * fall)) / RATE) for f, a in ((110, 1.0), (165, 0.5), (220, 0.3)))
+    hum *= (1 - fall) ** 2
+    gust = swept_noise(t, np.full(len(t), 500.0), q=0.8, seed=52) * np.exp(-((t - 2.9) / 0.35) ** 2) * 0.5
+    return finish_level(reverb(wind * 0.8 + hum * 0.3 + gust, seconds=2.0, wet=0.3), -17, fade_out=0.4)
+
+
+def flux_vortex_launch():
+    """Thrown up by the vortex: a deep whump and a fast rising whoosh of air."""
+    seconds = 1.6
+    t = t_axis(seconds)
+    whoosh = swept_noise(t, 300 + 2600 * np.clip(t / 0.8, 0, 1) ** 1.4, q=1.8, seed=61)
+    whoosh *= np.sin(np.pi * np.clip(t / 1.1, 0, 1)) ** 2
+    boom = sub_boom(t, start=70, end=38, decay=0.35)
+    thump = svf(np.random.default_rng(62).standard_normal(len(t)), 180, q=0.8, mode="low") * np.exp(-t / 0.08)
+    return finish_level(reverb(whoosh * 0.7 + boom + thump * 0.6, seconds=1.2, wet=0.22), -17, fade_out=0.25)
+
+
+FLUX_VORTEX = [("loop", flux_vortex_loop), ("appear", flux_vortex_appear), ("dissipate", flux_vortex_dissipate),
+               ("launch", flux_vortex_launch)]
+
+
 APERTURE = [("charge", aperture_charge), ("ready", aperture_ready), ("mount", aperture_mount)]
 MIRROR_SEA = [("rebound", mirror_sea_rebound)]
 SKYCHART = [("unfold", skychart_unfold)]
@@ -481,10 +565,11 @@ SEAM = (
     + [(f"thread_snap_{k + 1}", (lambda k=k: seam_thread_snap(k))) for k in range(5)]
     + [("hum", seam_hum), ("ring_pulse", seam_ring_pulse), ("crossing", seam_crossing), ("mend", seam_mend)]
 )
-LOOPS = {"seam/hum", "aperture/charge"}
+LOOPS = {"seam/hum", "aperture/charge", "flux_vortex/loop"}
 # The Seam's closing crackle has its own folder (sounds/closing/), see docs/CLOSING-AUDIO.md.
 CLOSING = [("close", seam_close)]
-GROUPS = {"seam": SEAM, "closing": CLOSING, "aperture": APERTURE, "skychart": SKYCHART, "mirror_sea": MIRROR_SEA}
+GROUPS = {"seam": SEAM, "closing": CLOSING, "aperture": APERTURE, "skychart": SKYCHART, "mirror_sea": MIRROR_SEA,
+          "flux_vortex": FLUX_VORTEX}
 
 
 def main(argv):

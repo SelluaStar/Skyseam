@@ -70,5 +70,21 @@
   "mirror_sea.rebound": {
     "subtitle": "subtitles.skyseam.mirror_sea.rebound",
     "sounds": [{"name": "skyseam:mirror_sea/rebound", "attenuation_distance": 32}]
+  },
+  "flux_vortex.loop": {
+    "subtitle": "subtitles.skyseam.flux_vortex.loop",
+    "sounds": [{"name": "skyseam:flux_vortex/loop", "attenuation_distance": 160}]
+  },
+  "flux_vortex.appear": {
+    "subtitle": "subtitles.skyseam.flux_vortex.appear",
+    "sounds": [{"name": "skyseam:flux_vortex/appear", "attenuation_distance": 384}]
+  },
+  "flux_vortex.dissipate": {
+    "subtitle": "subtitles.skyseam.flux_vortex.dissipate",
+    "sounds": [{"name": "skyseam:flux_vortex/dissipate", "attenuation_distance": 320}]
+  },
+  "flux_vortex.launch": {
+    "subtitle": "subtitles.skyseam.flux_vortex.launch",
+    "sounds": [{"name": "skyseam:flux_vortex/launch", "attenuation_distance": 48}]
   }
 }

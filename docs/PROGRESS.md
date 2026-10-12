@@ -1147,3 +1147,77 @@ The author: "the way to fix the glowing blocks is to remove them from LODs" (Dis
    with the giant Glowcaps still glowing.
 3. If you'd like the small glow shrooms (or anything else) back in the far terrain, remove them from
    `distant_horizons_hidden_blocks` in `config/skyseam-client.toml` *and* from Distant Horizons' list.
+
+## Flux vortices (2026-10-11)
+
+The author: "let's add a flux vortex type of thing (kinda like in the Avatar movie on Pandora)". Their wishes:
+- **Walking in:** you are launched up.
+- **A contraption flying in:** it is launched down, and all its propellers and spinning things spin in a random
+  direction until it leaves.
+- **How many and where:** several in a world, spawning like structures, in areas of low ground rather than on top of
+  mountains.
+- **How high:** up to about Y 400, a little above the highest floating islands.
+- **Coming and going:** they vanish and reappear at random times and places.
+- **The look:** nice particles, textures and animations, glowing, with forming and unravelling animations and effects
+  in the surroundings.
+
+**Built** (DECISIONS K97)
+- **Where and when** (`halcyon/vortex/VortexField`), from the seed and the clock, with nothing saved:
+  - **Cells and slots:** 640-block cells and ten-minute slots; in each slot a cell may hold one vortex (55 %).
+  - **Life:** it forms at a random moment and lasts 2.5 to 6 minutes, at a new spot each time.
+  - **The spot:** the lowest ground among a dozen random spots, lowland first, then open water, never a mountain.
+  - **Kept clear of:** floating islands, rock stacks, the Obelisk, the Arrival Lane and the Spindle.
+  - **Settings:** all of it (`[flux_vortex]` in the server config).
+- **What it does** (`halcyon/vortex/FluxVortices`, `external/CreateBridge`):
+  - **Creatures:** one walking in is thrown about 40 blocks up and out, with Slow Falling.
+  - **Ships:** one flying in is dragged down (up to 16 blocks per second) and swept round. Every spinning part on it
+    turns a random way at a random speed until it leaves, then gets its own speed back.
+- **What you see and hear** (`client/halcyon/vortex/`), sent to players within 2,048 blocks and drawn to 2,200:
+  - **The column:** misty, with counter-turning ribbons, a glowing core, a swirl of light on the ground and arcs of
+    lightning.
+  - **Rocks:** up to 60 chunks of rock and turf orbiting it.
+  - **Particles:** light circling up it, dust (or spray) round its foot, sparks.
+  - **Sound:** a roar, and sounds as it forms and unravels.
+  - **Forming:** the glow gathers, a ring of light flashes out, and the column climbs to the sky.
+  - **Unravelling:** it flares out, lets go of the ground and fades; its rocks fall.
+- **New files:** textures (`tools/textures/make_flux_vortex_textures.py`), three particles, four synthesized sounds.
+- **Commands:** `/skyseam halcyon vortex here [seconds]`, `at <x> <z> [seconds]`, `find`, `list`, `clear`.
+
+**Verified (actually run)**
+- **The milestone check:** build ✓, runData ✓, **49/49 GameTests** ✓, server boot ✓, sounds ✓.
+- **`vortexFieldFollowsTheRules`:**
+  - deterministic;
+  - 286 of 726 cell slots hold a vortex;
+  - each lives inside its slot and its cell;
+  - feet between 0 and 61 blocks above the sea, median 8;
+  - clear of floating islands and rock, and of the Obelisk and the lane;
+  - a cell's vortex moves from slot to slot;
+  - the shape and strength curve are right.
+- **`vortexThrowsCreaturesUp`:** a pig at a vortex's foot (in open air near the End's origin) was thrown from Y 230 past
+  Y 243 and had Slow Falling.
+- **`vortexDrivesShipsDownAndScramblesSpinningParts`:** two rafts released side by side near the End's origin.
+  - **The fall:** after 1.5 s the one in the vortex fell at 26 blocks per second and the free one at 16.
+  - **The scramble:** the shaft its creative motor turns went from 16 rpm to a scrambled speed (16 to 27 or to -22.7 in
+    different runs).
+  - **The restore:** once the vortex was gone the shaft was back at exactly 16.
+- **The boot check** (a real Halcyon): at the middle of the next ten slots, 206 vortices within 3,000 blocks of the
+  Spindle, 147 of them within 20 blocks of the sea, the highest foot 61 above it.
+- **The real client** (`tools/capture/m3v_vortex.json`, and `m3v_vortex_shaders.json` with Complementary Reimagined):
+  - **Shots:** forming, raging by day and night, among its rocks, unravelling, and a natural one found with `find`.
+  - **Under Complementary:** the column stays see-through with its ribbons showing.
+  - **Contact sheets:** [`docs/previews/m3v-vortex.png`](previews/m3v-vortex.png) and
+    [`m3v-vortex-shaders.png`](previews/m3v-vortex-shaders.png).
+
+**Not seen yet**
+- **A real Aeronautics ship's propellers** in a vortex. The GameTest scrambles a Create shaft on a Sable raft.
+  Propellers take their spin and thrust from the same speed, but nobody has watched one go wild.
+- **The throw on camera:** the capture's view from inside the column doesn't show the climb clearly.
+
+**Author's in-game test**
+1. In the Halcyon, `/skyseam halcyon vortex find` takes you to the nearest one (there are usually two or three within
+   1,000 blocks). Or `/skyseam halcyon vortex here 120` makes one where you stand.
+2. Watch it form and unravel (`/skyseam halcyon vortex here 20` makes a short one), and look at it by night.
+3. Walk into one: you should be thrown up and float down.
+4. Fly an Aeronautics ship into one: it should be dragged down, its propellers spinning wildly, until it gets out.
+5. With shaders, check it by day and by night.
+6. Send screenshots and `logs/latest.log`.
