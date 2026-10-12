@@ -1,5 +1,8 @@
 {
   "textures": [
-    "skyseam:flux_mote"
+    "skyseam:flux_mote_0",
+    "skyseam:flux_mote_1",
+    "skyseam:flux_mote_2",
+    "skyseam:flux_mote_3"
   ]
 }

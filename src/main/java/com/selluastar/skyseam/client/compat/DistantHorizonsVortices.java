@@ -40,8 +40,9 @@ import net.minecraft.world.phys.Vec3;
  * <p>Out there Skyseam's own drawing can't be used: Distant Horizons draws its far terrain with its own depth, so
  * anything drawn afterwards would show through far islands in front of it. Instead each far vortex is handed to
  * Distant Horizons as a group of glowing see-through boxes, which it draws among its terrain, hidden properly behind
- * it: the two thick strands of its double helix (the same helix the near one draws), a faint body round them and a
- * pool of light at the foot, coloured for the time of day, rising as it forms and lifting away as it unravels.
+ * it: the two thick vortices of its pair (on the same path the near one draws), each a soft column round a bright
+ * core, and a pool of light at the foot, coloured for the time of day, rising as it forms and lifting away as it
+ * unravels.
  *
  * <p>A far vortex is shown only once Distant Horizons has terrain where it stands, from where the near one starts to
  * fade out at the edge of the render distance (so the one fades into the other) out to Distant Horizons' own distance.
@@ -302,7 +303,7 @@ public final class DistantHorizonsVortices {
         List<DhApiRenderableBox> out = new ArrayList<>();
         double since = time - vortex.start();
         double height = vortex.height();
-        double top = height * (1 - Math.pow(1 - Mth.clamp((since - 8) / 40, 0, 1), 3));
+        double top = height * (1 - Math.pow(1 - Mth.clamp((since - 8) / 44, 0, 1), 3));
         double leave = FluxVortex.smooth(Mth.clamp((vortex.unravelled(time) - 0.1f) / 0.8f, 0, 1));
         double bottom = height * leave * leave;
         float lit = (float) VortexRenderer.poolLit(vortex, time) * blend;
@@ -321,17 +322,20 @@ public final class DistantHorizonsVortices {
         if (top - bottom < 1) {
             return out;
         }
-        // A faint body.
-        double body = vortex.radiusAt(vortex.baseY() + height / 2);
-        out.add(box(-body * 0.8, bottom, -body * 0.8, body * 0.8, top, body * 0.8, colour(3, day, Mth.lerp(day, 0.14f, 0.1f) * strength)));
-        // The two strands of the helix.
+        // The two vortices of the pair, each a thick soft column round a bright core.
         for (int k = 0; k < VortexRenderer.HELIX; k++) {
-            Color colour = colour(VortexRenderer.helixColour(k), day, Mth.lerp(day, 0.8f, 0.65f) * strength);
+            int hue = VortexRenderer.helixColour(k);
+            Color body = colour(hue, day, Mth.lerp(day, 0.3f, 0.18f) * strength);
+            Color core = colour(hue, day, Mth.lerp(day, 0.85f, 0.6f) * strength);
             for (double y = bottom; y < top; y += SEGMENT) {
-                Vec3 at = VortexRenderer.helixPoint(vortex, k, y + SEGMENT / 2, time);
+                double middle = Math.min(top, y + SEGMENT / 2);
+                Vec3 at = VortexRenderer.helixPoint(vortex, k, middle, time);
                 double x = at.x - vortex.x();
                 double z = at.z - vortex.z();
-                out.add(box(x - 1.7, y, z - 1.7, x + 1.7, Math.min(top, y + SEGMENT + 0.5), z + 1.7, colour));
+                double half = VortexRenderer.helixWidth(vortex, k, middle, time) * 0.35;
+                double end = Math.min(top, y + SEGMENT + 0.5);
+                out.add(box(x - half, y, z - half, x + half, end, z + half, body));
+                out.add(box(x - 1.2, y, z - 1.2, x + 1.2, end, z + 1.2, core));
             }
         }
         return out;

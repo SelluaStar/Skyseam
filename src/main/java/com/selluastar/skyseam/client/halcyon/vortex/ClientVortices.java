@@ -32,13 +32,15 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 /**
  * The flux vortices the server says are near (docs/DECISIONS.md K97), and what the client makes of them each tick:
- * motes of light streaming up along its helix, mist rising off the water or the ground at its foot (with spray
- * over water, grit over land) when the camera is near, sparks as it forms, its sound from the nearest one, the sound
- * of each forming and unravelling, and with Distant Horizons the far ones ({@link DistantHorizonsVortices}).
+ * motes twinkling up inside its two vortices, sparkles bursting out of its crown and falling away, light drawn in
+ * over the water to its foot, mist rising off the water or the ground there (with spray over water, grit over land)
+ * when the camera is near, sparks as it forms, its sound from the nearest one, the sound of each forming and
+ * unravelling, and with Distant Horizons the far ones ({@link DistantHorizonsVortices}).
  */
 public final class ClientVortices {
-    /** Particles are made for vortices this close to the camera. */
+    /** Particles are made for vortices this close to the camera: up the column within the first, at the crown within the second. */
     private static final double PARTICLE_RANGE = 160;
+    private static final double CROWN_RANGE = 320;
     /** The roar is played for the nearest vortex this close. */
     private static final double SOUND_RANGE = 170;
     /** Forming and unravelling are heard this far. */
@@ -134,8 +136,8 @@ public final class ClientVortices {
                 nearest = vortex;
                 nearestDistance = distance;
             }
-            if (distance < PARTICLE_RANGE) {
-                particles(level, vortex, time, camera);
+            if (distance < CROWN_RANGE) {
+                particles(level, vortex, time, camera, distance);
             }
         }
         if (nearest != null && nearestDistance < SOUND_RANGE
@@ -154,10 +156,26 @@ public final class ClientVortices {
         return Math.sqrt(Mth.square(camera.x - vortex.x()) + Mth.square(camera.y - y) + Mth.square(camera.z - vortex.z()));
     }
 
-    private static void particles(ClientLevel level, FluxVortex vortex, double time, Vec3 camera) {
+    private static void particles(ClientLevel level, FluxVortex vortex, double time, Vec3 camera, double distance) {
         RandomSource random = level.getRandom();
         float shown = vortex.formed(time) * (1 - vortex.unravelled(time));
         double since = time - vortex.start();
+        // Sparkles bursting out of the crown and falling away like spray from a fountain; a burst as it opens.
+        double open = VortexRenderer.crownOpen(vortex, time);
+        double top = vortex.topY();
+        if (open > 0.05 && camera.distanceTo(new Vec3(vortex.x(), top, vortex.z())) < CROWN_RANGE) {
+            int count = (int) Math.round(5 * open) + (open < 0.6 && since < 200 ? 20 : 0);
+            for (int k = 0; k < count; k++) {
+                double a = random.nextDouble() * Math.PI * 2;
+                double r = vortex.radiusAt(top) * 0.6 * Math.sqrt(random.nextDouble());
+                double out = 0.35 + 0.4 * random.nextDouble();
+                level.addAlwaysVisibleParticle(SkyseamParticles.FLUX_GLINT.get(), vortex.x() + Math.cos(a) * r, top - 6 + 6 * random.nextDouble(),
+                        vortex.z() + Math.sin(a) * r, Math.cos(a) * out, 0.25 + 0.3 * random.nextDouble(), Math.sin(a) * out);
+            }
+        }
+        if (distance > PARTICLE_RANGE) {
+            return;
+        }
         // Sparks burst at the foot as it forms.
         if (since < 45) {
             for (int k = 0; k < 5; k++) {
@@ -170,26 +188,29 @@ public final class ClientVortices {
         if (shown < 0.05f) {
             return;
         }
-        // Motes of light streaming up along the helix, and a few loose in the column, mostly near the camera's height.
-        int motes = Math.round(8 * shown);
+        // Motes twinkling up inside the two vortices, mostly near the camera's height (drawn however far off they are).
+        int motes = Math.round(10 * shown);
         for (int k = 0; k < motes; k++) {
-            double y = Mth.clamp(camera.y + (random.nextDouble() - 0.4) * 100, vortex.baseY(), vortex.topY() - 10);
-            double px;
-            double pz;
-            if (k % 4 != 3) {
-                Vec3 on = VortexRenderer.helixPoint(vortex, k % VortexRenderer.HELIX, y - vortex.baseY(), time);
-                px = on.x + (random.nextDouble() - 0.5) * 2.5;
-                pz = on.z + (random.nextDouble() - 0.5) * 2.5;
-            } else {
-                double a = random.nextDouble() * Math.PI * 2;
-                double r = vortex.radiusAt(y) * Math.sqrt(random.nextDouble()) * 0.95;
-                px = vortex.x() + Math.cos(a) * r;
-                pz = vortex.z() + Math.sin(a) * r;
-            }
-            level.addParticle(SkyseamParticles.FLUX_MOTE.get(), px, y, pz, vortex.x(), 0.45 + 0.6 * random.nextDouble(), vortex.z());
+            double y = Mth.clamp(camera.y + (random.nextDouble() - 0.4) * 110, vortex.baseY(), vortex.topY() - 20);
+            int strand = k % VortexRenderer.HELIX;
+            double above = y - vortex.baseY();
+            Vec3 on = VortexRenderer.helixPoint(vortex, strand, above, time);
+            double a = random.nextDouble() * Math.PI * 2;
+            double r = VortexRenderer.helixWidth(vortex, strand, above, time) * 0.45 * Math.sqrt(random.nextDouble());
+            level.addAlwaysVisibleParticle(SkyseamParticles.FLUX_MOTE.get(), on.x + Math.cos(a) * r, y, on.z + Math.sin(a) * r, vortex.x(),
+                    0.45 + 0.6 * random.nextDouble(), vortex.z());
         }
         if (Math.abs(camera.y - vortex.baseY()) > 120) {
             return;
+        }
+        // Light drawn in over the water (or the ground) from all round, streaming into the foot.
+        for (int k = 0; k < Math.round(3 * shown); k++) {
+            double a = random.nextDouble() * Math.PI * 2;
+            double r = vortex.radiusAt(vortex.baseY()) + 4 + 14 * random.nextDouble();
+            double in = 0.8 + 0.3 * random.nextDouble();
+            double round = (random.nextDouble() - 0.5) * 0.3;
+            level.addAlwaysVisibleParticle(SkyseamParticles.FLUX_GLINT.get(), vortex.x() + Math.cos(a) * r, vortex.baseY() + 0.4, vortex.z() + Math.sin(a) * r,
+                    -Math.cos(a) * in - Math.sin(a) * round, 0.06, -Math.sin(a) * in + Math.cos(a) * round);
         }
         // Mist rising off the water or the ground at the foot; spray off the water, or grit off the ground.
         BlockPos below = BlockPos.containing(vortex.x(), vortex.baseY() - 1, vortex.z());
