@@ -51,7 +51,7 @@ public final class SkyseamConfig {
     public static final ModConfigSpec.IntValue VORTEX_LAUNCH_HEIGHT;
     public static final ModConfigSpec.DoubleValue VORTEX_SHIP_SPEED;
     public static final ModConfigSpec.BooleanValue VORTEX_SCRAMBLE;
-    public static final ModConfigSpec.IntValue SPRINGBLOOM_LAUNCH_HEIGHT;
+    public static final ModConfigSpec.IntValue SPRINGBLOOM_BASE_LAUNCH_HEIGHT;
     public static final ModConfigSpec.DoubleValue SPRINGBLOOM_CHANCE;
     public static final ModConfigSpec.DoubleValue VEIL_PLAYER_PUSH;
     public static final ModConfigSpec.DoubleValue VEIL_SHIP_PUSH;
@@ -181,8 +181,10 @@ public final class SkyseamConfig {
         b.pop();
 
         b.push("springbloom");
-        SPRINGBLOOM_LAUNCH_HEIGHT = b.comment("How high a Springbloom throws whatever jumps off it, in blocks. The first landing after does no harm.")
-                .defineInRange("launch_height", 16, 2, 64);
+        SPRINGBLOOM_BASE_LAUNCH_HEIGHT = b.comment("How high a Springbloom of the usual size throws whatever jumps off it, in blocks. Bigger ones throw",
+                "higher, up to twice as high from one three times the size, and each launch goes up to an eighth higher or lower.",
+                "The first landing after a launch does no harm.")
+                .defineInRange("base_launch_height", 24, 2, 64);
         SPRINGBLOOM_CHANCE = b.comment("Springblooms grow on the grass of the Halcyon's islands, grounded and floating: one spot in each",
                 "11-block square of the map may hold one, with this chance. 0 grows none (it only applies to new chunks).")
                 .defineInRange("chance", 0.45, 0.0, 1.0);

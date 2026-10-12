@@ -72,6 +72,15 @@ configurations {
         canBeResolved = true
         transitive = false
     }
+    // gradlew runClient: the author's test client also gets maps (Xaero's Minimap and World Map), Jade, and mods that
+    // make it run faster (Sodium, Lithium, C2ME, FerriteCore, ImmediatelyFast, Yeetus Experimentus). Only in runClient:
+    // never shipped, never required, and left out of runServer, the GameTests and the screenshot client.
+    // gradlew runClient -PplainClient starts it without them.
+    playtestMods {
+        canBeConsumed = false
+        canBeResolved = true
+        transitive = false
+    }
 }
 
 dependencies {
@@ -95,6 +104,16 @@ dependencies {
     shaderMods "maven.modrinth:iris:${iris_version}"
     shaderMods "maven.modrinth:sodium:${sodium_version}"
     lodMods "maven.modrinth:distanthorizons:${distant_horizons_version}"
+
+    playtestMods "maven.modrinth:xaeros-minimap:${xaeros_minimap_version}"
+    playtestMods "maven.modrinth:xaeros-world-map:${xaeros_world_map_version}"
+    playtestMods "maven.modrinth:jade:${jade_version}"
+    playtestMods "maven.modrinth:sodium:${sodium_version}"
+    playtestMods "maven.modrinth:lithium:${lithium_version}"
+    playtestMods "maven.modrinth:c2me-neoforge:${c2me_version}"
+    playtestMods "maven.modrinth:ferrite-core:${ferritecore_version}"
+    playtestMods "maven.modrinth:immediatelyfast:${immediatelyfast_version}"
+    playtestMods "maven.modrinth:yeetus-experimentus:${yeetus_experimentus_version}"
 }
 
 // Aeronautics and Create keep the classes Skyseam compiles against (the balloon map, Simulated's ropes, catnip's
@@ -117,21 +136,42 @@ dependencies {
     compileOnly("maven.modrinth:create:${create_version}") { transitive = false }
 }
 
+// run/mods is shared by runClient (with the playtest mods) and the other runs (without), and Gradle only tracks the
+// files a task wrote itself into a shared folder, so it would call a sync up to date with the other's extra jars in
+// it. Each sync runs every time instead.
+def captureDir = file(project.findProperty('captureDir') ?: 'run/capture')
 def syncRunMods = tasks.register('syncRunMods', Sync) {
+    outputs.upToDateWhen { false }
     description = 'Copies the runtime mods (Create, Aeronautics, Sable, Fealty) into run/mods.'
     from configurations.runMods
     into file('run/mods')
 }
+def syncClientMods = tasks.register('syncClientMods', Sync) {
+    outputs.upToDateWhen { false }
+    description = 'Copies the runtime mods into run/mods for runClient, with the playtest mods (maps, Jade, performance) unless -PplainClient is set.'
+    from configurations.runMods
+    if (!project.hasProperty('plainClient')) {
+        from configurations.playtestMods
+    }
+    into file('run/mods')
+}
 def syncCaptureMods = tasks.register('syncCaptureMods', Sync) {
-    description = 'Copies the runtime mods into run/capture/mods for the screenshot client (runCaptureClient), with Iris and Sodium when -Pshaders is set and Distant Horizons when -Pdh is set.'
+    outputs.upToDateWhen { false }
+    description = 'Copies the runtime mods into run/capture/mods for the screenshot client (runCaptureClient), with Iris and Sodium when -Pshaders is set, Distant Horizons when -Pdh is set and the playtest mods when -Pplaytest is set.'
+    // Sodium is in both shaderMods and playtestMods.
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from configurations.runMods
     if (project.hasProperty('shaders')) {
         from configurations.shaderMods
     }
+    // gradlew runCaptureClient -Pplaytest: the author's playtest mods too (maps, Jade, performance), to check they load.
+    if (project.hasProperty('playtest')) {
+        from configurations.playtestMods
+    }
     if (project.hasProperty('dh')) {
         from configurations.lodMods
     }
-    into file('run/capture/mods')
+    into new File(captureDir, 'mods')
 }
 
 neoForge {
@@ -161,7 +201,8 @@ neoForge {
         // scene and saves screenshots to run/capture/screenshots (client/dev/DevSceneCapture). Development only.
         captureClient {
             client()
-            gameDirectory = file('run/capture')
+            // -PcaptureDir=run/capture2 runs it in another folder, beside one already open in run/capture.
+            gameDirectory = captureDir
             systemProperty 'skyseam.dev.capture', project.findProperty('scene') ? file(project.findProperty('scene')).absolutePath : ''
             programArguments.addAll '--width', '1280', '--height', '720'
         }
@@ -213,8 +254,12 @@ var generateModMetadata = tasks.register('generateModMetadata', ProcessResources
 sourceSets.main.resources.srcDir generateModMetadata
 neoForge.ideSyncTask generateModMetadata
 
-tasks.matching { it.name.startsWith('run') && it.name != 'runMods' }.configureEach {
+// runClient shares run/ with runServer and the GameTests, so each syncs run/mods to its own set as it starts.
+tasks.matching { it.name.startsWith('run') && it.name != 'runMods' && it.name != 'runClient' }.configureEach {
     dependsOn syncRunMods
+}
+tasks.matching { it.name == 'runClient' }.configureEach {
+    dependsOn syncClientMods
 }
 tasks.matching { it.name == 'runCaptureClient' }.configureEach {
     dependsOn syncCaptureMods

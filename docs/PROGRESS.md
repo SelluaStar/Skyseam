@@ -1360,3 +1360,56 @@ particles and animations". The images are kept in the gitignored `reference/loca
 4. Crouch-walk onto and off one: no launch.
 5. Look at them at night: the bulb, veins and tips glow.
 6. Send screenshots and `logs/latest.log`.
+
+## Springbloom sizes and walking on; playtest mods (2026-10-12)
+
+The author, after trying the Springbloom: "higher base boost height, i should be able to walk onto it rather than get
+stuck on it when holding w as if it were a block. i shouldnt need to jump, add variable boost height. add variable
+sizing so sometimes there will be a bigger one ... up to 3 times the size or so and have it random each time you place
+it or it spawns", and for the test client: Xaero's Minimap and World Map, Sodium, Lithium, C2ME, FerriteCore, Jade,
+Yeetus Experimentus and ImmediatelyFast.
+
+**Built** (DECISIONS K99, K100)
+- **Walking on:** its collision box is 9 pixels high (was 10), under the 0.6 blocks you step up without a jump.
+- **Sizes:** a block state `size` 0 to 4, drawn at 1, 1.35, 1.75, 2.3 and 3 times the usual size; rolled each time
+  one is planted (45, 25, 15, 10 and 5 in 100) or grows (made smaller until it has room). It still fills one block.
+  The bulb is flatter and wider on a big one, and sinks under whatever stands on it and bulges out, at every size.
+  Bigger ones puff more spores and sound lower. `/setblock ~ ~ ~ skyseam:springbloom[size=4]` places a given size.
+- **Launches:** 24 blocks from one of the usual size (was 16), up to twice that from the biggest, each launch up to
+  an eighth higher or lower. The setting is now `springbloom.base_launch_height` (renamed so old configs take the new
+  default). Jumping while on it still launches you; walking on and off doesn't.
+- **Playtest mods** in `gradlew runClient` only (`build.gradle` `playtestMods`, versions in `gradle.properties`):
+  Xaero's Minimap 26.6.0, Xaero's World Map 1.47.0, Jade 15.10.6, Sodium 0.8.13, Lithium 0.15.4, C2ME 0.4.0 alpha
+  123, FerriteCore 7.0.3, ImmediatelyFast 1.6.14, Yeetus Experimentus 87.0.0. `-PplainClient` leaves them out.
+  `runServer`, the GameTests and `runData` clean them back out of `run/mods`.
+- **Also:** the capture tool's `walk` step (holds forward), `runCaptureClient -Pplaytest` and `-PcaptureDir=`.
+- **Fixed on the way:** Gradle had called the shared `run/mods` sync up to date with the playtest jars still in it,
+  so the first data run loaded them; every sync now runs each time.
+
+**Verified (actually run)**
+- **The milestone check:** build ✓, runData ✓, **54/54 GameTests** ✓, server boot ✓.
+- **`springbloomCanBeWalkedOnto`:** a pig moved straight at one along the ground stepped up onto the bulb.
+- **`bigSpringbloomLaunchesHigher`:** a huge one threw a pig from Y 151.7 past Y 183.1 (more than the usual 24 plus
+  its spread, plus 4); the usual launch test now reads 2.22 blocks a tick (was 1.76).
+- **The boot check** (300 chunks of a real Halcyon): 22 Springblooms, 3 on floating islands; by size 16, 4, 1, 1, 0.
+  (The first room check, which wanted flat ground all round, let none bigger than size 1 grow: 19, 3, 0, 0, 0.)
+- **The real client, with all nine playtest mods loaded** (`runCaptureClient -Pplaytest`,
+  `tools/capture/m4_springbloom_sizes.json`): a fresh Halcyon generated with C2ME and Lithium running; the five sizes
+  side by side by day and night; a survival player holding forward walked onto one of the usual size without jumping
+  and stood on its bulb, then jumped and was launched; walked into the huge one, sank into its bulb, and was thrown
+  far higher. The first try showed the big bulbs squashed flat under their petals; they now stand higher at rest
+  (top 10 pixels up on the usual size, 21 on the biggest) and still sink under you. Contact sheet
+  [`docs/previews/m4-springbloom-sizes.png`](previews/m4-springbloom-sizes.png). The log has only the mods' usual notes
+  about optional add-ons that aren't installed, and Xaero's version check failing offline.
+
+**Not seen yet**
+- **The playtest mods in your own `runClient`** with your saved worlds (only the screenshot client was run with them).
+- **A big one grown wild** up close: the boot check counts them, the capture's `find` shot landed in a hillside.
+- **Multiplayer**, as before.
+
+**Author's in-game test**
+1. Start the client: `.\gradlew runClient` (with the playtest mods), or `.\gradlew runClient -PplainClient`.
+2. `/setblock ~ ~ ~2 skyseam:springbloom[size=4]` (or place some from the creative tab: each rolls a size).
+3. Walk onto one holding W: you should step up onto it without jumping, and the bulb should sink under you.
+4. Jump on one of the usual size, then on a huge one: about 24 blocks, then about 48.
+5. Send screenshots and `logs/latest.log`.
