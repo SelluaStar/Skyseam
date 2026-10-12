@@ -27,7 +27,7 @@ public final class SkyseamParticles {
     /** The Halcyon's night glow: fireflies near the ground, drifting lanterns higher up (biome ambient particles). */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> WISP = PARTICLES.register("wisp", () -> new SimpleParticleType(false));
     /**
-     * A flux vortex's light: motes circling up its column. Spawned by the client only, with the vortex's axis passed
+     * A flux vortex's light: motes twinkling up its column. Spawned by the client only, with the vortex's axis passed
      * as the x and z speed and its climb as the y speed (client/particle/VortexParticle).
      */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FLUX_MOTE = simple("flux_mote");
@@ -35,6 +35,11 @@ public final class SkyseamParticles {
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FLUX_DUST = simple("flux_dust");
     /** Bright sparks as a vortex forms and crackling off its rocks. */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FLUX_SPARK = simple("flux_spark");
+    /**
+     * A flux vortex's sparkle that keeps its own speed (the x, y and z speed passed in) and settles slowly: sparkles
+     * falling from the crown, and light drawn in over the water to the foot (client/particle/VortexParticle).
+     */
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> FLUX_GLINT = simple("flux_glint");
 
     private SkyseamParticles() {}
 

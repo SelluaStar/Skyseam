@@ -1174,13 +1174,17 @@ The author: "let's add a flux vortex type of thing (kinda like in the Avatar mov
     turns a random way at a random speed until it leaves, then gets its own speed back.
 - **What you see and hear** (`client/halcyon/vortex/`), sent to players within 2,048 blocks. Redrawn after the
   author's reference stills (see "Looks like Pandora's" below):
-  - **The column:** a double helix of two thick strands of light, uneven and wandering, with thinner strands coming
-    and going, wisps and arcs, spilling over the top like a fountain.
+  - **The column:** two thick vortices of light winding round each other like DNA, each with strands spinning round
+    its middle, arcs jumping between them, wisps peeling off; pixel-art textures in Minecraft's style.
+  - **The crown:** at the top they flare apart; arcs burst out all round and fall away, a glowing cap hangs over it,
+    halos pulse out and sparkles fall like spray.
   - **The foot:** a pool of light with ripples running out over the water.
   - **Rocks:** eight great flat-bottomed mesas hanging round it.
-  - **Particles:** motes streaming up it, mist (or spray) off its foot, sparks.
+  - **Particles:** twinkling motes up the vortices, sparkles falling from the crown, light drawn in over the water to
+    the foot, mist (or spray) off its foot, sparks.
   - **Sound:** a roar, and sounds as it forms and unravels.
-  - **Forming:** the pool lights, a ripple runs out, the helix shoots up winding round itself and the rocks lift.
+  - **Forming:** the pool lights, a ripple runs out, the pair shoots up winding round each other, the crown bursts
+    open and the rocks lift.
   - **Unravelling:** the strands let go of the ground and stream away upward; the pool dims and the rocks sink.
 - **New files:** textures (`tools/textures/make_flux_vortex_textures.py`), three particles, four synthesized sounds.
 - **Commands:** `/skyseam halcyon vortex here [seconds]`, `at <x> <z> [seconds]`, `find`, `list`, `clear`.
@@ -1210,6 +1214,29 @@ The author: "let's add a flux vortex type of thing (kinda like in the Avatar mov
   - **Under Complementary:** the column stays see-through with its ribbons showing.
   - **Contact sheets:** [`docs/previews/m3v-vortex.png`](previews/m3v-vortex.png) and
     [`m3v-vortex-shaders.png`](previews/m3v-vortex-shaders.png).
+
+### Two vortices like DNA, in Minecraft's style (2026-10-12)
+
+The author, on the thin double helix, sending the same three stills again: "add extra effects to it and make the top
+look better and make it like two helixes or something like a thick vortex like shown in the reference. MAKE IT LOOK
+EXACTLY LIKE THE REFERENCE AND ALSO MATCH MINECRAFTS STYLE (two vortex's in a dna shape)".
+
+**What changed** (DECISIONS K97)
+- **Two thick vortices:** each about ten blocks thick, with a body of pixel streaks running up it, a bright core, a
+  haze, and four strands spinning round its middle. They wind round each other like DNA, cyan and violet by night,
+  milky white by day, spreading and throwing up spray at the water.
+- **The top:** they flare apart into a crown. Eighteen arcs burst out and fall away in turn, a glowing cap with rays
+  hangs over it, halos pulse out, and sparkles fall from it.
+- **Extra effects:** a new `flux_glint` particle for the crown's sparkles and for light drawn in over the water to the
+  foot; motes that twinkle through four pixel frames; arcs between the two vortices; wisps.
+- **Minecraft's style:** every vortex texture redone as pixel art in a few steps of brightness, without smoothing,
+  like a beacon beam.
+- **Fixes found on the way:**
+  - vanilla drops particles more than 32 blocks from the camera, so motes high up the column never showed; they are
+    now spawned as always-visible;
+  - from inside a vortex the strips filled the view with light; anything within a few blocks of the camera now fades;
+  - by day the pair stacked up to solid white; it is now drawn at about half strength by day.
+- **Far, with Distant Horizons:** the same two vortices as boxes, a soft column round a bright core each.
 
 ### Looks like Pandora's (2026-10-11)
 

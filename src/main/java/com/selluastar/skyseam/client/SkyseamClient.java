@@ -94,6 +94,7 @@ public final class SkyseamClient {
         event.registerSpriteSet(SkyseamParticles.WISP.get(), WispParticle.Provider::new);
         event.registerSpriteSet(SkyseamParticles.FLUX_MOTE.get(), sprites -> new VortexParticle.Provider(sprites, VortexParticle.Kind.MOTE));
         event.registerSpriteSet(SkyseamParticles.FLUX_DUST.get(), sprites -> new VortexParticle.Provider(sprites, VortexParticle.Kind.DUST));
+        event.registerSpriteSet(SkyseamParticles.FLUX_GLINT.get(), sprites -> new VortexParticle.Provider(sprites, VortexParticle.Kind.GLINT));
         event.registerSpriteSet(SkyseamParticles.FLUX_SPARK.get(), sprites -> new GlowParticle.Provider(sprites, GlowParticle.Kind.SPARK));
     }
 

@@ -41,45 +41,57 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.model.data.ModelData;
 
 /**
- * Draws the flux vortices (docs/DECISIONS.md K97): a double helix of light standing from the water or the ground up
- * into the sky, wild and uneven, not a whirlwind.
+ * Draws the flux vortices (docs/DECISIONS.md K97): two thick vortices of light winding round each other like DNA,
+ * from the water or the ground up into the sky, after the author's reference stills of Pandora's flux vortices, in
+ * Minecraft's own style (pixel-art textures shown without smoothing, like a beacon beam).
  *
- * <p>Two thick strands of light, one cyan and one violet by night, twist round each other all the way up, the helix
- * bending and breathing as slow waves run along it, so no two turns are alike; the twists climb slowly and light runs
- * up each strand. A few thinner strands wander round them, each shooting up some part of the column, lingering and
- * fading out, then coming back somewhere else; wisps peel off the helix and curl away; now and then an arc of light
- * jumps between its two strands. A faint glow gives the column its body, brightest where it leaves the water. At the
- * top the strands spill over and fall away in arcs, like a fountain. A pool of light lies on the water at its foot,
- * ripples running out from it, and great flat-bottomed rocks, as broad as the column, hang in the air round it,
- * barely moving. White and pale by day; cyan, blue and violet by night.
+ * <p>Each of the pair is a column of light some ten blocks thick: a body of pixel streaks running up it, a bright
+ * core, a soft haze round it and four strands spinning round its middle, so each is a vortex of its own. The two wind
+ * round each other about two and a half times on the way up, the twists climbing slowly, slow waves bending and
+ * swelling them so no two turns are alike. Where they leave the water they spread and throw up spray; now and then
+ * an arc of light jumps between them, and wisps peel off and curl away.
  *
- * <p>Forming: the pool lights and a ripple runs out; then the two strands of the helix shoot up out of it together,
- * winding round each other, each with a bright head, the wanderers following, and the rocks lift into place.
- * Unravelling: the strands let go of the ground and stream up and away into the sky, the pool dims and the rocks sink.
+ * <p>At the top they flare apart and open into a crown: arcs of light burst out of it all round and fall away, each
+ * shooting out, curling and fading in turn; a glowing cap hangs over it, and rings of light pulse out from it. A pool
+ * of light lies on the water at the foot, ripples running out from it, and great flat-bottomed rocks hang round the
+ * column, barely moving. White and pale by day; cyan and violet by night, one vortex each.
+ *
+ * <p>Forming: the pool lights and a ripple runs out; the two vortices shoot up out of it together, winding round each
+ * other, each with a bright head; at the top the crown bursts open, and the rocks lift into place. Unravelling: the
+ * vortices let go of the ground and stream up into the crown, which fades last; the pool dims and the rocks sink.
  *
  * <p>It is drawn only where the world is: within the render distance, once the chunk under it has loaded, fading out
  * towards the edge of the view, so terrain and islands in front of it hide it. Beyond that, with Distant Horizons, a
  * simpler version is drawn among its far terrain ({@code client/compat/DistantHorizonsVortices}).
  */
 public final class VortexRenderer {
+    private static final ResourceLocation TUBE = Skyseam.id("textures/environment/flux_tube.png");
     private static final ResourceLocation STRAND = Skyseam.id("textures/environment/flux_strand.png");
-    private static final ResourceLocation HELIX_TEXTURE = Skyseam.id("textures/environment/flux_helix.png");
     private static final ResourceLocation GLOW = Skyseam.id("textures/environment/flux_glow.png");
     private static final ResourceLocation POOL = Skyseam.id("textures/environment/flux_pool.png");
+    private static final ResourceLocation CROWN = Skyseam.id("textures/environment/flux_crown.png");
     private static final ResourceLocation BAND = Skyseam.id("textures/environment/flux_band.png");
 
-    /** The strands of the helix, then the wanderers. */
+    /** The two vortices of the pair. */
     public static final int HELIX = 2;
-    private static final int WANDERERS = 4;
+    /** Strands spinning round each vortex's middle. */
+    private static final int SWIRLS = 4;
+    /** Arcs bursting out of the crown. */
+    private static final int CROWN_ARCS = 18;
+    /** The crown is the top share of the column. */
+    private static final double CROWN_SHARE = 0.16;
     private static final int MESAS = 8;
     private static final double ROCK_RANGE = 360;
     /** A ripple runs out from the foot this often, in ticks, and lasts this long. */
     private static final int RIPPLE_EVERY = 46;
     private static final int RIPPLE_LIFE = 150;
-    /** A wisp may peel off the helix this often, in ticks, and lasts this long. */
-    private static final int WISP_EVERY = 9;
+    /** A ring pulses out of the crown this often, in ticks, and lasts this long. */
+    private static final int HALO_EVERY = 60;
+    private static final int HALO_LIFE = 120;
+    /** A wisp may peel off this often, in ticks, and lasts this long. */
+    private static final int WISP_EVERY = 11;
     private static final int WISP_LIFE = 45;
-    /** An arc may jump between the strands this often, in ticks. */
+    /** An arc may jump between the vortices this often, in ticks. */
     private static final int ARC_EVERY = 5;
     /** Night colours: cyan, blue, violet and a pale cyan; by day each is mostly white. */
     private static final float[][] NIGHT = {{0.3f, 0.86f, 1f}, {0.34f, 0.52f, 1f}, {0.64f, 0.44f, 1f}, {0.74f, 0.96f, 1f}};
@@ -87,13 +99,12 @@ public final class VortexRenderer {
     private static final float SHADER_LIGHT = 0.7f;
 
     /**
-     * One strand's make, fixed for its vortex. Heights are in blocks above the foot. Its twists climb {@code speed}
-     * blocks a tick; {@code bend} scales the slow waves (with phases {@code waves}) that bend it and swell it. A
-     * wanderer comes and goes once every {@code cycle} ticks.
+     * One vortex of the pair, fixed for its flux vortex. Heights are in blocks above the foot. Its twists round the
+     * other climb {@code speed} blocks a tick; {@code waves} are the phases of the slow waves that bend and swell it;
+     * its strands spin round its middle {@code spin} radians a tick.
      */
-    private record Strand(boolean wanderer, double phase, double twist, double speed, double reach, double bend, double[] waves, double width,
-            double flow, double repeat, int colour, float alpha, double delay, double climb, double leave, double spillReach, double spillRise,
-            double spillDrop, double spillCurl, double cycle, long seed) {}
+    private record Tube(double phase, double twist, double speed, double reach, double[] waves, double width, int colour, double delay,
+            double climb, double leave, double spin, double swirlTwist) {}
 
     /** One hanging rock: where it hangs and the blocks it is made of, round its middle. */
     private record Mesa(double angle, double distance, double fraction, double yaw, double phase, List<Piece> pieces, double delay, double reach,
@@ -102,7 +113,7 @@ public final class VortexRenderer {
     /** One block of a rock, and the faces of it that show (a bit for each {@link Direction}). */
     private record Piece(float x, float y, float z, BlockState state, int faces) {}
 
-    private static final Map<Long, Strand[]> STRANDS_OF = new HashMap<>();
+    private static final Map<Long, Tube[]> TUBES_OF = new HashMap<>();
     private static final Map<Long, Mesa[]> MESAS_OF = new HashMap<>();
 
     private static float lightScale = 1;
@@ -139,14 +150,24 @@ public final class VortexRenderer {
         return new float[] {Mth.lerp(white, night[0], 0.95f), Mth.lerp(white, night[1], 0.98f), Mth.lerp(white, night[2], 1f)};
     }
 
-    /** The colour of strand {@code strand} of the helix. */
+    /** A colour made paler, for a vortex's core and strands. */
+    private static float[] paler(float[] colour, float by) {
+        return new float[] {Mth.lerp(by, colour[0], 1f), Mth.lerp(by, colour[1], 1f), Mth.lerp(by, colour[2], 1f)};
+    }
+
+    /** The colour of vortex {@code strand} of the pair. */
     public static int helixColour(int strand) {
         return strand == 0 ? 0 : 2;
     }
 
-    /** A point on strand {@code strand} of the helix (0 or 1), {@code above} blocks over the foot. */
+    /** A point on the middle of vortex {@code strand} of the pair (0 or 1), {@code above} blocks over the foot. */
     public static Vec3 helixPoint(FluxVortex vortex, int strand, double above, double time) {
-        return point(vortex, strandsOf(vortex)[strand], above, time);
+        return centre(vortex, tubesOf(vortex)[strand], above, time);
+    }
+
+    /** How thick vortex {@code strand} of the pair is {@code above} blocks over the foot. */
+    public static double helixWidth(FluxVortex vortex, int strand, double above, double time) {
+        return tubeWidth(vortex, tubesOf(vortex)[strand], above, time);
     }
 
     public static void onRenderLevel(RenderLevelStageEvent event) {
@@ -192,7 +213,9 @@ public final class VortexRenderer {
         }
         buffers.endBatch(SkyseamRenderTypes.flux(POOL));
         for (FluxVortex vortex : shown) {
-            ripples(buffers.getBuffer(SkyseamRenderTypes.flux(BAND)), matrix, vortex, time, camera);
+            VertexConsumer band = buffers.getBuffer(SkyseamRenderTypes.flux(BAND));
+            ripples(band, matrix, vortex, time, camera);
+            halos(band, matrix, vortex, time, camera);
         }
         buffers.endBatch(SkyseamRenderTypes.flux(BAND));
         for (FluxVortex vortex : shown) {
@@ -200,15 +223,20 @@ public final class VortexRenderer {
         }
         buffers.endBatch(SkyseamRenderTypes.flux(GLOW));
         for (FluxVortex vortex : shown) {
+            bodies(buffers.getBuffer(SkyseamRenderTypes.flux(TUBE)), matrix, vortex, time, camera);
+        }
+        buffers.endBatch(SkyseamRenderTypes.flux(TUBE));
+        for (FluxVortex vortex : shown) {
             VertexConsumer strands = buffers.getBuffer(SkyseamRenderTypes.flux(STRAND));
-            strands(strands, matrix, vortex, time, camera, true);
+            strands(strands, matrix, vortex, time, camera);
+            crownArcs(strands, matrix, vortex, time, camera);
             wisps(strands, matrix, vortex, time, camera);
         }
         buffers.endBatch(SkyseamRenderTypes.flux(STRAND));
         for (FluxVortex vortex : shown) {
-            strands(buffers.getBuffer(SkyseamRenderTypes.flux(HELIX_TEXTURE)), matrix, vortex, time, camera, false);
+            crown(buffers.getBuffer(SkyseamRenderTypes.flux(CROWN)), matrix, vortex, time, camera);
         }
-        buffers.endBatch(SkyseamRenderTypes.flux(HELIX_TEXTURE));
+        buffers.endBatch(SkyseamRenderTypes.flux(CROWN));
         for (FluxVortex vortex : shown) {
             arcs(buffers.getBuffer(SkyseamRenderTypes.glow()), matrix, vortex, time, camera);
         }
@@ -217,14 +245,14 @@ public final class VortexRenderer {
 
     /** Drops the cached makes of vortices no longer near. */
     private static void forget(List<FluxVortex> vortices) {
-        if (STRANDS_OF.size() + MESAS_OF.size() < 24) {
+        if (TUBES_OF.size() + MESAS_OF.size() < 24) {
             return;
         }
         Set<Long> ids = new HashSet<>();
         for (FluxVortex vortex : vortices) {
             ids.add(vortex.id());
         }
-        STRANDS_OF.keySet().retainAll(ids);
+        TUBES_OF.keySet().retainAll(ids);
         MESAS_OF.keySet().retainAll(ids);
     }
 
@@ -253,72 +281,50 @@ public final class VortexRenderer {
         return smooth(since(vortex, time) / 16) * (1 - smooth((vortex.unravelled(time) - 0.55) / 0.45));
     }
 
-    /**
-     * The lit part of a strand now, in blocks above the foot: {@code [0]} where it starts, {@code [1]} where it ends,
-     * and {@code [2]} how far its spill over the top has grown, 0 to 1.
-     */
-    private static double[] span(FluxVortex vortex, Strand s, double time) {
-        double since = since(vortex, time);
+    /** How far into the crown a height is, 0 below it to 1 at the very top. */
+    private static double crownShare(FluxVortex vortex, double above) {
         double height = vortex.height();
-        double top = height * ease((since - s.delay) / s.climb);
-        double leave = smooth((vortex.unravelled(time) - s.leave) / 0.5);
-        double bottom = height * leave * leave;
-        double spill = ease((since - s.delay - s.climb) / 40) * (1 - smooth(vortex.unravelled(time) / 0.5));
-        return new double[] {bottom, top, spill};
+        return smooth((above - height * (1 - CROWN_SHARE)) / (height * CROWN_SHARE));
+    }
+
+    /** How far the crown has opened: once the vortices reach the top, until they have streamed up into it. */
+    public static double crownOpen(FluxVortex vortex, double time) {
+        Tube tube = tubesOf(vortex)[0];
+        return ease((since(vortex, time) - tube.delay - tube.climb + 4) / 40) * (1 - smooth((vortex.unravelled(time) - 0.55) / 0.45));
     }
 
     /**
-     * Where a wanderer is showing now: {@code [0]} to {@code [1]} in blocks above the foot, and {@code [2]} how bright,
-     * or null while it rests. Each time round it picks a stretch of the column at random, shoots up it, lingers and
-     * fades out.
+     * The lit part of a vortex now, in blocks above the foot: {@code [0]} where it starts and {@code [1]} where it
+     * ends. It shoots up as the flux vortex forms and lets go of the ground as it unravels.
      */
-    private static double[] showing(FluxVortex vortex, Strand s, double time) {
-        double t = time / s.cycle + (s.seed & 1023) / 1024.0;
-        long round = (long) Math.floor(t);
-        double u = t - round;
-        RandomSource random = RandomSource.create(s.seed + round * 0x9E3779B97F4A7C15L);
-        if (random.nextFloat() < 0.3f) {
-            return null;
-        }
+    private static double[] span(FluxVortex vortex, Tube tube, double time) {
         double height = vortex.height();
-        double from = height * 0.6 * random.nextDouble();
-        double to = random.nextFloat() < 0.35f ? height : Math.min(height, from + height * (0.2 + 0.45 * random.nextDouble()));
-        double bright = (0.55 + 0.45 * random.nextDouble()) * (1 - smooth((u - 0.55) / 0.45));
-        return new double[] {from, from + (to - from) * ease(u / 0.3), bright};
+        double top = height * ease((since(vortex, time) - tube.delay) / tube.climb);
+        double leave = smooth((vortex.unravelled(time) - tube.leave) / 0.6);
+        return new double[] {height * leave * leave, top};
     }
 
     // ---- Makes ---------------------------------------------------------------------------------------------------
 
-    private static Strand[] strandsOf(FluxVortex vortex) {
-        return STRANDS_OF.computeIfAbsent(vortex.id(), id -> {
+    private static Tube[] tubesOf(FluxVortex vortex) {
+        return TUBES_OF.computeIfAbsent(vortex.id(), id -> {
             RandomSource random = RandomSource.create(id * 6364136223846793005L + 1442695040888963407L);
-            Strand[] out = new Strand[HELIX + WANDERERS];
             double sign = random.nextBoolean() ? 1 : -1;
-            double twist = sign * (0.075 + 0.02 * random.nextDouble());
-            double speed = 0.12 + 0.08 * random.nextDouble();
-            // The two strands of the helix share their waves, so they bend together and stay across from each other.
-            double[] shared = waves(random);
-            double start = random.nextDouble() * Mth.TWO_PI;
-            for (int k = 0; k < HELIX; k++) {
-                out[k] = new Strand(false, start + k * Math.PI, twist, speed, 0.7, 1, shared, 5.5 + 1.0 * random.nextDouble(),
-                        0.7 + 0.3 * random.nextDouble(), 60, helixColour(k), 0.9f, 8, 34, 0.06 * k, 30 + 8 * random.nextDouble(),
-                        10 + 6 * random.nextDouble(), 40 + 15 * random.nextDouble(), (random.nextDouble() - 0.5) * 0.6, 0, random.nextLong());
+            double twist = sign * (0.042 + 0.012 * random.nextDouble());
+            double speed = 0.08 + 0.04 * random.nextDouble();
+            // The two share their waves, so they bend together and stay across from each other.
+            double[] waves = new double[5];
+            for (int k = 0; k < waves.length; k++) {
+                waves[k] = random.nextDouble() * Mth.TWO_PI;
             }
-            for (int k = HELIX; k < out.length; k++) {
-                double own = random.nextBoolean() ? 1 : -1;
-                out[k] = new Strand(true, random.nextDouble() * Mth.TWO_PI, own * (0.03 + 0.05 * random.nextDouble()), 0.05 + 0.15 * random.nextDouble(),
-                        0.3 + 0.6 * random.nextDouble(), 1.8, waves(random), 1.3 + 1.1 * random.nextDouble(), 0.5 + 0.5 * random.nextDouble(), 45,
-                        1 + random.nextInt(3), 0.55f + 0.25f * random.nextFloat(), 30 + 20 * random.nextDouble(), 40 + 20 * random.nextDouble(),
-                        0.3 * random.nextDouble(), 16 + 16 * random.nextDouble(), 6 + 8 * random.nextDouble(), 25 + 20 * random.nextDouble(),
-                        (random.nextDouble() - 0.5) * 1.2, 120 + 140 * random.nextDouble(), random.nextLong());
+            double start = random.nextDouble() * Mth.TWO_PI;
+            Tube[] out = new Tube[HELIX];
+            for (int k = 0; k < HELIX; k++) {
+                out[k] = new Tube(start + k * Math.PI, twist, speed, 0.52, waves, 9 + 1.5 * random.nextDouble(), helixColour(k), 8, 44, 0.08 * k,
+                        sign * (0.03 + 0.015 * random.nextDouble()), sign * (0.1 + 0.04 * random.nextDouble()));
             }
             return out;
         });
-    }
-
-    private static double[] waves(RandomSource random) {
-        return new double[] {random.nextDouble() * Mth.TWO_PI, random.nextDouble() * Mth.TWO_PI, random.nextDouble() * Mth.TWO_PI,
-                random.nextDouble() * Mth.TWO_PI, random.nextDouble() * Mth.TWO_PI};
     }
 
     private static Mesa[] mesasOf(FluxVortex vortex) {
@@ -330,7 +336,7 @@ public final class VortexRenderer {
                 int depth = 8 + random.nextInt(8);
                 int layers = 5 + random.nextInt(4);
                 List<Piece> pieces = mesa(random, width, depth, layers);
-                double fraction = 0.12 + 0.8 * (i + 0.2 + 0.6 * random.nextDouble()) / MESAS;
+                double fraction = 0.12 + 0.72 * (i + 0.2 + 0.6 * random.nextDouble()) / MESAS;
                 double angle = i * 2.39996 + random.nextDouble() * 0.6;
                 double distance = 3 + Math.max(width, depth) * 0.5 + 18 * random.nextDouble() * random.nextDouble();
                 out[i] = new Mesa(angle, distance, fraction, random.nextDouble() * Mth.TWO_PI, random.nextDouble() * Mth.TWO_PI, pieces,
@@ -418,6 +424,38 @@ public final class VortexRenderer {
         return ((long) (x + 0x80000) << 40) | ((long) (y + 0x80000) << 20) | (z + 0x80000);
     }
 
+    // ---- Shape ---------------------------------------------------------------------------------------------------
+
+    /**
+     * The middle of a vortex {@code above} blocks over the foot. The pair's twists climb with time; slow waves bend
+     * it round the axis and swell it out and draw it in; in the crown the two flare apart.
+     */
+    private static Vec3 centre(FluxVortex vortex, Tube tube, double above, double time) {
+        double y = vortex.baseY() + above;
+        double[] w = tube.waves;
+        double phi = tube.phase + tube.twist * (above - tube.speed * time) + 0.6 * Math.sin(0.011 * above + 0.005 * time + w[0])
+                + 0.25 * Math.sin(0.029 * above - 0.009 * time + w[1]);
+        double crown = crownShare(vortex, above);
+        double reach = tube.reach * (1 + 0.22 * Math.sin(0.017 * above + 0.008 * time + w[2]) + 0.1 * Math.sin(0.043 * above - 0.012 * time + w[3]))
+                * (1 + 1.3 * crown * crown);
+        double r = vortex.radiusAt(y) * reach;
+        return new Vec3(vortex.x() + Math.cos(phi) * r, y, vortex.z() + Math.sin(phi) * r);
+    }
+
+    /** How thick a vortex is {@code above} blocks over the foot: swelling as waves run up it, spread at the foot and in the crown. */
+    private static double tubeWidth(FluxVortex vortex, Tube tube, double above, double time) {
+        double foot = Math.exp(-above / 16);
+        return tube.width * (1 + 0.2 * Math.sin(0.035 * above - 0.025 * time + tube.waves[4])) * (1 + 0.7 * foot)
+                * (1 + 1.2 * crownShare(vortex, above));
+    }
+
+    /** How much of a vortex shows {@code above} blocks over the foot, within its lit part: soft at its ends, thinning out in the crown. */
+    private static float shows(FluxVortex vortex, double above, double from, double to) {
+        double foot = from > 0.5 ? Mth.clamp((above - from) / 16, 0, 1) : 1;
+        double head = to >= vortex.height() - 0.5 ? 1 : Mth.clamp((to - above) / 8 + 0.2, 0, 1);
+        return (float) (foot * head * (1 - 0.7 * crownShare(vortex, above)));
+    }
+
     // ---- Drawing helpers -----------------------------------------------------------------------------------------
 
     private static void vertex(VertexConsumer buffer, PoseStack.Pose pose, double x, double y, double z, Vec3 camera, float[] colour, float a, float u,
@@ -428,7 +466,8 @@ public final class VortexRenderer {
 
     /**
      * A strip along a line of points, turned to face the camera, {@code widths[k]} wide at each; its texture runs
-     * across it (u) and along it (v, from {@code v0}, one repeat each {@code vScale} blocks).
+     * across it (u) and along it (v, from {@code v0}, one repeat each {@code vScale} blocks). It fades out within a
+     * few blocks of the camera, so from inside a vortex it doesn't fill the view.
      */
     private static void strip(VertexConsumer buffer, PoseStack.Pose pose, List<Vec3> points, Vec3 camera, double[] widths, float[] colour, float[] alphas,
             double v0, double vScale) {
@@ -451,76 +490,65 @@ public final class VortexRenderer {
             float v0k = (float) (v0 + along / vScale);
             float v1k = (float) (v0 + (along + length) / vScale);
             along += length;
-            if (alphas[k] <= 0.002f && alphas[k + 1] <= 0.002f) {
+            float a0 = alphas[k] * near(p0, camera, widths[k]);
+            float a1 = alphas[k + 1] * near(p1, camera, widths[k + 1]);
+            if (a0 <= 0.002f && a1 <= 0.002f) {
                 continue;
             }
-            vertex(buffer, pose, p0.x - s0.x, p0.y - s0.y, p0.z - s0.z, camera, colour, alphas[k], 0, v0k);
-            vertex(buffer, pose, p0.x + s0.x, p0.y + s0.y, p0.z + s0.z, camera, colour, alphas[k], 1, v0k);
-            vertex(buffer, pose, p1.x + s1.x, p1.y + s1.y, p1.z + s1.z, camera, colour, alphas[k + 1], 1, v1k);
-            vertex(buffer, pose, p1.x - s1.x, p1.y - s1.y, p1.z - s1.z, camera, colour, alphas[k + 1], 0, v1k);
+            vertex(buffer, pose, p0.x - s0.x, p0.y - s0.y, p0.z - s0.z, camera, colour, a0, 0, v0k);
+            vertex(buffer, pose, p0.x + s0.x, p0.y + s0.y, p0.z + s0.z, camera, colour, a0, 1, v0k);
+            vertex(buffer, pose, p1.x + s1.x, p1.y + s1.y, p1.z + s1.z, camera, colour, a1, 1, v1k);
+            vertex(buffer, pose, p1.x - s1.x, p1.y - s1.y, p1.z - s1.z, camera, colour, a1, 0, v1k);
         }
     }
 
-    /**
-     * A point on a strand {@code above} blocks over the foot. Its twists climb with time; two slow waves run along it,
-     * bending it round the axis, and two more swell it out and draw it in.
-     */
-    private static Vec3 point(FluxVortex vortex, Strand s, double above, double time) {
-        double y = vortex.baseY() + above;
-        double[] w = s.waves;
-        double phi = s.phase + s.twist * (above - s.speed * time)
-                + s.bend * (0.8 * Math.sin(0.011 * above + 0.005 * time + w[0]) + 0.35 * Math.sin(0.029 * above - 0.009 * time + w[1]));
-        double reach = s.reach * (1 + s.bend * (0.28 * Math.sin(0.017 * above + 0.008 * time + w[2]) + 0.14 * Math.sin(0.043 * above - 0.012 * time + w[3])));
-        double r = vortex.radiusAt(y) * reach;
-        return new Vec3(vortex.x() + Math.cos(phi) * r, y, vortex.z() + Math.sin(phi) * r);
+    /** 0 for a point of a strip right at the camera (or within half the strip's width of it), 1 from some blocks off. */
+    private static float near(Vec3 point, Vec3 camera, double width) {
+        return (float) Mth.clamp((point.distanceTo(camera) - width * 0.5 - 2) / 14, 0, 1);
     }
 
-    /** A strand's width {@code above} blocks over the foot: swelling and thinning as waves run up it. */
-    private static double width(Strand s, double above, double time) {
-        return s.width * (0.8 + 0.25 * Math.sin(0.045 * above - 0.03 * time + s.waves[4]) + 0.1 * Math.sin(0.13 * above - 0.07 * time + s.waves[1]));
+    /** A square turned to face the camera, {@code size} blocks from its middle to each side. */
+    private static void billboard(VertexConsumer buffer, PoseStack.Pose pose, Vec3 middle, Vec3 camera, double size, float[] colour, float a) {
+        Vec3 look = middle.subtract(camera);
+        Vec3 right = look.cross(new Vec3(0, 1, 0));
+        if (right.lengthSqr() < 1.0e-8) {
+            right = new Vec3(1, 0, 0);
+        }
+        right = right.normalize().scale(size);
+        Vec3 up = right.cross(look).normalize().scale(size);
+        vertex(buffer, pose, middle.x - right.x - up.x, middle.y - right.y - up.y, middle.z - right.z - up.z, camera, colour, a, 0, 1);
+        vertex(buffer, pose, middle.x + right.x - up.x, middle.y + right.y - up.y, middle.z + right.z - up.z, camera, colour, a, 1, 1);
+        vertex(buffer, pose, middle.x + right.x + up.x, middle.y + right.y + up.y, middle.z + right.z + up.z, camera, colour, a, 1, 0);
+        vertex(buffer, pose, middle.x - right.x + up.x, middle.y - right.y + up.y, middle.z - right.z + up.z, camera, colour, a, 0, 0);
     }
 
-    /**
-     * Lays out a strand from {@code from} to {@code to} blocks above the foot and on over the top in its spill (grown
-     * {@code spill}, 0 to 1), with the alpha and width at each point: soft where it starts above the foot and where its
-     * head is climbing, fading along its spill.
-     */
-    private static void path(FluxVortex vortex, Strand s, double time, double step, float a, double from, double to, double spill, List<Vec3> points,
-            List<Float> alphas, List<Double> widths) {
-        if (to - from < 0.5) {
-            return;
+    /** A flat square lying level, {@code size} blocks from its middle to each side, turned {@code turn}. */
+    private static void lying(VertexConsumer buffer, PoseStack.Pose pose, double x, double y, double z, Vec3 camera, double size, double turn,
+            float[] colour, float a) {
+        float[][] corners = {{0, 0}, {0, 1}, {1, 1}, {1, 0}};
+        for (float[] corner : corners) {
+            double cx = (corner[0] - 0.5) * 2 * size;
+            double cz = (corner[1] - 0.5) * 2 * size;
+            vertex(buffer, pose, x + cx * Math.cos(turn) - cz * Math.sin(turn), y, z + cx * Math.sin(turn) + cz * Math.cos(turn), camera, colour, a,
+                    corner[0], corner[1]);
         }
-        double soft = from > 0.5 ? 14 : 0.01;
-        boolean topped = to >= vortex.height() - 0.5;
-        for (double above = from; ; above += step) {
-            double h = Math.min(above, to);
-            points.add(point(vortex, s, h, time));
-            float foot = (float) Mth.clamp((h - from) / soft, 0, 1);
-            float head = topped ? 1 : (float) Mth.clamp((to - h) / 6 + 0.25, 0, 1);
-            alphas.add(a * foot * head);
-            widths.add(width(s, h, time));
-            if (h >= to) {
-                break;
-            }
-        }
-        if (spill <= 0.01 || s.spillReach <= 0 || !topped) {
-            return;
-        }
-        Vec3 last = points.get(points.size() - 1);
-        double out = Math.atan2(last.z - vortex.z(), last.x - vortex.x());
-        double reach = Math.hypot(last.x - vortex.x(), last.z - vortex.z());
-        double startWidth = widths.get(widths.size() - 1);
-        // A parabola through the top, rising spillRise and falling to spillDrop below it.
-        double up = 2 * s.spillRise + 2 * Math.sqrt(s.spillRise * s.spillRise + s.spillRise * s.spillDrop);
-        double down = up + s.spillDrop;
-        int steps = 14;
-        for (int i = 1; i <= steps; i++) {
-            double q = spill * i / steps;
-            double angle = out + s.spillCurl * q;
-            double r = reach + s.spillReach * q;
-            points.add(new Vec3(vortex.x() + Math.cos(angle) * r, vortex.topY() + up * q - down * q * q, vortex.z() + Math.sin(angle) * r));
-            alphas.add(a * (float) Math.pow(1 - q, 1.4) * (i == steps ? 0 : 1));
-            widths.add(startWidth * (1 - 0.6 * q));
+    }
+
+    /** A flat ring lying level, {@code thick} blocks across, its texture running across it. */
+    private static void ring(VertexConsumer buffer, PoseStack.Pose pose, double x, double y, double z, Vec3 camera, double radius, double thick,
+            float[] colour, float a) {
+        int segments = 64;
+        for (int s = 0; s < segments; s++) {
+            double t0 = s * Mth.TWO_PI / segments;
+            double t1 = (s + 1) * Mth.TWO_PI / segments;
+            float u0 = (float) s / segments * 8;
+            float u1 = (float) (s + 1) / segments * 8;
+            double in = radius - thick / 2;
+            double out = radius + thick / 2;
+            vertex(buffer, pose, x + Math.cos(t0) * in, y, z + Math.sin(t0) * in, camera, colour, a, u0, 0);
+            vertex(buffer, pose, x + Math.cos(t1) * in, y, z + Math.sin(t1) * in, camera, colour, a, u1, 0);
+            vertex(buffer, pose, x + Math.cos(t1) * out, y, z + Math.sin(t1) * out, camera, colour, a, u1, 1);
+            vertex(buffer, pose, x + Math.cos(t0) * out, y, z + Math.sin(t0) * out, camera, colour, a, u0, 1);
         }
     }
 
@@ -536,59 +564,98 @@ public final class VortexRenderer {
         return values.stream().mapToDouble(Double::doubleValue).toArray();
     }
 
-    // ---- The column ----------------------------------------------------------------------------------------------
+    /** Blocks between the points laid along a vortex: finer near, coarser far. */
+    private static double step(FluxVortex vortex, Vec3 camera) {
+        return Mth.clamp(vortex.height() / 120.0, 2, 3.5) * (1 + flat(vortex, camera) / 400);
+    }
 
-    /** The wanderers where they are showing, or the two strands of the helix; light running up each. */
-    private static void strands(VertexConsumer buffer, PoseStack.Pose pose, FluxVortex vortex, double time, Vec3 camera, boolean wanderers) {
+    // ---- The pair ------------------------------------------------------------------------------------------------
+
+    /** The bodies of the two vortices: pixel streaks of light running up them. */
+    private static void bodies(VertexConsumer buffer, PoseStack.Pose pose, FluxVortex vortex, double time, Vec3 camera) {
         float faded = fade(vortex, camera);
         if (faded <= 0.01f) {
             return;
         }
-        double step = Mth.clamp(vortex.height() / 120.0, 2, 3.5) * (1 + flat(vortex, camera) / 400);
-        float dayAlpha = Mth.lerp(daylight, 1f, 0.8f);
-        List<Vec3> points = new ArrayList<>();
-        List<Float> alphas = new ArrayList<>();
-        List<Double> widths = new ArrayList<>();
-        for (Strand s : strandsOf(vortex)) {
-            if (s.wanderer != wanderers) {
+        float a = Mth.lerp(daylight, 0.62f, 0.3f) * faded;
+        double step = step(vortex, camera);
+        for (Tube tube : tubesOf(vortex)) {
+            double[] span = span(vortex, tube, time);
+            if (span[1] - span[0] < 0.5) {
                 continue;
             }
-            double[] span = span(vortex, s, time);
-            double from = span[0];
-            double to = span[1];
-            double spill = span[2];
-            float a = s.alpha * faded * dayAlpha;
-            if (s.wanderer) {
-                double[] showing = showing(vortex, s, time);
-                if (showing == null) {
-                    continue;
+            List<Vec3> points = new ArrayList<>();
+            List<Float> alphas = new ArrayList<>();
+            List<Double> widths = new ArrayList<>();
+            for (double above = span[0]; ; above += step) {
+                double h = Math.min(above, span[1]);
+                points.add(centre(vortex, tube, h, time));
+                alphas.add(a * shows(vortex, h, span[0], span[1]));
+                widths.add(tubeWidth(vortex, tube, h, time));
+                if (h >= span[1]) {
+                    break;
                 }
-                from = Math.max(from, showing[0]);
-                to = Math.min(to, showing[1]);
-                a *= (float) showing[2];
             }
-            points.clear();
-            alphas.clear();
-            widths.clear();
-            path(vortex, s, time, step, a, from, to, spill, points, alphas, widths);
-            if (points.size() < 2) {
-                continue;
-            }
-            strip(buffer, pose, points, camera, doubles(widths), colour(s.colour, daylight), floats(alphas), -time * s.flow / s.repeat + s.phase,
-                    s.repeat);
+            strip(buffer, pose, points, camera, doubles(widths), colour(tube.colour, daylight), floats(alphas), -time * 0.45 / 32 + tube.phase, 32);
         }
     }
 
-    /** Wisps peeling off the helix every so often, at random heights, curling out and up and fading. */
+    /** The core of each vortex, and the strands spinning round its middle; light running up each. */
+    private static void strands(VertexConsumer buffer, PoseStack.Pose pose, FluxVortex vortex, double time, Vec3 camera) {
+        float faded = fade(vortex, camera);
+        if (faded <= 0.01f) {
+            return;
+        }
+        double step = step(vortex, camera);
+        for (Tube tube : tubesOf(vortex)) {
+            double[] span = span(vortex, tube, time);
+            if (span[1] - span[0] < 0.5) {
+                continue;
+            }
+            float[] colour = colour(tube.colour, daylight);
+            List<Vec3> core = new ArrayList<>();
+            List<Float> coreAlphas = new ArrayList<>();
+            List<Double> coreWidths = new ArrayList<>();
+            List<List<Vec3>> swirls = new ArrayList<>();
+            for (int j = 0; j < SWIRLS; j++) {
+                swirls.add(new ArrayList<>());
+            }
+            List<Float> swirlAlphas = new ArrayList<>();
+            for (double above = span[0]; ; above += step) {
+                double h = Math.min(above, span[1]);
+                Vec3 middle = centre(vortex, tube, h, time);
+                double width = tubeWidth(vortex, tube, h, time);
+                float shows = shows(vortex, h, span[0], span[1]);
+                core.add(middle);
+                coreAlphas.add(Mth.lerp(daylight, 0.9f, 0.55f) * faded * shows);
+                coreWidths.add(width * 0.3);
+                for (int j = 0; j < SWIRLS; j++) {
+                    double angle = j * Mth.TWO_PI / SWIRLS + tube.swirlTwist * h - tube.spin * time;
+                    double r = width * (0.34 + 0.06 * Math.sin(0.07 * h + j));
+                    swirls.get(j).add(middle.add(Math.cos(angle) * r, 0, Math.sin(angle) * r));
+                }
+                swirlAlphas.add(Mth.lerp(daylight, 0.8f, 0.5f) * faded * shows);
+                if (h >= span[1]) {
+                    break;
+                }
+            }
+            strip(buffer, pose, core, camera, doubles(coreWidths), paler(colour, 0.5f), floats(coreAlphas), -time * 0.7 / 24 + tube.phase, 24);
+            double[] swirlWidths = new double[swirlAlphas.size()];
+            java.util.Arrays.fill(swirlWidths, 1.3);
+            for (int j = 0; j < SWIRLS; j++) {
+                strip(buffer, pose, swirls.get(j), camera, swirlWidths, paler(colour, 0.3f), floats(swirlAlphas), -time * 0.9 / 16 + j * 0.31, 16);
+            }
+        }
+    }
+
+    /** Wisps peeling off the vortices every so often, at random heights, curling out and up and fading. */
     private static void wisps(VertexConsumer buffer, PoseStack.Pose pose, FluxVortex vortex, double time, Vec3 camera) {
         float faded = fade(vortex, camera) * vortex.formed(time) * (1 - vortex.unravelled(time));
         if (faded <= 0.01f) {
             return;
         }
-        Strand[] strands = strandsOf(vortex);
+        Tube[] tubes = tubesOf(vortex);
         long now = (long) Math.floor(time / WISP_EVERY);
-        List<Vec3> points = new ArrayList<>();
-        List<Float> alphas = new ArrayList<>();
         int steps = 10;
         double[] widths = new double[steps + 1];
         for (long slot = now - WISP_LIFE / WISP_EVERY; slot <= now; slot++) {
@@ -600,92 +667,107 @@ public final class VortexRenderer {
             if (random.nextFloat() < 0.3f) {
                 continue;
             }
-            int k = random.nextInt(HELIX);
-            Strand s = strands[k];
-            double[] span = span(vortex, s, time);
-            double start = vortex.height() * (0.05 + 0.85 * random.nextDouble());
+            Tube tube = tubes[random.nextInt(HELIX)];
+            double[] span = span(vortex, tube, time);
+            double start = vortex.height() * (0.05 + 0.75 * random.nextDouble());
             double length = 16 + 24 * random.nextDouble();
             if (start < span[0] || start + length > span[1]) {
                 continue;
             }
-            double out = 7 + 12 * random.nextDouble();
+            double out = 8 + 12 * random.nextDouble();
             double curl = (random.nextDouble() - 0.5) * 2.4;
             double p = age / WISP_LIFE;
             double grown = ease(p * 2.2);
-            points.clear();
-            alphas.clear();
+            double edge = tubeWidth(vortex, tube, start, time) / 2;
+            List<Vec3> points = new ArrayList<>();
+            List<Float> alphas = new ArrayList<>();
             for (int i = 0; i <= steps; i++) {
                 double q = grown * i / steps;
-                Vec3 on = point(vortex, s, start + q * length, time);
+                Vec3 on = centre(vortex, tube, start + q * length, time);
                 double angle = Math.atan2(on.z - vortex.z(), on.x - vortex.x()) + curl * q;
-                double r = Math.hypot(on.x - vortex.x(), on.z - vortex.z()) + out * Math.pow(q, 1.6);
+                double r = Math.hypot(on.x - vortex.x(), on.z - vortex.z()) + edge + out * Math.pow(q, 1.6);
                 points.add(new Vec3(vortex.x() + Math.cos(angle) * r, on.y + 6 * q * q, vortex.z() + Math.sin(angle) * r));
-                alphas.add(faded * 0.75f * (float) (Math.pow(1 - p, 1.3) * (1 - 0.7 * i / (double) steps)) * (i == steps ? 0 : 1));
-                widths[i] = width(s, start, time) * 0.45 * (1 - 0.5 * i / (double) steps);
+                alphas.add(faded * 0.8f * (float) (Math.pow(1 - p, 1.3) * (1 - 0.7 * i / (double) steps)) * (i == steps ? 0 : 1));
+                widths[i] = 1.4 * (1 - 0.5 * i / (double) steps);
             }
-            strip(buffer, pose, points, camera, widths, colour(s.colour, daylight), floats(alphas), -time * 0.03 + slot * 0.37, 30);
+            strip(buffer, pose, points, camera, widths, paler(colour(tube.colour, daylight), 0.3f), floats(alphas), -time * 0.03 + slot * 0.37, 16);
         }
     }
 
     /**
-     * The column's glow: wide and faint all the way up, brightest where it leaves the water; and while it forms, a
-     * bright head on each strand of the helix as it climbs.
+     * The soft light round the column: a haze round each vortex, spray where they leave the water, a faint glow over
+     * the whole column, and while they form, a bright head on each as it climbs.
      */
     private static void glow(VertexConsumer buffer, PoseStack.Pose pose, FluxVortex vortex, double time, Vec3 camera) {
         float faded = fade(vortex, camera);
         if (faded <= 0.01f) {
             return;
         }
-        Strand[] strands = strandsOf(vortex);
-        double bottom = vortex.height();
-        double top = 0;
-        for (int k = 0; k < HELIX; k++) {
-            double[] span = span(vortex, strands[k], time);
-            if (span[1] - span[0] > 0.5) {
-                bottom = Math.min(bottom, span[0]);
-                top = Math.max(top, span[1]);
-            }
-        }
+        double step = step(vortex, camera) * 2;
         float lit = (float) poolLit(vortex, time);
-        float[] colour = colour(0, daylight);
-        float body = Mth.lerp(daylight, 0.1f, 0.05f) * faded;
-        if (top - bottom > 1) {
+        for (Tube tube : tubesOf(vortex)) {
+            double[] span = span(vortex, tube, time);
+            if (span[1] - span[0] < 0.5) {
+                continue;
+            }
+            float[] colour = colour(tube.colour, daylight);
+            // The haze.
             List<Vec3> points = new ArrayList<>();
             List<Float> alphas = new ArrayList<>();
             List<Double> widths = new ArrayList<>();
-            int steps = 24;
-            for (int i = 0; i <= steps; i++) {
-                double above = bottom + (top - bottom) * i / steps;
-                points.add(new Vec3(vortex.x(), vortex.baseY() + above, vortex.z()));
-                float foot = (float) Math.exp(-above / 18);
-                float ends = (float) Mth.clamp(Math.min((above - bottom) / 12 + (bottom < 0.5 ? 1 : 0), (top - above) / 20), 0, 1);
-                alphas.add((body + 0.3f * foot * lit * faded) * ends);
-                widths.add(vortex.radiusAt(vortex.baseY() + above) * 2.4 + 10 * foot);
+            for (double above = span[0]; ; above += step) {
+                double h = Math.min(above, span[1]);
+                points.add(centre(vortex, tube, h, time));
+                alphas.add(Mth.lerp(daylight, 0.16f, 0.07f) * faded * shows(vortex, h, span[0], span[1]));
+                widths.add(tubeWidth(vortex, tube, h, time) * 1.8);
+                if (h >= span[1]) {
+                    break;
+                }
             }
             strip(buffer, pose, points, camera, doubles(widths), colour, floats(alphas), 0, 1000);
-        }
-        // The heads of the helix's strands, while they climb.
-        for (int k = 0; k < HELIX; k++) {
-            Strand s = strands[k];
-            double[] span = span(vortex, s, time);
-            if (span[1] <= 0.5 || span[1] >= vortex.height() - 0.5) {
-                continue;
+            // The spray where it leaves the water.
+            if (span[0] < 1) {
+                Vec3 foot = centre(vortex, tube, 0, time);
+                List<Vec3> spray = List.of(foot, centre(vortex, tube, 8, time), centre(vortex, tube, 20, time));
+                double width = tubeWidth(vortex, tube, 0, time);
+                strip(buffer, pose, spray, camera, new double[] {width * 2.2, width * 1.8, width * 1.2}, paler(colour, 0.5f),
+                        new float[] {0.45f * lit * faded, 0.3f * lit * faded, 0}, 0, 1000);
             }
-            Vec3 tip = point(vortex, s, span[1], time);
-            Vec3 tail = point(vortex, s, Math.max(0, span[1] - 16), time);
-            strip(buffer, pose, List.of(tail, tip, tip.add(0, 4, 0)), camera, new double[] {3, 11, 1}, colour(s.colour, daylight),
-                    new float[] {0, 0.95f * faded, 0}, 0, 1000);
+            // The head, while it climbs.
+            if (span[1] > 0.5 && span[1] < vortex.height() - 0.5) {
+                Vec3 tip = centre(vortex, tube, span[1], time);
+                Vec3 tail = centre(vortex, tube, Math.max(0, span[1] - 18), time);
+                strip(buffer, pose, List.of(tail, tip, tip.add(0, 5, 0)), camera, new double[] {4, 16, 2}, paler(colour, 0.4f),
+                        new float[] {0, 0.95f * faded, 0}, 0, 1000);
+            }
+        }
+        // The faint glow over the whole column.
+        double[] span = span(vortex, tubesOf(vortex)[0], time);
+        if (span[1] - span[0] > 1) {
+            List<Vec3> points = new ArrayList<>();
+            List<Float> alphas = new ArrayList<>();
+            List<Double> widths = new ArrayList<>();
+            int steps = 20;
+            for (int i = 0; i <= steps; i++) {
+                double above = span[0] + (span[1] - span[0]) * i / steps;
+                points.add(new Vec3(vortex.x(), vortex.baseY() + above, vortex.z()));
+                float foot = (float) Math.exp(-above / 18);
+                float ends = (float) Mth.clamp(Math.min((above - span[0]) / 12 + (span[0] < 0.5 ? 1 : 0), (span[1] - above) / 20 + 0.3), 0, 1);
+                alphas.add((Mth.lerp(daylight, 0.07f, 0.03f) + 0.25f * foot * lit) * faded * ends);
+                widths.add(vortex.radiusAt(vortex.baseY() + above) * 2.6 + 10 * foot);
+            }
+            strip(buffer, pose, points, camera, doubles(widths), colour(3, daylight), floats(alphas), 0, 1000);
         }
     }
 
-    /** Now and then an arc of light jumps between the two strands of the helix and flickers out. */
+    /** Now and then an arc of light jumps between the two vortices and flickers out. */
     private static void arcs(VertexConsumer glow, PoseStack.Pose pose, FluxVortex vortex, double time, Vec3 camera) {
         float on = vortex.formed(time) * (1 - vortex.unravelled(time)) * fade(vortex, camera);
         if (on < 0.2f) {
             return;
         }
-        Strand[] strands = strandsOf(vortex);
-        double[] span = span(vortex, strands[0], time);
+        Tube[] tubes = tubesOf(vortex);
+        double[] span = span(vortex, tubes[0], time);
         long slot = (long) Math.floor(time / ARC_EVERY);
         double age = time / ARC_EVERY - slot;
         float[] colour = colour(3, daylight);
@@ -694,23 +776,23 @@ public final class VortexRenderer {
             if (random.nextFloat() < 0.55f) {
                 continue;
             }
-            double above = vortex.height() * (0.05 + 0.85 * random.nextDouble());
+            double above = vortex.height() * (0.05 + 0.75 * random.nextDouble());
             if (above < span[0] || above > span[1] || Math.abs(vortex.baseY() + above - camera.y) > 220) {
                 continue;
             }
-            Vec3 from = point(vortex, strands[0], above, time);
-            Vec3 to = point(vortex, strands[1], above + (random.nextDouble() - 0.5) * 12, time);
+            Vec3 from = centre(vortex, tubes[0], above, time);
+            Vec3 to = centre(vortex, tubes[1], above + (random.nextDouble() - 0.5) * 12, time);
             float a = on * (0.6f + 0.4f * random.nextFloat()) * (float) (1 - age) * Mth.lerp(daylight, 0.9f, 0.7f);
             Vector3f previous = null;
             int segments = 9;
             for (int s = 0; s <= segments; s++) {
                 double t = (double) s / segments;
-                double jitter = s == 0 || s == segments ? 0 : 1.4 * Math.sin(Math.PI * t);
+                double jitter = s == 0 || s == segments ? 0 : 1.6 * Math.sin(Math.PI * t);
                 Vec3 at = from.lerp(to, t).add((random.nextDouble() - 0.5) * jitter * 2, (random.nextDouble() - 0.5) * jitter * 2,
                         (random.nextDouble() - 0.5) * jitter * 2);
                 Vector3f point = new Vector3f((float) (at.x - camera.x), (float) (at.y - camera.y), (float) (at.z - camera.z));
                 if (previous != null) {
-                    bolt(glow, pose, previous, point, 0.12f, colour, a);
+                    bolt(glow, pose, previous, point, 0.18f, colour, a);
                 }
                 previous = point;
             }
@@ -731,28 +813,110 @@ public final class VortexRenderer {
         glow.addVertex(pose, to.x - side.x, to.y - side.y, to.z - side.z).setColor(colour[0], colour[1], colour[2], a);
     }
 
+    // ---- The crown -----------------------------------------------------------------------------------------------
+
+    /**
+     * Arcs of light bursting out of the crown all round and falling away: each shoots out, curls and fades in turn,
+     * then bursts out again somewhere else.
+     */
+    private static void crownArcs(VertexConsumer buffer, PoseStack.Pose pose, FluxVortex vortex, double time, Vec3 camera) {
+        float open = (float) crownOpen(vortex, time) * fade(vortex, camera);
+        if (open <= 0.01f) {
+            return;
+        }
+        double top = vortex.topY();
+        double from = vortex.radiusAt(top) * 0.55;
+        int steps = 14;
+        double[] widths = new double[steps + 1];
+        for (int i = 0; i < CROWN_ARCS; i++) {
+            double life = 110 + (i * 37) % 70;
+            double t = time / life + i * 0.618;
+            long round = (long) Math.floor(t);
+            double p = t - round;
+            RandomSource random = RandomSource.create(vortex.id() * 7477L + i * 92821L + round * 68659L);
+            double angle = i * Mth.TWO_PI / CROWN_ARCS + (random.nextDouble() - 0.5) * 0.5 + tubesOf(vortex)[0].twist * tubesOf(vortex)[0].speed * -time;
+            double reach = 16 + 26 * random.nextDouble();
+            double rise = 8 + 16 * random.nextDouble();
+            double drop = 28 + 40 * random.nextDouble();
+            double curl = (random.nextDouble() - 0.5) * 0.8;
+            double width = 1.2 + 1.2 * random.nextDouble();
+            float bright = 0.6f + 0.4f * random.nextFloat();
+            float[] colour = paler(colour(random.nextBoolean() ? 0 : 2, daylight), 0.25f);
+            // A parabola rising {@code rise} over the top and falling to {@code drop} below it.
+            double up = 2 * rise + 2 * Math.sqrt(rise * rise + rise * drop);
+            double down = up + drop;
+            double grown = ease(p / 0.45);
+            float life01 = (float) (1 - smooth((p - 0.55) / 0.45));
+            List<Vec3> points = new ArrayList<>();
+            List<Float> alphas = new ArrayList<>();
+            for (int s = 0; s <= steps; s++) {
+                double q = grown * s / steps;
+                double a = angle + curl * q;
+                double r = from + reach * q;
+                points.add(new Vec3(vortex.x() + Math.cos(a) * r, top - 8 + up * q - down * q * q, vortex.z() + Math.sin(a) * r));
+                alphas.add(open * bright * life01 * (float) Math.pow(1 - s / (double) steps, 0.8) * (s == steps ? 0 : 1) * 0.9f);
+                widths[s] = width * (1 - 0.5 * s / (double) steps);
+            }
+            strip(buffer, pose, points, camera, widths, colour, floats(alphas), -time * 0.8 / 16 + i * 0.37, 16);
+        }
+    }
+
+    /** The crown's glowing cap: a glow facing the camera over the top, and a slowly turning disc of light under it. */
+    private static void crown(VertexConsumer buffer, PoseStack.Pose pose, FluxVortex vortex, double time, Vec3 camera) {
+        float open = (float) crownOpen(vortex, time) * fade(vortex, camera);
+        float faded = fade(vortex, camera);
+        // The heads of the two vortices, while they climb.
+        for (Tube tube : tubesOf(vortex)) {
+            double[] span = span(vortex, tube, time);
+            if (span[1] > 0.5 && span[1] < vortex.height() - 0.5) {
+                billboard(buffer, pose, centre(vortex, tube, span[1], time), camera, 7, paler(colour(tube.colour, daylight), 0.5f), 0.9f * faded);
+            }
+        }
+        if (open <= 0.01f) {
+            return;
+        }
+        double top = vortex.topY();
+        double size = vortex.radiusAt(top) * 1.15 * (0.6 + 0.4 * ease(open));
+        float breathe = (float) (0.85 + 0.15 * Math.sin(time * 0.05 + vortex.id()));
+        billboard(buffer, pose, new Vec3(vortex.x(), top + 4, vortex.z()), camera, size, colour(3, daylight), Mth.lerp(daylight, 0.5f, 0.35f) * open * breathe);
+        lying(buffer, pose, vortex.x(), top - 2, vortex.z(), camera, size * 1.3, time * 0.004, colour(0, daylight), 0.35f * open);
+        lying(buffer, pose, vortex.x(), top + 1, vortex.z(), camera, size * 0.9, -time * 0.007 + 1, colour(2, daylight), 0.3f * open);
+    }
+
+    /** Rings of light pulsing out of the crown, one after another. */
+    private static void halos(VertexConsumer buffer, PoseStack.Pose pose, FluxVortex vortex, double time, Vec3 camera) {
+        float open = (float) crownOpen(vortex, time) * fade(vortex, camera);
+        if (open <= 0.01f) {
+            return;
+        }
+        double top = vortex.topY();
+        double from = vortex.radiusAt(top);
+        for (int j = 0; j * HALO_EVERY < HALO_LIFE; j++) {
+            double age = time % HALO_EVERY + j * HALO_EVERY;
+            double p = age / HALO_LIFE;
+            if (p > 1) {
+                continue;
+            }
+            float a = (float) (Math.min(1, p * 6) * Math.pow(1 - p, 1.4)) * 0.6f * open;
+            ring(buffer, pose, vortex.x(), top - 4 + 6 * p, vortex.z(), camera, from * (0.8 + 2.6 * Math.sqrt(p)), 2 + 3 * p,
+                    colour(j % 2 == 0 ? 0 : 2, daylight), a);
+        }
+    }
+
     // ---- The foot ------------------------------------------------------------------------------------------------
 
-    /** The pool of light on the water or the ground at the foot, and a wider fainter one round it, breathing. */
+    /** The pool of light on the water or the ground at the foot, and a wider fainter one round it, turning slowly. */
     private static void pool(VertexConsumer buffer, PoseStack.Pose pose, FluxVortex vortex, double time, Vec3 camera) {
         float a = (float) poolLit(vortex, time) * fade(vortex, camera);
         if (a < 0.01f) {
             return;
         }
         double size = vortex.radiusAt(vortex.baseY()) * 1.9;
-        double breathe = 1 + 0.05 * Math.sin(time * 0.035 + vortex.id());
         double y = vortex.baseY() + 0.06;
-        // A flash as the strands burst out of it.
+        // A flash as the vortices burst out of it.
         float flash = (float) Math.max(0, 1 - Math.abs(since(vortex, time) - 14) / 14);
-        pad(buffer, pose, vortex, camera, size * breathe, y, colour(0, daylight), Mth.lerp(daylight, 0.85f, 0.6f) * a + 0.5f * flash * a);
-        pad(buffer, pose, vortex, camera, size * 2.4 / breathe, y + 0.02, colour(2, daylight), Mth.lerp(daylight, 0.35f, 0.22f) * a);
-    }
-
-    private static void pad(VertexConsumer buffer, PoseStack.Pose pose, FluxVortex vortex, Vec3 camera, double size, double y, float[] colour, float a) {
-        vertex(buffer, pose, vortex.x() - size, y, vortex.z() - size, camera, colour, a, 0, 0);
-        vertex(buffer, pose, vortex.x() - size, y, vortex.z() + size, camera, colour, a, 0, 1);
-        vertex(buffer, pose, vortex.x() + size, y, vortex.z() + size, camera, colour, a, 1, 1);
-        vertex(buffer, pose, vortex.x() + size, y, vortex.z() - size, camera, colour, a, 1, 0);
+        lying(buffer, pose, vortex.x(), y, vortex.z(), camera, size, time * 0.003, colour(0, daylight), Mth.lerp(daylight, 0.85f, 0.6f) * a + 0.5f * flash * a);
+        lying(buffer, pose, vortex.x(), y + 0.02, vortex.z(), camera, size * 2.2, -time * 0.002, colour(2, daylight), Mth.lerp(daylight, 0.35f, 0.22f) * a);
     }
 
     /** Ripples of light running out over the water from the foot, slowly, one after another; the first as it forms. */
@@ -768,7 +932,7 @@ public final class VortexRenderer {
         // The ripple of its forming: fast and bright.
         if (since > 6 && since < 66) {
             double p = (since - 6) / 60;
-            ring(buffer, pose, vortex, camera, foot * 0.4 + foot * 3.6 * ease(p), 3 + 4 * p, y, colour, (float) (1 - p) * lit);
+            ring(buffer, pose, vortex.x(), y, vortex.z(), camera, foot * 0.4 + foot * 3.6 * ease(p), 3 + 4 * p, colour, (float) (1 - p) * lit);
         }
         for (int j = 0; j * RIPPLE_EVERY < RIPPLE_LIFE; j++) {
             double age = (since - 20) % RIPPLE_EVERY + j * RIPPLE_EVERY;
@@ -778,24 +942,7 @@ public final class VortexRenderer {
             double p = age / RIPPLE_LIFE;
             double radius = foot * (0.75 + 2.6 * Math.sqrt(p));
             float a = (float) (Math.min(1, p * 8) * Math.pow(1 - p, 1.5)) * Mth.lerp(daylight, 0.55f, 0.35f) * lit;
-            ring(buffer, pose, vortex, camera, radius, 1.6 + 3 * p, y, colour, a);
-        }
-    }
-
-    private static void ring(VertexConsumer buffer, PoseStack.Pose pose, FluxVortex vortex, Vec3 camera, double radius, double thick, double y,
-            float[] colour, float a) {
-        int segments = 64;
-        for (int s = 0; s < segments; s++) {
-            double t0 = s * Mth.TWO_PI / segments;
-            double t1 = (s + 1) * Mth.TWO_PI / segments;
-            float u0 = (float) s / segments * 4;
-            float u1 = (float) (s + 1) / segments * 4;
-            double in = radius - thick / 2;
-            double out = radius + thick / 2;
-            vertex(buffer, pose, vortex.x() + Math.cos(t0) * in, y, vortex.z() + Math.sin(t0) * in, camera, colour, a, u0, 0);
-            vertex(buffer, pose, vortex.x() + Math.cos(t1) * in, y, vortex.z() + Math.sin(t1) * in, camera, colour, a, u1, 0);
-            vertex(buffer, pose, vortex.x() + Math.cos(t1) * out, y, vortex.z() + Math.sin(t1) * out, camera, colour, a, u1, 1);
-            vertex(buffer, pose, vortex.x() + Math.cos(t0) * out, y, vortex.z() + Math.sin(t0) * out, camera, colour, a, u0, 1);
+            ring(buffer, pose, vortex.x(), y, vortex.z(), camera, radius, 1.6 + 3 * p, colour, a);
         }
     }
 

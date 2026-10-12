@@ -45,7 +45,7 @@ public final class SkyseamRenderTypes {
                     .createCompositeState(false)));
 
     /**
-     * Textured additive light, for a flux vortex's helix, strands, glow, pool and ripples (docs/DECISIONS.md K97),
+     * Textured additive light, for a flux vortex's vortices, strands, glow, pool, crown and ripples (docs/DECISIONS.md K97),
      * drawn from both sides without writing depth. It uses vanilla's eyes shader (texture times colour, faded by fog), which
      * shader packs draw as glowing and keep see-through (Complementary's spider-eyes program); the beacon-beam shader
      * was tried first, but Complementary turns a beam's faint alpha into a solid dithered white.
