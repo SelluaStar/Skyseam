@@ -12,7 +12,7 @@ import net.neoforged.fml.ModList;
 
 /**
  * Flux vortices marked on the map mods players use (docs/DECISIONS.md K105): Xaero's Minimap and World Map
- * ({@link XaeroVortexMarkers}: a cyan "V" waypoint, as Xaero's maps draw waypoints) and JourneyMap
+ * ({@link XaeroVortexMarkers}: a waypoint whose symbol is a vortex icon in the game's font) and JourneyMap
  * ({@link JourneyMapVortices}: a vortex icon), each named with what the vortex is doing and how long it has left.
  * Refreshed once a second from the vortices the server sends; neither mod is ever required, and each is left alone for
  * the session if anything goes wrong with it.

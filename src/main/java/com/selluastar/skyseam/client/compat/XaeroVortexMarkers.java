@@ -24,14 +24,18 @@ import xaero.hud.minimap.world.MinimapWorld;
 
 /**
  * Flux vortices on Xaero's Minimap, and through it on Xaero's World Map (docs/DECISIONS.md K105): a temporary waypoint
- * at each (never saved), a cyan "V", named with what the vortex is doing and how long it has left. Xaero's maps have no
- * public way for a mod to draw its own icons, so this goes through the minimap's own waypoint classes; only ever
+ * at each (never saved), named with what the vortex is doing and how long it has left. Xaero's maps have no public way
+ * for a mod to draw its own icons, and a waypoint shows only text, so its symbol is a vortex icon added to the game's
+ * font as a character of its own ({@link #ICON}, {@code assets/minecraft/font/default.json}), on a black square. This
+ * goes through the minimap's own waypoint classes; only ever
  * loaded when Xaero's Minimap is ({@link VortexMapMarkers}). Those within {@link #NEAR} blocks show in the world and on
  * the minimap too; the rest only on the world map, so the sky isn't crowded with their labels.
  */
 final class XaeroVortexMarkers {
     /** Vortices this close are marked in the world and on the minimap as well as on the world map. */
     private static final double NEAR = 512;
+    /** The vortex icon's character in the game's font ({@code textures/font/flux_vortex.png}). */
+    static final String ICON = "";
     private static final Map<Long, Waypoint> SHOWN = new HashMap<>();
     @Nullable
     private static WaypointSet shownIn;
@@ -58,7 +62,7 @@ final class XaeroVortexMarkers {
             String name = VortexMapMarkers.title(vortex, time);
             Waypoint waypoint = SHOWN.get(vortex.id());
             if (waypoint == null) {
-                waypoint = new Waypoint(Mth.floor(vortex.x()), vortex.baseY(), Mth.floor(vortex.z()), name, "V", WaypointColor.AQUA,
+                waypoint = new Waypoint(Mth.floor(vortex.x()), vortex.baseY(), Mth.floor(vortex.z()), name, ICON, WaypointColor.BLACK,
                         WaypointPurpose.NORMAL, true);
                 set.add(waypoint);
                 SHOWN.put(vortex.id(), waypoint);
