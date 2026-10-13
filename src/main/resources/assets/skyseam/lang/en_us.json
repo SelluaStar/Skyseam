@@ -74,6 +74,11 @@
   "skyseam.configuration.springbloom.title": "Springbloom",
   "skyseam.configuration.springbloom.chance": "Chance one grows",
   "skyseam.configuration.springbloom.base_launch_height": "Launch height (blocks)",
+  "skyseam.configuration.murmurberry": "Murmurberry",
+  "skyseam.configuration.murmurberry.title": "Murmurberry",
+  "skyseam.configuration.murmurberry.range": "Hearing range (blocks)",
+  "skyseam.configuration.murmurberry.max_delay_seconds": "Delay at the edge of the range (seconds)",
+  "skyseam.configuration.murmurberry.density": "How thickly they grow",
   "skyseam.configuration.veil": "The Veil",
   "skyseam.configuration.veil.title": "The Veil",
   "skyseam.configuration.veil.enabled": "The Veil holds the Halcyon in",
@@ -286,5 +291,10 @@
   "subtitles.skyseam.springbloom.squish": "Springbloom squishes rudely",
   "subtitles.skyseam.springbloom.launch": "Springbloom springs",
   "commands.skyseam.halcyon.springbloom.none": "No Springbloom in the loaded chunks within %s blocks.",
-  "commands.skyseam.halcyon.springbloom.found": "Beside the Springbloom at %s (it was %s blocks away)."
+  "commands.skyseam.halcyon.springbloom.found": "Beside the Springbloom at %s (it was %s blocks away).",
+
+  "block.skyseam.murmurberry": "Murmurberry",
+  "commands.skyseam.halcyon.murmurberry.none": "No Murmurberry in the loaded chunks within %s blocks.",
+  "commands.skyseam.halcyon.murmurberry.found": "By the Murmurberry at %s (it was %s blocks away).",
+  "commands.skyseam.halcyon.murmurberry.ripple": "A sound here: every Murmurberry within %s blocks lights in turn."
 }

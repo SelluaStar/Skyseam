@@ -19,6 +19,7 @@ public final class SkyseamCreativeTabs {
                 output.accept(SkyseamItems.HARMONIC_APERTURE.get());
                 output.accept(SkyseamItems.SKYCHART.get());
                 output.accept(SkyseamItems.SPRINGBLOOM.get());
+                output.accept(SkyseamItems.MURMURBERRY.get());
                 SkyseamBlocks.halcyonBlocks().forEach(block -> output.accept(block.get()));
             })
             .build());

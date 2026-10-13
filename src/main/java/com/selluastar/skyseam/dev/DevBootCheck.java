@@ -11,6 +11,7 @@ import com.selluastar.skyseam.halcyon.LanternSun;
 import com.selluastar.skyseam.halcyon.vortex.FluxVortex;
 import com.selluastar.skyseam.halcyon.vortex.VortexField;
 import com.selluastar.skyseam.external.SableBridge;
+import com.selluastar.skyseam.halcyon.flora.MurmurberryBlock;
 import com.selluastar.skyseam.halcyon.flora.SpringbloomBlock;
 import com.selluastar.skyseam.registry.SkyseamBlocks;
 import com.selluastar.skyseam.world.HalcyonLayout;
@@ -192,6 +193,7 @@ public final class DevBootCheck {
         glowCensus(level, "in the Highlands", (int) (plan.landmarks.outX * 3000) >> 4, (int) (plan.landmarks.outZ * 3000) >> 4, problems);
         vortexCensus(level, plan, problems);
         springbloomCensus(level, plan, problems);
+        murmurberryCensus(level, plan, problems);
         return problems;
     }
 
@@ -243,6 +245,59 @@ public final class DevBootCheck {
                 floating, Arrays.toString(sizes));
         if (count == 0) {
             problems.add("no Springbloom grew in 300 chunks");
+        }
+    }
+
+    /**
+     * Murmurberries (docs/DECISIONS.md K106) in the same 300 chunks as the Springbloom census: how many grew on floors,
+     * walls and roofs, and that every one has the face it grows from.
+     */
+    private static void murmurberryCensus(ServerLevel level, HalcyonPlan plan, List<String> problems) {
+        int[][] origins = {{14, -6}, {(int) (-plan.landmarks.outZ * 1000) >> 4, (int) (plan.landmarks.outX * 1000) >> 4},
+                {(int) (plan.landmarks.outX * 3000) >> 4, (int) (plan.landmarks.outZ * 3000) >> 4}};
+        int floors = 0;
+        int walls = 0;
+        int roofs = 0;
+        int loose = 0;
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        for (int[] origin : origins) {
+            for (int cx = origin[0] + 1; cx < origin[0] + 11; cx++) {
+                for (int cz = origin[1] + 1; cz < origin[1] + 11; cz++) {
+                    LevelChunk chunk = level.getChunk(cx, cz);
+                    LevelChunkSection[] sections = chunk.getSections();
+                    for (int s = 0; s < sections.length; s++) {
+                        LevelChunkSection section = sections[s];
+                        if (section.hasOnlyAir() || !section.getStates().maybeHas(state -> state.is(SkyseamBlocks.MURMURBERRY.get()))) {
+                            continue;
+                        }
+                        int y0 = SectionPos.sectionToBlockCoord(chunk.getSectionYFromSectionIndex(s));
+                        for (int y = 0; y < 16; y++) {
+                            for (int z = 0; z < 16; z++) {
+                                for (int x = 0; x < 16; x++) {
+                                    BlockState berry = section.getBlockState(x, y, z);
+                                    if (!berry.is(SkyseamBlocks.MURMURBERRY.get())) {
+                                        continue;
+                                    }
+                                    Direction facing = berry.getValue(MurmurberryBlock.FACING);
+                                    floors += facing == Direction.UP ? 1 : 0;
+                                    roofs += facing == Direction.DOWN ? 1 : 0;
+                                    walls += facing.getAxis().isHorizontal() ? 1 : 0;
+                                    pos.set(chunk.getPos().getMinBlockX() + x, y0 + y, chunk.getPos().getMinBlockZ() + z);
+                                    loose += berry.canSurvive(level, pos) ? 0 : 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Skyseam.LOGGER.info("Skyseam boot check: in 300 chunks, {} Murmurberries: {} on floors, {} on walls, {} hanging from roofs", floors + walls + roofs,
+                floors, walls, roofs);
+        if (floors + walls + roofs == 0) {
+            problems.add("no Murmurberry grew in 300 chunks");
+        }
+        if (loose > 0) {
+            problems.add(loose + " Murmurberries grew with nothing to hold on to");
         }
     }
 

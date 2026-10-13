@@ -1503,3 +1503,69 @@ back in place of the hanging mesas, in the far version too.
   vortex on Xaero's Minimap and World Map (drawn by their own element renderers, not waypoints) and on JourneyMap, with
   what it is doing and the time left on hover. Seen in the screenshot client on all three (`m3v_vortex_maps.json`,
   sheet `build/previews/vortex-map-icons.png`); the hover text wasn't seen.
+
+## The Murmurberry (2026-10-13)
+
+DECISIONS K106. The author: "create a glow berry type thing that has variations so its like whitish birthday cake ish
+color blended and it glows and it either hangs or attaches to the wall or roof or floor (variated) and when a mob or a
+player moves or makes a sound or a block is placed or broken or pretty much anything that would trigger a sculk sensor
+happens, it should glow for a split second ... closer it would be instant and farther it would be like 10 seconds ...
+a 3d model with animations and nice textures. for the off (no glow) it should be like a translucent shell of a balloon
+grey ... when it glows it should be the same but glowing and animated".
+
+**Built**
+- **The plant** (`halcyon/flora/MurmurberryBlock`, a GeckoLib block entity): up to five berries like little balloons on
+  thin stalks over a mossy pad with four leaves (`art/models/murmurberry.bbmodel`). Off, each berry is a see-through
+  pale grey shell with a sheen and a dim core inside. Lit, the same shell glows in one of four colourways of
+  birthday-cake pastels blended into each other (pink and sky blue, pink and peach, mint and sky blue, lemon and
+  lavender), whitest in the middle and flecked with sprinkles, with a soft halo of its colour, and it swells
+  (`pulse`); otherwise it sways (`idle`). Textures by `tools/textures/make_murmurberry_textures.py`.
+- **Variety:** on floors (berries up), walls (out and tipped up) and roofs (hanging, on stalks up to half again as
+  long); its colourway, size, turn and number of berries (two to five) differ from one to the next.
+- **Hearing:** anything a sculk sensor would take as a vibration (steps, falls, splashes, swimming, flapping, blocks
+  placed or broken, doors, chests, eating, hits, projectiles, explosions), but not a crouched step, a spectator, or
+  anything on wool. It hears 32 blocks (`murmurberry.range`): the nearest light at once and the furthest 10 seconds
+  later (`murmurberry.max_delay_seconds`), so the light runs out from the sound in a ring, about 3 blocks a second. A
+  flash lasts about half a second; after one, a berry rests a second, so something walking past sends rings out about
+  once a second rather than a flicker each step.
+- **Light is drawn, not cast:** it lights nothing round it, off or lit, so a ripple across a cave costs no lighting
+  work. No sound of its own.
+- **Where it grows:** in patches, on the floors, walls and roofs of the Halcyon's caves and under overhangs (giant
+  trees' canopies count), roofs only with ground below (`murmurberry.density`). It breaks at a touch, drops itself,
+  needs the face it grows from, and can be placed on any solid face. In the Skyseam creative tab.
+- **Also:** `/skyseam halcyon murmurberry find` (stands you where you can see the nearest) and `ripple` (a sound where
+  you stand); hidden from Distant Horizons' far terrain (the default list only).
+
+**Verified (actually run)**
+- **The milestone check:** build ✓, runData ✓, **60/60 GameTests** ✓, server boot ✓ (chunks at 12 to 19 ms again).
+- **GameTests** (`gametest/MurmurberryGameTests`): a block placed three blocks away is heard and sent from where it was
+  placed; a sound just inside the range is sent and one just outside isn't; a step is heard but a crouched step and
+  anything on wool aren't, nor a sculk sensor's own clicking; the delay is none within a block, the full 10 s at the
+  edge and grows steadily between; taking away the block it grows on (floor, wall or roof) breaks it.
+- **The boot check** (a real Halcyon): 819 in 300 chunks, 204 on floors, 352 on walls, 263 hanging from roofs, every
+  one with something to hold on to.
+- **The real client** (`tools/capture/m4_murmurberry.json`, `m4_murmurberry_natural.json`): a sealed hall lined with
+  them on floors, walls and roof; off (see-through grey); a sound filmed at 1, 3, 6 and 9 seconds, the light running
+  out across the hall; close up lit, in all four colourways with halos; walking through it (steps are heard); two that
+  grew, one under a giant tree and one on a cave wall, lit by a sound. Sheet
+  [`docs/previews/m4-murmurberry.png`](previews/m4-murmurberry.png).
+- **Found and fixed while filming:** the first run drew only the pads. GeckoLib shares one set of bones between every
+  Murmurberry, and the per-plant changes (longer hanging stalks) piled up frame after frame until the stalks were
+  endlessly long; each change is now made afresh from the animation every frame.
+
+**Not seen yet**
+- **Under a shader pack:** the lit pass uses the same render type as the vortices' glow (drawn as emissive by
+  Complementary), but it hasn't been filmed under shaders.
+- **Many at once in a big natural cave:** the hall held 167; a dense patch in a large cave could hold more, each a
+  GeckoLib model.
+- **Multiplayer:** each player's client lights its own berries from the sounds the server sends; not tried with two.
+
+**Author's in-game test**
+1. In the Halcyon, `/skyseam halcyon murmurberry find` (or place some from the creative tab on floors, walls and
+   ceilings in a dark place).
+2. Stand still, then break or place a block: the nearest should flash at once, the rest in a ring outward over about
+   ten seconds, each going out after half a second.
+3. Walk past them, then crouch-walk past them: walking sets off rings, crouching shouldn't.
+4. Look at them unlit: grey see-through balloons. Lit: pastel blends with sprinkles and a halo.
+5. Settings (Mods, Skyseam, Config, Murmurberry): hearing range, delay at the edge, how thickly they grow.
+6. Send screenshots and `logs/latest.log`.

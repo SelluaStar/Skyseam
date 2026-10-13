@@ -4,6 +4,7 @@ import com.selluastar.skyseam.Skyseam;
 import com.selluastar.skyseam.aperture.ApertureBlockEntity;
 import com.selluastar.skyseam.client.aperture.ApertureChargeSound;
 import com.selluastar.skyseam.client.aperture.ApertureRenderer;
+import com.selluastar.skyseam.client.flora.MurmurberryRenderer;
 import com.selluastar.skyseam.client.flora.SpringbloomRenderer;
 import com.selluastar.skyseam.client.particle.SporeParticle;
 import com.selluastar.skyseam.client.aperture.ApertureScreen;
@@ -78,6 +79,7 @@ public final class SkyseamClient {
         event.registerEntityRenderer(SkyseamEntities.SEAM.get(), SeamRenderer::new);
         event.registerBlockEntityRenderer(SkyseamBlockEntities.APERTURE.get(), ApertureRenderer::new);
         event.registerBlockEntityRenderer(SkyseamBlockEntities.SPRINGBLOOM.get(), SpringbloomRenderer::new);
+        event.registerBlockEntityRenderer(SkyseamBlockEntities.MURMURBERRY.get(), MurmurberryRenderer::new);
     }
 
     @SubscribeEvent

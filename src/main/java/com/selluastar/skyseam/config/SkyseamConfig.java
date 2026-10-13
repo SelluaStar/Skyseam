@@ -7,7 +7,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  * with the spec's value as the default. Values are added by the milestone that uses them.
  *
  * <p>Laid out for the in-game screen (Mods, Skyseam, Config; docs/DECISIONS.md K103): the Halcyon first (its shape,
- * its flux vortices in four pages, the Springbloom, the Veil and Rebound), then the Seam, its sites and the Harmonic
+ * its flux vortices in four pages, the Springbloom, the Murmurberry, the Veil and Rebound), then the Seam, its sites and the Harmonic
  * Aperture. Every entry and section has a name in the language file ({@code skyseam.configuration.<path>}); its
  * comment is its tooltip.
  */
@@ -64,6 +64,9 @@ public final class SkyseamConfig {
     public static final ModConfigSpec.BooleanValue VORTEX_SCRAMBLE;
     public static final ModConfigSpec.IntValue SPRINGBLOOM_BASE_LAUNCH_HEIGHT;
     public static final ModConfigSpec.DoubleValue SPRINGBLOOM_CHANCE;
+    public static final ModConfigSpec.IntValue MURMURBERRY_RANGE;
+    public static final ModConfigSpec.DoubleValue MURMURBERRY_MAX_DELAY_SECONDS;
+    public static final ModConfigSpec.DoubleValue MURMURBERRY_DENSITY;
     public static final ModConfigSpec.DoubleValue VEIL_PLAYER_PUSH;
     public static final ModConfigSpec.DoubleValue VEIL_SHIP_PUSH;
     public static final ModConfigSpec.IntValue REBOUND_HEIGHT;
@@ -164,6 +167,22 @@ public final class SkyseamConfig {
                         "up to twice as high from one three times the size; each launch goes up to an eighth higher or lower. The",
                         "first landing after a launch does no harm.")
                 .defineInRange("base_launch_height", 24, 2, 64);
+        b.pop();
+
+        section(b, "murmurberry");
+        MURMURBERRY_RANGE = named(b, "murmurberry.range").comment(
+                        "How far Murmurberries hear, in blocks. Anything a sculk sensor would take as a vibration (a step, a fall, a",
+                        "splash, a block placed or broken, a door; not a crouched step, nor anything on wool) lights every Murmurberry",
+                        "this close to it for a split second.")
+                .defineInRange("range", 32, 4, 96);
+        MURMURBERRY_MAX_DELAY_SECONDS = named(b, "murmurberry.max_delay_seconds").comment(
+                        "How long the light takes to reach a Murmurberry at the edge of that range, in seconds. Nearer ones light",
+                        "sooner and the nearest at once, so the light runs out from the sound in a ring. 0 lights them all together.")
+                .defineInRange("max_delay_seconds", 10.0, 0.0, 30.0);
+        MURMURBERRY_DENSITY = named(b, "murmurberry.density").comment(
+                        "How thickly Murmurberries grow on the floors, walls and roofs of the Halcyon's caves and under its overhangs:",
+                        "1 is the usual, 2 twice as many, 0 none. Only new chunks.")
+                .defineInRange("density", 1.0, 0.0, 4.0);
         b.pop();
 
         section(b, "veil");

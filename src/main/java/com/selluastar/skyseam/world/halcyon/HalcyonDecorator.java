@@ -5,6 +5,7 @@ import java.util.List;
 import com.selluastar.skyseam.block.BloomcoralBlock;
 import com.selluastar.skyseam.block.LanternVineBlock;
 import com.selluastar.skyseam.config.SkyseamConfig;
+import com.selluastar.skyseam.halcyon.flora.MurmurberryBlock;
 import com.selluastar.skyseam.halcyon.flora.SpringbloomBlock;
 import com.selluastar.skyseam.registry.SkyseamBlocks;
 import com.selluastar.skyseam.world.HalcyonLayout;
@@ -55,6 +56,7 @@ import net.minecraft.world.level.levelgen.Heightmap;
  * <li>On grass: short grass, petals, ferns, lupines, small mushrooms and bushes by biome; on bare rock: Prismite.</li>
  * <li>On cave floors: ferns, lupines, glowing mushrooms and crystals.</li>
  * <li>Under islands, overhangs and cave roofs: glow moss, wisteria, ivy, lantern vines and hanging roots.</li>
+ * <li>In patches, on the floors, walls and roofs of caves and under overhangs: Murmurberries.</li>
  * <li>On the sea floor: kelp forests in deep water; seagrass, Bloomcoral reefs and glowing Prismite in the shallows.</li>
  * <li>Waterfalls of real water spilling off high cliffs and floating islands, lit along their fall.</li>
  * </ul>
@@ -66,6 +68,8 @@ public final class HalcyonDecorator {
     private static final int SPRINGBLOOM_CELL = 11;
     /** A surface with something solid this close overhead is under a roof (a cave, an overhang). */
     private static final int ROOFED = 40;
+    /** An underside with ground this close below is a cave's roof or an overhang, not the open underside of an island. */
+    private static final int FLOORED = 24;
     private static final BlockState FALLING_WATER = Blocks.WATER.defaultBlockState().setValue(LiquidBlock.LEVEL, 8);
 
     private HalcyonDecorator() {}
@@ -358,6 +362,9 @@ public final class HalcyonDecorator {
         int y = ground.getY();
         int z = ground.getZ();
         BlockPos up = ground.above();
+        if (murmurberriesBy(level, noise, ground, block)) {
+            return;
+        }
         double roll = noise.hash(x, y, z, 19);
         if (isTurf(block)) {
             if (roll < 0.22) {
@@ -379,6 +386,78 @@ public final class HalcyonDecorator {
             set(level, up, SkyseamBlocks.GLOW_SHROOM.get().defaultBlockState());
         } else if (roll < 0.18 && isFullBlock(level, ground, block)) {
             set(level, up, SkyseamBlocks.GLOW_MOSS.get().defaultBlockState().setValue(MultifaceBlock.getFaceProperty(Direction.DOWN), true));
+        }
+    }
+
+    /**
+     * Murmurberries (docs/DECISIONS.md K106) grow in patches, where a slow noise says so; in one, on a cave floor or the
+     * ground under an overhang, now and then one on the floor, or on the wall beside it one or two blocks up. True if one
+     * grew.
+     */
+    private static boolean murmurberriesBy(WorldGenLevel level, Noise noise, BlockPos ground, BlockState block) {
+        double density = murmurberryDensity();
+        int x = ground.getX();
+        int y = ground.getY();
+        int z = ground.getZ();
+        if (density <= 0 || !murmurberryPatch(noise, x, z) || !isFullBlock(level, ground, block)) {
+            return false;
+        }
+        BlockPos up = ground.above();
+        if (!level.getBlockState(up).isAir()) {
+            return false;
+        }
+        if (noise.hash(x, y, z, 95) < 0.07 * density) {
+            set(level, up, murmurberry(Direction.UP, noise.hash(x, y, z, 96)));
+            return true;
+        }
+        for (Direction side : Direction.Plane.HORIZONTAL) {
+            BlockPos spot = noise.hash(x, y, z, 100 + side.ordinal()) < 0.5 ? up : up.above();
+            BlockPos wall = spot.relative(side);
+            if (noise.hash(x, y, z, 110 + side.ordinal()) < 0.08 * density && level.getBlockState(spot).isAir()
+                    && isFullBlock(level, wall, level.getBlockState(wall))) {
+                set(level, spot, murmurberry(side.getOpposite(), noise.hash(x, y, z, 120 + side.ordinal())));
+                return spot.equals(up);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * In a Murmurberry patch, now and then one hanging from a cave's roof or an overhang (with ground below it, not under
+     * an island in the open sky). True if one grew.
+     */
+    private static boolean murmurberryUnder(WorldGenLevel level, Noise noise, BlockPos air) {
+        double density = murmurberryDensity();
+        int x = air.getX();
+        int y = air.getY();
+        int z = air.getZ();
+        if (density <= 0 || !murmurberryPatch(noise, x, z) || noise.hash(x, y, z, 97) >= 0.08 * density
+                || !isFullBlock(level, air.above(), level.getBlockState(air.above()))) {
+            return false;
+        }
+        BlockPos.MutableBlockPos below = air.mutable();
+        for (int k = 1; k <= FLOORED; k++) {
+            if (isSolid(level.getBlockState(below.move(Direction.DOWN)))) {
+                set(level, air, murmurberry(Direction.DOWN, noise.hash(x, y, z, 98)));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean murmurberryPatch(Noise noise, int x, int z) {
+        return noise.fbm(x + 1931, z - 733, 14, 2) > 0.22;
+    }
+
+    private static BlockState murmurberry(Direction facing, double roll) {
+        return MurmurberryBlock.state(SkyseamBlocks.MURMURBERRY.get(), facing, roll);
+    }
+
+    private static double murmurberryDensity() {
+        try {
+            return SkyseamConfig.MURMURBERRY_DENSITY.get();
+        } catch (IllegalStateException notLoaded) {
+            return SkyseamConfig.MURMURBERRY_DENSITY.getDefault();
         }
     }
 
@@ -507,6 +586,9 @@ public final class HalcyonDecorator {
         int x = air.getX();
         int y = air.getY();
         int z = air.getZ();
+        if (murmurberryUnder(level, noise, air)) {
+            return;
+        }
         double roll = noise.hash(x, y, z, 21);
         boolean draped = region == HalcyonRegion.PETALWASH || region == HalcyonRegion.HUSH || region == HalcyonRegion.SPINDLE;
         boolean green = region == HalcyonRegion.SUNREACH_CLIFFS || region == HalcyonRegion.ELDERWOOD || region == HalcyonRegion.CAPWOOD;
