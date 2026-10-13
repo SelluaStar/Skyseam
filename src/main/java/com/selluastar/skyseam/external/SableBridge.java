@@ -124,6 +124,15 @@ public final class SableBridge {
     }
 
     /**
+     * True if Sable carries the entity with the ship: it stands on it (Sable tracks it there) or rides something in its
+     * plot. Unlike {@link #isAboard}, being merely beside the ship, inside its box, doesn't count.
+     */
+    public static boolean isCarried(Entity entity, Ship ship) {
+        SubLevelAccess on = SableCompanion.INSTANCE.getTrackingOrVehicleSubLevel(entity);
+        return on != null && on.getUniqueId().equals(ship.id());
+    }
+
+    /**
      * Where a position is in the world: a position in a ship's plot becomes the world position it occupies now, and
      * any other position is returned as it is. Works on both sides.
      */

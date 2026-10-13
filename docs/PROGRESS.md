@@ -1614,3 +1614,60 @@ them usually spawn in clumps and also have it so some areas spawn with fields of
 3. In a cave elsewhere, `/skyseam halcyon murmurberry find`: they should come in clumps.
 4. Break one (a pop) and place one (a squeak); placed ones come in different heights.
 5. Send screenshots and `logs/latest.log`.
+
+## Flux vortex effects reworked: low gravity, a ride up the column, a spiral for ships (2026-10-13)
+
+DECISIONS K108. The author: "the systems we defined for the vortex's before dont actually work. remember it should mess
+with gravity so as you get closer to it it should be low gravity", then five points: low gravity next to it; a slow,
+configurable pull towards the middle for ships; players that touch it pulled in and pushed up until they leave, with no
+Slow Falling and fall damage on; ships inside spun until they leave, their parts still turning at random; and the pull a
+spiral, like something orbiting into a black hole.
+
+**Built** (`halcyon/vortex/FluxVortices`)
+- **Low gravity:** gravity weakens from 40 blocks out from the column (or above its top) to a fifth of the usual at its
+  edge and inside. Players and creatures jump higher and fall slower (their gravity attribute, given back when they leave,
+  change level or the vortex goes); a falling ship falls slower. A ship holding its height (levitite, envelopes,
+  propellers) is left to it: lifting it too would fling it upward.
+- **Creatures and players** touching the column are drawn in towards a ring round its middle and carried up it, round
+  and round, at 16 blocks a second; near the top they are flung out over the crown. No Slow Falling, and the fall is
+  counted from where they leave, so it hurts as usual. Only those a ship carries stay with it.
+- **Ships** within 48 blocks of the edge are swept round it (12 blocks a second at the edge) and slowly drawn in (1.5),
+  with the pull towards the middle an orbit needs, so they spiral in; their engines can fly out against the slow drift.
+  Inside, a ship is spun round at 45 degrees a second and its spinning parts turn a random way until it leaves; then the
+  parts get their own speeds back and the spin slows to a stop.
+- **Settings** (Config, Flux vortices, What they do): gravity at the edge, low gravity reach, lift speed, ship pull, ship
+  orbit, ship pull reach, ship spin, and the scramble switch. The old throw height and ship pull-down are gone.
+
+**Verified (actually run)**
+- **The milestone check:** build ✓, runData ✓, **62/62 GameTests** ✓ (in one run four Seam and Aperture tests failed
+  together and passed on the next two; a separate task is suggested to find what they share), server boot ✓.
+- **GameTests** (`VortexGameTests`): six blocks from the edge a pig's gravity is a quarter of the usual, and all of it
+  again once the vortex goes; a pig at the edge rose from Y 210 to 235.6 in 2 s and was drawn from 12 to 6.7 blocks off
+  the axis, with no Slow Falling and no fall counted; at the top it is flung out of the column and its fall is counted; a
+  raft 17 blocks from the edge went from 30 to 28 blocks off the axis in 3 s, swept round at 9.8 blocks a second and
+  falling at 14 against 30 for a raft far off; a raft inside spun at 43 degrees a second with its shaft scrambled, got
+  the shaft's own speed back when the vortex went, and stopped spinning.
+- **The real client** (`tools/capture/m3v_vortex_k108.json`): a survival player's gravity read 0.08 far off and 0.016
+  beside and inside the vortex; they were caught at its foot, carried up past the floating islands, flung out at the
+  top, and killed by the fall onto a stone floor laid round its foot ("Dev fell from a high place"). A raft half of
+  levitite, hovering 32.6 blocks off the axis, was swept round and in: 32.6, 31.7, 30.6, 29.0, 27.2, 25.2, 23.2, 21.4,
+  19.9, 18.4, 16.4, 13.7 and 11.8 blocks off every 2 seconds, about one and three quarter turns at 8 to 11 blocks a
+  second, into the column. Sheet [`docs/previews/m3v-vortex-k108.png`](previews/m3v-vortex-k108.png).
+- **Found while filming:** a raft spinning in the pool beside a player counted them as aboard (they were inside its box),
+  so the vortex left them be until it drifted off; now only those Sable carries count. And a hovering levitite raft
+  barely moved (half a block a second) until the swirl's hold on ships was made firmer.
+
+**Not seen yet**
+- **A real Aeronautics ship flown by a player** into a vortex (with propellers, envelopes or levitite): the rafts here
+  had no engines.
+- **The spin seen from aboard**, and how it feels to steer out against the spiral.
+- **Multiplayer:** each player's own client is sent their motion every tick while they are carried.
+
+**Author's in-game test**
+1. `/skyseam halcyon vortex here 300` a little way off, or `/skyseam halcyon vortex find`.
+2. Walk towards it: jumps get floatier the closer you are.
+3. Step into it: you should be drawn in and carried up, round and round, flung out at the top, and the fall should hurt
+   (water still saves you).
+4. Fly a ship near it: it should be swept round and slowly drawn in; inside, it spins and its propellers go wild until
+   you get out. Settings under Config, Flux vortices, What they do.
+5. Send screenshots and `logs/latest.log`.

@@ -6,8 +6,8 @@ import net.minecraft.util.Mth;
  * One flux vortex (docs/DECISIONS.md K97): a column of strands of light streaming up from low ground or the sea into
  * the sky, like the flux vortices of Pandora, that forms, streams for a few minutes and unravels.
  *
- * <p>Shared by the server (which throws what walks in and drives ships down) and the client (which draws it), so both
- * agree on its shape and its life. Times are the level's game time in ticks.
+ * <p>Shared by the server (which carries what walks in up the column and draws ships round it) and the client (which
+ * draws it), so both agree on its shape and its life. Times are the level's game time in ticks.
  *
  * @param id    stable for this vortex: its cell and slot, or a summoned vortex's own number
  * @param x     its axis
@@ -53,7 +53,7 @@ public record FluxVortex(long id, double x, double z, int baseY, int topY, long 
     }
 
     /**
-     * How hard it pulls and throws, 0 to 1: nothing while the glow gathers on the ground, rising as the column climbs,
+     * How hard it pulls and carries, 0 to 1: nothing while the glow gathers on the ground, rising as the column climbs,
      * and gone by the time it has half unravelled.
      */
     public float strength(double time) {
