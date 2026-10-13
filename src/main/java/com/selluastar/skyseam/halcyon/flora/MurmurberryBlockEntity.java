@@ -1,8 +1,11 @@
 package com.selluastar.skyseam.halcyon.flora;
 
 import com.selluastar.skyseam.registry.SkyseamBlockEntities;
+import com.selluastar.skyseam.registry.SkyseamSounds;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -22,6 +25,11 @@ import software.bernie.geckolib.util.GeckoLibUtil;
  * <p>A flash rises in a tick and a half, holds, and fades out by the {@link #FLASH_TICKS}th tick. Once lit it hears
  * nothing more for {@link #REST_TICKS} ticks, as a sculk sensor rests: so a creature walking by sends rings of light out
  * about once a second rather than a flicker on every step.
+ *
+ * <p>As it lights it chimes (K107): a soft glassy note, one of five of a pentatonic scale picked at random, so a ripple
+ * running across a cave plays like wind chimes; a little lower from a taller one. Only those within
+ * {@link #CHIME_RANGE} blocks of a player chime, and at most {@link #CHIMES_PER_TICK} start in any one tick, so a field
+ * lighting all at once is a shimmer, not a din.
  */
 public class MurmurberryBlockEntity extends BlockEntity implements GeoBlockEntity {
     public static final String PULSE = "pulse";
@@ -33,6 +41,12 @@ public class MurmurberryBlockEntity extends BlockEntity implements GeoBlockEntit
     private static final float HOLD = 4f;
     /** How many ripples it can wait on at once; any more are dropped. */
     private static final int QUEUE = 16;
+    /** Beyond this many blocks from every player a chime would not be heard (its sound fades out over 20). */
+    private static final double CHIME_RANGE = 20;
+    private static final int CHIMES_PER_TICK = 3;
+    /** Client only: the tick the chimes were last counted in, and how many started in it. */
+    private static long chimeTick;
+    private static int chimes;
     private static final RawAnimation IDLE_ANIMATION = RawAnimation.begin().thenLoop("idle");
     private static final RawAnimation PULSE_ANIMATION = RawAnimation.begin().thenPlay(PULSE);
 
@@ -114,6 +128,7 @@ public class MurmurberryBlockEntity extends BlockEntity implements GeoBlockEntit
             if (now - berry.litAt >= REST_TICKS) {
                 berry.litAt = now;
                 berry.triggerAnim("main", PULSE);
+                chime(level, pos, state);
             }
             done++;
         }
@@ -121,6 +136,31 @@ public class MurmurberryBlockEntity extends BlockEntity implements GeoBlockEntit
             System.arraycopy(berry.heard, done, berry.heard, 0, berry.waiting - done);
             berry.waiting -= done;
         }
+    }
+
+    /** Client only: the chime as it lights, if a player is near enough to hear it and few have started this tick. */
+    private static void chime(Level level, BlockPos pos, BlockState state) {
+        long now = level.getGameTime();
+        if (now != chimeTick) {
+            chimeTick = now;
+            chimes = 0;
+        }
+        if (chimes >= CHIMES_PER_TICK || !playerWithin(level, pos, CHIME_RANGE)) {
+            return;
+        }
+        chimes++;
+        int height = state.hasProperty(MurmurberryBlock.HEIGHT) ? state.getValue(MurmurberryBlock.HEIGHT) : 2;
+        float pitch = (1.06f - 0.03f * height) * (0.97f + 0.06f * level.random.nextFloat());
+        level.playLocalSound(pos, SkyseamSounds.MURMURBERRY_CHIME.get(), SoundSource.BLOCKS, 0.45f + 0.1f * level.random.nextFloat(), pitch, false);
+    }
+
+    private static boolean playerWithin(Level level, BlockPos pos, double range) {
+        for (Player player : level.players()) {
+            if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) < range * range) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

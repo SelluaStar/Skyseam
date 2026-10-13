@@ -17,10 +17,12 @@ import com.selluastar.skyseam.registry.SkyseamBlocks;
 import com.selluastar.skyseam.world.HalcyonLayout;
 import com.selluastar.skyseam.world.halcyon.HalcyonChunkGenerator;
 import com.selluastar.skyseam.world.halcyon.HalcyonLandmarks;
+import com.selluastar.skyseam.world.halcyon.HalcyonRegion;
 import com.selluastar.skyseam.world.halcyon.plan.HalcyonPlan;
 import com.selluastar.skyseam.world.halcyon.plan.Landmarks;
 import com.selluastar.skyseam.world.structure.StructureMarkers;
 
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.SectionPos;
@@ -249,55 +251,113 @@ public final class DevBootCheck {
     }
 
     /**
-     * Murmurberries (docs/DECISIONS.md K106) in the same 300 chunks as the Springbloom census: how many grew on floors,
-     * walls and roofs, and that every one has the face it grows from.
+     * Murmurberries (docs/DECISIONS.md K106, K107) in the same 300 chunks as the Springbloom census: how many grew on
+     * floors, walls and roofs, how many at each height, and how many stand in clumps (another within three blocks); that
+     * every one has the face it grows from, and that most stand in clumps. Then 100 chunks deep in the Hush, for its
+     * fields: how many stand in the open there.
      */
     private static void murmurberryCensus(ServerLevel level, HalcyonPlan plan, List<String> problems) {
         int[][] origins = {{14, -6}, {(int) (-plan.landmarks.outZ * 1000) >> 4, (int) (plan.landmarks.outX * 1000) >> 4},
                 {(int) (plan.landmarks.outX * 3000) >> 4, (int) (plan.landmarks.outZ * 3000) >> 4}};
-        int floors = 0;
-        int walls = 0;
-        int roofs = 0;
-        int loose = 0;
-        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        MurmurCount count = new MurmurCount();
         for (int[] origin : origins) {
-            for (int cx = origin[0] + 1; cx < origin[0] + 11; cx++) {
-                for (int cz = origin[1] + 1; cz < origin[1] + 11; cz++) {
-                    LevelChunk chunk = level.getChunk(cx, cz);
-                    LevelChunkSection[] sections = chunk.getSections();
-                    for (int s = 0; s < sections.length; s++) {
-                        LevelChunkSection section = sections[s];
-                        if (section.hasOnlyAir() || !section.getStates().maybeHas(state -> state.is(SkyseamBlocks.MURMURBERRY.get()))) {
-                            continue;
-                        }
-                        int y0 = SectionPos.sectionToBlockCoord(chunk.getSectionYFromSectionIndex(s));
-                        for (int y = 0; y < 16; y++) {
-                            for (int z = 0; z < 16; z++) {
-                                for (int x = 0; x < 16; x++) {
-                                    BlockState berry = section.getBlockState(x, y, z);
-                                    if (!berry.is(SkyseamBlocks.MURMURBERRY.get())) {
-                                        continue;
-                                    }
-                                    Direction facing = berry.getValue(MurmurberryBlock.FACING);
-                                    floors += facing == Direction.UP ? 1 : 0;
-                                    roofs += facing == Direction.DOWN ? 1 : 0;
-                                    walls += facing.getAxis().isHorizontal() ? 1 : 0;
-                                    pos.set(chunk.getPos().getMinBlockX() + x, y0 + y, chunk.getPos().getMinBlockZ() + z);
-                                    loose += berry.canSurvive(level, pos) ? 0 : 1;
-                                }
+            countMurmurberries(level, origin[0], origin[1], count);
+        }
+        int all = count.floors + count.walls + count.roofs;
+        int clumped = count.clumped();
+        Skyseam.LOGGER.info("Skyseam boot check: in 300 chunks, {} Murmurberries: {} on floors, {} on walls, {} hanging from roofs; by height, lowest "
+                + "first: {}; {} of them ({}%) in clumps (another within 3 blocks)", all, count.floors, count.walls, count.roofs,
+                Arrays.toString(count.heights), clumped, all == 0 ? 0 : 100 * clumped / all);
+        if (all == 0) {
+            problems.add("no Murmurberry grew in 300 chunks");
+        }
+        if (count.loose > 0) {
+            problems.add(count.loose + " Murmurberries grew with nothing to hold on to");
+        }
+        if (all > 0 && clumped * 2 < all) {
+            problems.add("only " + clumped + " of " + all + " Murmurberries stand in clumps");
+        }
+        Vec3 hush = plan.deepIn(HalcyonRegion.HUSH, Vec3.ZERO);
+        if (hush == null) {
+            Skyseam.LOGGER.info("Skyseam boot check: no Hush found for the Murmurberry field census");
+            return;
+        }
+        MurmurCount fields = new MurmurCount();
+        countMurmurberries(level, ((int) hush.x >> 4) - 6, ((int) hush.z >> 4) - 6, fields);
+        Skyseam.LOGGER.info("Skyseam boot check: in 100 chunks deep in the Hush round {}, {}, {} Murmurberries, {} of them in the open (its fields); "
+                + "by height, lowest first: {}", (int) hush.x, (int) hush.z, fields.floors + fields.walls + fields.roofs, fields.open,
+                Arrays.toString(fields.heights));
+        if (fields.loose > 0) {
+            problems.add(fields.loose + " Murmurberries in the Hush grew with nothing to hold on to");
+        }
+    }
+
+    /** Murmurberries counted by {@link #countMurmurberries}. */
+    private static final class MurmurCount {
+        int floors;
+        int walls;
+        int roofs;
+        int loose;
+        int open;
+        final int[] heights = new int[MurmurberryBlock.HEIGHT.getPossibleValues().size()];
+        final LongOpenHashSet positions = new LongOpenHashSet();
+
+        /** How many have another within three blocks. */
+        int clumped() {
+            int clumped = 0;
+            BlockPos.MutableBlockPos near = new BlockPos.MutableBlockPos();
+            for (long packed : positions) {
+                BlockPos at = BlockPos.of(packed);
+                search:
+                for (int dx = -3; dx <= 3; dx++) {
+                    for (int dy = -3; dy <= 3; dy++) {
+                        for (int dz = -3; dz <= 3; dz++) {
+                            if ((dx != 0 || dy != 0 || dz != 0) && positions.contains(near.setWithOffset(at, dx, dy, dz).asLong())) {
+                                clumped++;
+                                break search;
                             }
                         }
                     }
                 }
             }
+            return clumped;
         }
-        Skyseam.LOGGER.info("Skyseam boot check: in 300 chunks, {} Murmurberries: {} on floors, {} on walls, {} hanging from roofs", floors + walls + roofs,
-                floors, walls, roofs);
-        if (floors + walls + roofs == 0) {
-            problems.add("no Murmurberry grew in 300 chunks");
-        }
-        if (loose > 0) {
-            problems.add(loose + " Murmurberries grew with nothing to hold on to");
+    }
+
+    /** Counts the Murmurberries in the 10 by 10 chunks past chunk {@code originX}, {@code originZ}. */
+    private static void countMurmurberries(ServerLevel level, int originX, int originZ, MurmurCount count) {
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        for (int cx = originX + 1; cx < originX + 11; cx++) {
+            for (int cz = originZ + 1; cz < originZ + 11; cz++) {
+                LevelChunk chunk = level.getChunk(cx, cz);
+                LevelChunkSection[] sections = chunk.getSections();
+                for (int s = 0; s < sections.length; s++) {
+                    LevelChunkSection section = sections[s];
+                    if (section.hasOnlyAir() || !section.getStates().maybeHas(state -> state.is(SkyseamBlocks.MURMURBERRY.get()))) {
+                        continue;
+                    }
+                    int y0 = SectionPos.sectionToBlockCoord(chunk.getSectionYFromSectionIndex(s));
+                    for (int y = 0; y < 16; y++) {
+                        for (int z = 0; z < 16; z++) {
+                            for (int x = 0; x < 16; x++) {
+                                BlockState berry = section.getBlockState(x, y, z);
+                                if (!berry.is(SkyseamBlocks.MURMURBERRY.get())) {
+                                    continue;
+                                }
+                                Direction facing = berry.getValue(MurmurberryBlock.FACING);
+                                count.floors += facing == Direction.UP ? 1 : 0;
+                                count.roofs += facing == Direction.DOWN ? 1 : 0;
+                                count.walls += facing.getAxis().isHorizontal() ? 1 : 0;
+                                count.heights[berry.getValue(MurmurberryBlock.HEIGHT)]++;
+                                pos.set(chunk.getPos().getMinBlockX() + x, y0 + y, chunk.getPos().getMinBlockZ() + z);
+                                count.loose += berry.canSurvive(level, pos) ? 0 : 1;
+                                count.open += facing == Direction.UP && level.canSeeSky(pos) ? 1 : 0;
+                                count.positions.add(pos.asLong());
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

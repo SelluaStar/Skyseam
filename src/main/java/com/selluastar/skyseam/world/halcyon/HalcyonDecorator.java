@@ -56,7 +56,8 @@ import net.minecraft.world.level.levelgen.Heightmap;
  * <li>On grass: short grass, petals, ferns, lupines, small mushrooms and bushes by biome; on bare rock: Prismite.</li>
  * <li>On cave floors: ferns, lupines, glowing mushrooms and crystals.</li>
  * <li>Under islands, overhangs and cave roofs: glow moss, wisteria, ivy, lantern vines and hanging roots.</li>
- * <li>In patches, on the floors, walls and roofs of caves and under overhangs: Murmurberries.</li>
+ * <li>On the floors, walls and roofs of caves and under overhangs, in clumps and now and then a field: Murmurberries;
+ * in the Hush, fields of them in the open too.</li>
  * <li>On the sea floor: kelp forests in deep water; seagrass, Bloomcoral reefs and glowing Prismite in the shallows.</li>
  * <li>Waterfalls of real water spilling off high cliffs and floating islands, lit along their fall.</li>
  * </ul>
@@ -70,6 +71,9 @@ public final class HalcyonDecorator {
     private static final int ROOFED = 40;
     /** An underside with ground this close below is a cave's roof or an overhang, not the open underside of an island. */
     private static final int FLOORED = 24;
+    /** One spot per 9-block cell of the map may be the middle of a clump of Murmurberries, with this chance (K107). */
+    private static final int MURMUR_CLUMP_CELL = 9;
+    private static final double MURMUR_CLUMP_CHANCE = 0.22;
     private static final BlockState FALLING_WATER = Blocks.WATER.defaultBlockState().setValue(LiquidBlock.LEVEL, 8);
 
     private HalcyonDecorator() {}
@@ -227,7 +231,7 @@ public final class HalcyonDecorator {
             }
         }
         if (roofed) {
-            caveFloor(level, noise, ground, block);
+            caveFloor(level, noise, region, ground, block);
             return;
         }
         boolean turf = isTurf(block);
@@ -238,6 +242,9 @@ public final class HalcyonDecorator {
         }
         if (turf && isSpringbloomSpot(noise, x, z) && flat(level, ground)) {
             set(level, up, springbloom(level, up, noise.hash(x, y, z, 94)));
+            return;
+        }
+        if (turf && region == HalcyonRegion.HUSH && murmurberryField(level, noise, ground)) {
             return;
         }
         if (turf) {
@@ -357,12 +364,12 @@ public final class HalcyonDecorator {
     }
 
     /** A cave floor or the ground under an overhang: ferns and lupines on moss, glowing mushrooms, crystals on rock. */
-    private static void caveFloor(WorldGenLevel level, Noise noise, BlockPos ground, BlockState block) {
+    private static void caveFloor(WorldGenLevel level, Noise noise, HalcyonRegion region, BlockPos ground, BlockState block) {
         int x = ground.getX();
         int y = ground.getY();
         int z = ground.getZ();
         BlockPos up = ground.above();
-        if (murmurberriesBy(level, noise, ground, block)) {
+        if (murmurberriesBy(level, noise, region, ground, block)) {
             return;
         }
         double roll = noise.hash(x, y, z, 19);
@@ -390,67 +397,134 @@ public final class HalcyonDecorator {
     }
 
     /**
-     * Murmurberries (docs/DECISIONS.md K106) grow in patches, where a slow noise says so; in one, on a cave floor or the
-     * ground under an overhang, now and then one on the floor, or on the wall beside it one or two blocks up. True if one
-     * grew.
+     * Where Murmurberries may grow (docs/DECISIONS.md K106, K107), at one spot: how likely one is there (0 to 1) and how
+     * tall it grows (0 to 1).
      */
-    private static boolean murmurberriesBy(WorldGenLevel level, Noise noise, BlockPos ground, BlockState block) {
+    private record MurmurSpot(double chance, double tallness) {}
+
+    /**
+     * Murmurberries grow in clumps: the middle of one is a spot in about a fifth of the map's 9-block cells, and the clump
+     * reaches 2 to 4.5 blocks from it, nearly every spot holding one at its middle and a few at its edge, the tallest in
+     * the middle. Where a field lies ({@link #murmurberryFieldStrength}), most spots in its heart hold one, tall and short
+     * in rolling waves. Elsewhere only a stray one now and then.
+     */
+    private static MurmurSpot murmurSpot(Noise noise, int x, int z, boolean hush, double density) {
+        double field = murmurberryFieldStrength(noise, x, z, hush) * Math.min(1, density);
+        double chance = 0.62 * field;
+        double tallness = 0.3 + 0.3 * field + 0.6 * noise.fbm(x + 77, z - 311, 6, 2);
+        int cx = Math.floorDiv(x, MURMUR_CLUMP_CELL);
+        int cz = Math.floorDiv(z, MURMUR_CLUMP_CELL);
+        for (int i = -1; i <= 1; i++) {
+            for (int j = -1; j <= 1; j++) {
+                long h = noise.cellHash(cx + i, cz + j, 99);
+                if (((h >>> 40) & 0xFFFF) / 65536.0 >= MURMUR_CLUMP_CHANCE * density) {
+                    continue;
+                }
+                double sx = (cx + i) * MURMUR_CLUMP_CELL + Math.floorMod(h, MURMUR_CLUMP_CELL) + 0.5;
+                double sz = (cz + j) * MURMUR_CLUMP_CELL + Math.floorMod(h >>> 16, MURMUR_CLUMP_CELL) + 0.5;
+                double radius = 2 + ((h >>> 32) & 0xFF) / 255.0 * 2.5;
+                double core = 1 - Math.sqrt((x + 0.5 - sx) * (x + 0.5 - sx) + (z + 0.5 - sz) * (z + 0.5 - sz)) / radius;
+                if (core > 0) {
+                    chance = Math.max(chance, 0.2 + 0.6 * core);
+                    tallness = Math.max(tallness, 0.05 + 0.9 * core);
+                }
+            }
+        }
+        return new MurmurSpot(Math.max(chance, 0.004 * density), tallness);
+    }
+
+    /**
+     * How far into a Murmurberry field (x, z) lies: 0 outside one, 1 in its heart. Fields are slow, rare swells of noise
+     * (by a sample of it, about one spot in sixteen of the map lies in one and one in fifty in a heart); in the Hush about
+     * twice as many.
+     */
+    private static double murmurberryFieldStrength(Noise noise, int x, int z, boolean hush) {
+        double edge = hush ? 0.36 : 0.45;
+        return Mth.clamp((noise.fbm(x - 4211, z + 2909, 72, 3) - edge) / 0.1, 0, 1);
+    }
+
+    /** A Murmurberry's height (0 to 4), from how tall it should grow there (0 to 1) and a roll (0 to 1) for a little spread. */
+    private static int murmurberryHeight(double tallness, double roll) {
+        return Mth.clamp((int) Math.round(tallness * 4 + (roll - 0.5) * 1.4), 0, 4);
+    }
+
+    /**
+     * On a cave floor or the ground under an overhang: by its chance ({@link #murmurSpot}), a Murmurberry on the floor, or
+     * on the wall beside it one or two blocks up. True if one grew.
+     */
+    private static boolean murmurberriesBy(WorldGenLevel level, Noise noise, HalcyonRegion region, BlockPos ground, BlockState block) {
         double density = murmurberryDensity();
         int x = ground.getX();
         int y = ground.getY();
         int z = ground.getZ();
-        if (density <= 0 || !murmurberryPatch(noise, x, z) || !isFullBlock(level, ground, block)) {
-            return false;
-        }
         BlockPos up = ground.above();
-        if (!level.getBlockState(up).isAir()) {
+        if (density <= 0 || !isFullBlock(level, ground, block) || !level.getBlockState(up).isAir()) {
             return false;
         }
-        if (noise.hash(x, y, z, 95) < 0.07 * density) {
-            set(level, up, murmurberry(Direction.UP, noise.hash(x, y, z, 96)));
+        MurmurSpot spot = murmurSpot(noise, x, z, region == HalcyonRegion.HUSH, density);
+        if (noise.hash(x, y, z, 95) < spot.chance()) {
+            set(level, up, murmurberry(Direction.UP, noise.hash(x, y, z, 96), murmurberryHeight(spot.tallness(), noise.hash(x, y, z, 97))));
             return true;
         }
         for (Direction side : Direction.Plane.HORIZONTAL) {
-            BlockPos spot = noise.hash(x, y, z, 100 + side.ordinal()) < 0.5 ? up : up.above();
-            BlockPos wall = spot.relative(side);
-            if (noise.hash(x, y, z, 110 + side.ordinal()) < 0.08 * density && level.getBlockState(spot).isAir()
+            BlockPos at = noise.hash(x, y, z, 100 + side.ordinal()) < 0.5 ? up : up.above();
+            BlockPos wall = at.relative(side);
+            if (noise.hash(x, y, z, 110 + side.ordinal()) < 0.6 * spot.chance() && level.getBlockState(at).isAir()
                     && isFullBlock(level, wall, level.getBlockState(wall))) {
-                set(level, spot, murmurberry(side.getOpposite(), noise.hash(x, y, z, 120 + side.ordinal())));
-                return spot.equals(up);
+                set(level, at, murmurberry(side.getOpposite(), noise.hash(x, y, z, 120 + side.ordinal()),
+                        murmurberryHeight(spot.tallness(), noise.hash(x, y, z, 130 + side.ordinal()))));
+                return at.equals(up);
             }
         }
         return false;
     }
 
     /**
-     * In a Murmurberry patch, now and then one hanging from a cave's roof or an overhang (with ground below it, not under
-     * an island in the open sky). True if one grew.
+     * Under a cave's roof or an overhang (with ground below it, not under an island in the open sky): by its chance, a
+     * Murmurberry hanging from it. True if one grew.
      */
-    private static boolean murmurberryUnder(WorldGenLevel level, Noise noise, BlockPos air) {
+    private static boolean murmurberryUnder(WorldGenLevel level, Noise noise, HalcyonRegion region, BlockPos air) {
         double density = murmurberryDensity();
         int x = air.getX();
         int y = air.getY();
         int z = air.getZ();
-        if (density <= 0 || !murmurberryPatch(noise, x, z) || noise.hash(x, y, z, 97) >= 0.08 * density
-                || !isFullBlock(level, air.above(), level.getBlockState(air.above()))) {
+        if (density <= 0 || !isFullBlock(level, air.above(), level.getBlockState(air.above()))) {
+            return false;
+        }
+        MurmurSpot spot = murmurSpot(noise, x, z, region == HalcyonRegion.HUSH, density);
+        if (noise.hash(x, y, z, 98) >= 0.75 * spot.chance()) {
             return false;
         }
         BlockPos.MutableBlockPos below = air.mutable();
         for (int k = 1; k <= FLOORED; k++) {
             if (isSolid(level.getBlockState(below.move(Direction.DOWN)))) {
-                set(level, air, murmurberry(Direction.DOWN, noise.hash(x, y, z, 98)));
+                set(level, air, murmurberry(Direction.DOWN, noise.hash(x, y, z, 99), murmurberryHeight(spot.tallness(), noise.hash(x, y, z, 140))));
                 return true;
             }
         }
         return false;
     }
 
-    private static boolean murmurberryPatch(Noise noise, int x, int z) {
-        return noise.fbm(x + 1931, z - 733, 14, 2) > 0.22;
+    /**
+     * Open grass in the Hush, whose standing dusk shows their light: where a field lies, a Murmurberry on most spots of
+     * its heart, tall and short in rolling waves. True if one grew.
+     */
+    private static boolean murmurberryField(WorldGenLevel level, Noise noise, BlockPos ground) {
+        double density = murmurberryDensity();
+        int x = ground.getX();
+        int y = ground.getY();
+        int z = ground.getZ();
+        double field = murmurberryFieldStrength(noise, x, z, true) * Math.min(1, density);
+        if (field <= 0 || noise.hash(x, y, z, 95) >= 0.62 * field || !level.getBlockState(ground.above()).isAir()) {
+            return false;
+        }
+        double tallness = 0.3 + 0.3 * field + 0.6 * noise.fbm(x + 77, z - 311, 6, 2);
+        set(level, ground.above(), murmurberry(Direction.UP, noise.hash(x, y, z, 96), murmurberryHeight(tallness, noise.hash(x, y, z, 97))));
+        return true;
     }
 
-    private static BlockState murmurberry(Direction facing, double roll) {
-        return MurmurberryBlock.state(SkyseamBlocks.MURMURBERRY.get(), facing, roll);
+    private static BlockState murmurberry(Direction facing, double roll, int height) {
+        return MurmurberryBlock.state(SkyseamBlocks.MURMURBERRY.get(), facing, roll, height);
     }
 
     private static double murmurberryDensity() {
@@ -586,7 +660,7 @@ public final class HalcyonDecorator {
         int x = air.getX();
         int y = air.getY();
         int z = air.getZ();
-        if (murmurberryUnder(level, noise, air)) {
+        if (murmurberryUnder(level, noise, region, air)) {
             return;
         }
         double roll = noise.hash(x, y, z, 21);

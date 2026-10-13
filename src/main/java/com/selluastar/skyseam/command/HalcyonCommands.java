@@ -223,7 +223,7 @@ final class HalcyonCommands {
                     default -> HalcyonRegion.PETALWASH;
                 };
                 Vec3 from = player.level() == halcyon ? player.position() : plan.landmarks.arrival;
-                Vec3 spot = deepIn(plan, region, from);
+                Vec3 spot = plan.deepIn(region, from);
                 if (spot == null) {
                     source.sendFailure(Component.translatable("commands.skyseam.halcyon.notfound", region.biome()));
                     return 0;
@@ -244,24 +244,6 @@ final class HalcyonCommands {
     /** A spot {@code clear} blocks above the land (or sea) at a column. */
     private static Vec3 above(HalcyonPlan plan, double x, double z, int clear) {
         return new Vec3(Math.floor(x) + 0.5, Math.max(HalcyonLayout.SEA_LEVEL, plan.landHeight((int) x, (int) z)) + clear, Math.floor(z) + 0.5);
-    }
-
-    /** The nearest column to {@code from} whose surroundings 60 blocks round are all in the biome. */
-    private static Vec3 deepIn(HalcyonPlan plan, HalcyonRegion region, Vec3 from) {
-        for (int ring = 0; ring < 160; ring++) {
-            int r = ring * 32;
-            int steps = Math.max(1, (int) (2 * Math.PI * r / 32));
-            for (int k = 0; k < steps; k++) {
-                double a = k * Math.PI * 2 / steps;
-                double x = from.x + Math.cos(a) * r;
-                double z = from.z + Math.sin(a) * r;
-                if (plan.region(x, z) == region && plan.region(x + 60, z) == region
-                        && plan.region(x - 60, z) == region && plan.region(x, z + 60) == region && plan.region(x, z - 60) == region) {
-                    return new Vec3(x, 0, z);
-                }
-            }
-        }
-        return null;
     }
 
     /**
@@ -395,7 +377,7 @@ final class HalcyonCommands {
             case SPIREPINE -> HalcyonRegion.SUNREACH_CLIFFS;
             default -> HalcyonRegion.CAPWOOD;
         };
-        Vec3 spot = deepIn(plan, home, from);
+        Vec3 spot = plan.deepIn(home, from);
         Flora.Big best = null;
         double bestDistance = Double.MAX_VALUE;
         if (spot != null) {

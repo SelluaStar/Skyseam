@@ -101,5 +101,29 @@
       {"name": "skyseam:springbloom/launch_1", "attenuation_distance": 32},
       {"name": "skyseam:springbloom/launch_2", "attenuation_distance": 32}
     ]
+  },
+  "murmurberry.chime": {
+    "subtitle": "subtitles.skyseam.murmurberry.chime",
+    "sounds": [
+      {"name": "skyseam:murmurberry/chime_1", "attenuation_distance": 20},
+      {"name": "skyseam:murmurberry/chime_2", "attenuation_distance": 20},
+      {"name": "skyseam:murmurberry/chime_3", "attenuation_distance": 20},
+      {"name": "skyseam:murmurberry/chime_4", "attenuation_distance": 20},
+      {"name": "skyseam:murmurberry/chime_5", "attenuation_distance": 20}
+    ]
+  },
+  "murmurberry.pop": {
+    "subtitle": "subtitles.skyseam.murmurberry.pop",
+    "sounds": [
+      {"name": "skyseam:murmurberry/pop_1", "attenuation_distance": 16},
+      {"name": "skyseam:murmurberry/pop_2", "attenuation_distance": 16}
+    ]
+  },
+  "murmurberry.place": {
+    "subtitle": "subtitles.skyseam.murmurberry.place",
+    "sounds": [
+      {"name": "skyseam:murmurberry/place_1", "attenuation_distance": 16},
+      {"name": "skyseam:murmurberry/place_2", "attenuation_distance": 16}
+    ]
   }
 }

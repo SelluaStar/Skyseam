@@ -11,6 +11,7 @@ import com.selluastar.skyseam.block.SmallShroomBlock;
 import com.selluastar.skyseam.halcyon.flora.MurmurberryBlock;
 import com.selluastar.skyseam.halcyon.flora.SpringbloomBlock;
 
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.level.block.AmethystClusterBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -30,6 +31,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.material.PushReaction;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.common.util.DeferredSoundType;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -196,10 +198,14 @@ public final class SkyseamBlocks {
     public static final DeferredBlock<SpringbloomBlock> SPRINGBLOOM = BLOCKS.register("springbloom",
             () -> new SpringbloomBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(0.4f).sound(SoundType.SLIME_BLOCK)
                     .lightLevel(state -> 9).noOcclusion().pushReaction(PushReaction.DESTROY)));
+    /** The Murmurberry's own pop when broken and squeak when placed (K107); the rest are cave vines'. */
+    private static final SoundType MURMURBERRY_SOUNDS = new DeferredSoundType(1.0f, 1.0f, SkyseamSounds.MURMURBERRY_POP,
+            () -> SoundEvents.CAVE_VINES_STEP, SkyseamSounds.MURMURBERRY_PLACE, () -> SoundEvents.CAVE_VINES_HIT, () -> SoundEvents.CAVE_VINES_FALL);
+
     /** The Murmurberry (docs/DECISIONS.md K106): berries on the walls, floors and roofs of caves that flash at a sound. */
     public static final DeferredBlock<MurmurberryBlock> MURMURBERRY = BLOCKS.register("murmurberry",
             () -> new MurmurberryBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY).noCollission().instabreak()
-                    .sound(SoundType.CAVE_VINES).noOcclusion().pushReaction(PushReaction.DESTROY)));
+                    .sound(MURMURBERRY_SOUNDS).noOcclusion().pushReaction(PushReaction.DESTROY)));
 
     /** Every Halcyon block, in creative tab order. */
     public static List<DeferredBlock<? extends Block>> halcyonBlocks() {

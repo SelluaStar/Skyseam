@@ -23,6 +23,7 @@ import com.selluastar.skyseam.world.halcyon.shape.SpireCluster;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
+import net.minecraft.world.phys.Vec3;
 
 /**
  * The Halcyon's plan for one world seed (docs/DECISIONS.md K75 to K78, K81 to K85): where its landmarks are, which
@@ -140,6 +141,27 @@ public final class HalcyonPlan {
     /** The biome region at a column. */
     public HalcyonRegion region(double x, double z) {
         return regions.at(x, z);
+    }
+
+    /**
+     * The nearest column to {@code from} (searching outward in rings 32 blocks apart, to about 5,000 blocks) whose
+     * surroundings 60 blocks round are all in {@code region}, or null. Its y is 0.
+     */
+    public Vec3 deepIn(HalcyonRegion region, Vec3 from) {
+        for (int ring = 0; ring < 160; ring++) {
+            int r = ring * 32;
+            int steps = Math.max(1, (int) (2 * Math.PI * r / 32));
+            for (int k = 0; k < steps; k++) {
+                double a = k * Math.PI * 2 / steps;
+                double x = from.x + Math.cos(a) * r;
+                double z = from.z + Math.sin(a) * r;
+                if (region(x, z) == region && region(x + 60, z) == region && region(x - 60, z) == region && region(x, z + 60) == region
+                        && region(x, z - 60) == region) {
+                    return new Vec3(x, 0, z);
+                }
+            }
+        }
+        return null;
     }
 
     /**
