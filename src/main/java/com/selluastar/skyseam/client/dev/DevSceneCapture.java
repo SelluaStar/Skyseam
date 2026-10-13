@@ -57,7 +57,8 @@ import net.neoforged.neoforge.common.NeoForge;
  * {@code {"walk": 20}} holds the forward key for that many ticks (and waits them out), and
  * {@code {"camera": "back"}} (or {@code "front"}, {@code "first"}) switches to that view. {@code {"config": true}} opens
  * Skyseam's settings screen, and {@code {"press": "Flux vortices"}} presses the first button on the open screen whose
- * label holds that text (for its pages); both keep the screen open until a {@code close} step.
+ * label holds that text (for its pages); both keep the screen open until a {@code close} step, as does
+ * {@code {"key": "gui.xaero_open_map"}}, which presses that key binding once.
  */
 public final class DevSceneCapture {
     public static final String PROPERTY = "skyseam.dev.capture";
@@ -105,6 +106,8 @@ public final class DevSceneCapture {
                     STEPS.add(new Step("use", step.get("use").getAsString(), 0));
                 } else if (step.has("config")) {
                     STEPS.add(new Step("config", "", 0));
+                } else if (step.has("key")) {
+                    STEPS.add(new Step("key", step.get("key").getAsString(), 0));
                 } else if (step.has("press")) {
                     STEPS.add(new Step("press", step.get("press").getAsString(), 0));
                 } else if (step.has("close")) {
@@ -196,6 +199,16 @@ public final class DevSceneCapture {
                 case "config" -> {
                     ModList.get().getModContainerById(Skyseam.MOD_ID)
                             .ifPresent(container -> minecraft.setScreen(new ConfigurationScreen(container, minecraft.screen)));
+                    keepScreen = true;
+                    return;
+                }
+                case "key" -> {
+                    // Presses a key binding by its name (another mod's, like a map's), once.
+                    for (net.minecraft.client.KeyMapping mapping : minecraft.options.keyMappings) {
+                        if (mapping.getName().equals(step.value())) {
+                            net.minecraft.client.KeyMapping.click(mapping.getKey());
+                        }
+                    }
                     keepScreen = true;
                     return;
                 }

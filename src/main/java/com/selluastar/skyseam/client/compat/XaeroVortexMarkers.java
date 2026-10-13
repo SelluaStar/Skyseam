@@ -1,94 +1,217 @@
 package com.selluastar.skyseam.client.compat;
 
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
-import org.jetbrains.annotations.Nullable;
-
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.selluastar.skyseam.Skyseam;
 import com.selluastar.skyseam.halcyon.vortex.FluxVortex;
 
-import net.minecraft.util.Mth;
-import net.minecraft.world.phys.Vec3;
-import xaero.common.minimap.waypoints.Waypoint;
-import xaero.common.minimap.waypoints.WaypointVisibilityType;
-import xaero.hud.minimap.BuiltInHudModules;
-import xaero.hud.minimap.module.MinimapSession;
-import xaero.hud.minimap.waypoint.WaypointColor;
-import xaero.hud.minimap.waypoint.WaypointPurpose;
-import xaero.hud.minimap.waypoint.set.WaypointSet;
-import xaero.hud.minimap.world.MinimapWorld;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.resources.ResourceLocation;
+import xaero.common.HudMod;
+import xaero.common.graphics.renderer.multitexture.MultiTextureRenderTypeRendererProvider;
+import xaero.hud.minimap.element.render.MinimapElementReader;
+import xaero.hud.minimap.element.render.MinimapElementRenderInfo;
+import xaero.hud.minimap.element.render.MinimapElementRenderLocation;
+import xaero.hud.minimap.element.render.MinimapElementRenderProvider;
+import xaero.hud.minimap.element.render.MinimapElementRenderer;
 
 /**
- * Flux vortices on Xaero's Minimap, and through it on Xaero's World Map (docs/DECISIONS.md K105): a temporary waypoint
- * at each (never saved), named with what the vortex is doing and how long it has left. Xaero's maps have no public way
- * for a mod to draw its own icons, and a waypoint shows only text, so its symbol is a vortex icon added to the game's
- * font as a character of its own ({@link #ICON}, {@code assets/minecraft/font/default.json}), on a black square. This
- * goes through the minimap's own waypoint classes; only ever
- * loaded when Xaero's Minimap is ({@link VortexMapMarkers}). Those within {@link #NEAR} blocks show in the world and on
- * the minimap too; the rest only on the world map, so the sky isn't crowded with their labels.
+ * Flux vortices on Xaero's Minimap (docs/DECISIONS.md K105): its own icon drawn at each vortex over the minimap
+ * ({@code textures/gui/map/flux_vortex.png}, white outlined in black), through the minimap's element renderers, the
+ * same way it draws its radar; hovering it in the minimap's menus names what the vortex is doing and how long it has
+ * left. Only ever loaded when Xaero's Minimap is ({@link VortexMapMarkers}); the world map has its own
+ * ({@link XaeroWorldMapVortices}).
  */
 final class XaeroVortexMarkers {
-    /** Vortices this close are marked in the world and on the minimap as well as on the world map. */
-    private static final double NEAR = 512;
-    /** The vortex icon's character in the game's font ({@code textures/font/flux_vortex.png}). */
-    static final String ICON = "";
-    private static final Map<Long, Waypoint> SHOWN = new HashMap<>();
-    @Nullable
-    private static WaypointSet shownIn;
+    static final ResourceLocation ICON = Skyseam.id("textures/gui/map/flux_vortex.png");
+    /** The icon's size on the minimap, in GUI pixels. */
+    private static final int SIZE = 14;
+    private static boolean registered;
 
     private XaeroVortexMarkers() {}
 
-    static void update(List<FluxVortex> vortices, long time, Vec3 camera) {
-        MinimapSession session = BuiltInHudModules.MINIMAP.getCurrentSession();
-        MinimapWorld world = session == null ? null : session.getWorldManager().getCurrentWorld();
-        WaypointSet set = world == null ? null : world.getCurrentWaypointSet();
-        if (set != shownIn) {
-            clear();
-            shownIn = set;
-        }
-        if (set == null) {
+    /** Hands the renderer to the minimap once it is up. */
+    static void register() {
+        if (registered || HudMod.INSTANCE == null || HudMod.INSTANCE.getMinimap() == null) {
             return;
         }
-        Set<Long> alive = new HashSet<>();
-        for (FluxVortex vortex : vortices) {
-            if (!vortex.alive(time)) {
-                continue;
-            }
-            alive.add(vortex.id());
-            String name = VortexMapMarkers.title(vortex, time);
-            Waypoint waypoint = SHOWN.get(vortex.id());
-            if (waypoint == null) {
-                waypoint = new Waypoint(Mth.floor(vortex.x()), vortex.baseY(), Mth.floor(vortex.z()), name, ICON, WaypointColor.BLACK,
-                        WaypointPurpose.NORMAL, true);
-                set.add(waypoint);
-                SHOWN.put(vortex.id(), waypoint);
-            } else if (!name.equals(waypoint.getName())) {
-                waypoint.setName(name);
-            }
-            boolean near = Math.hypot(vortex.x() - camera.x, vortex.z() - camera.z) <= NEAR;
-            waypoint.setVisibility(near ? WaypointVisibilityType.LOCAL : WaypointVisibilityType.WORLD_MAP_LOCAL);
+        HudMod.INSTANCE.getMinimap().getOverMapRendererHandler().add(new Renderer());
+        registered = true;
+    }
+
+    /** The vortices to mark now: alive in the level the camera is in. */
+    static List<FluxVortex> shown() {
+        Minecraft minecraft = Minecraft.getInstance();
+        List<FluxVortex> out = new ArrayList<>();
+        if (minecraft.level == null) {
+            return out;
         }
-        Iterator<Map.Entry<Long, Waypoint>> entries = SHOWN.entrySet().iterator();
-        while (entries.hasNext()) {
-            Map.Entry<Long, Waypoint> entry = entries.next();
-            if (!alive.contains(entry.getKey())) {
-                set.remove(entry.getValue());
-                entries.remove();
+        long time = minecraft.level.getGameTime();
+        for (FluxVortex vortex : VortexMapMarkers.vortices()) {
+            if (vortex.alive(time)) {
+                out.add(vortex);
             }
+        }
+        return out;
+    }
+
+    /** Draws the icon centred where the pose is, {@code size} GUI pixels across. */
+    static void drawIcon(GuiGraphics graphics, int size) {
+        RenderSystem.enableBlend();
+        graphics.blit(ICON, -size / 2, -size / 2, size, size, 0, 0, 32, 32, 32, 32);
+    }
+
+    private static final class Renderer extends MinimapElementRenderer<FluxVortex, Object> {
+        Renderer() {
+            super(new Reader(), new Provider(), new Object());
+        }
+
+        @Override
+        public boolean renderElement(FluxVortex vortex, boolean highlighted, boolean outOfBounds, double optionalDepth, float optionalScale, double partialX,
+                double partialY, MinimapElementRenderInfo info, GuiGraphics graphics, MultiBufferSource.BufferSource buffers) {
+            // Only those on the minimap: the rest would crowd its rim.
+            if (outOfBounds) {
+                return false;
+            }
+            graphics.pose().pushPose();
+            graphics.pose().translate(partialX, partialY, optionalDepth);
+            graphics.pose().scale(optionalScale, optionalScale, 1);
+            drawIcon(graphics, SIZE);
+            graphics.pose().popPose();
+            return true;
+        }
+
+        @Override
+        public void preRender(MinimapElementRenderInfo info, MultiBufferSource.BufferSource buffers, MultiTextureRenderTypeRendererProvider renderers) {}
+
+        @Override
+        public void postRender(MinimapElementRenderInfo info, MultiBufferSource.BufferSource buffers, MultiTextureRenderTypeRendererProvider renderers) {}
+
+        @Override
+        public boolean shouldRender(MinimapElementRenderLocation location) {
+            return location == MinimapElementRenderLocation.OVER_MINIMAP;
         }
     }
 
-    static void clear() {
-        if (shownIn != null) {
-            for (Waypoint waypoint : SHOWN.values()) {
-                shownIn.remove(waypoint);
-            }
+    private static final class Provider extends MinimapElementRenderProvider<FluxVortex, Object> {
+        private Iterator<FluxVortex> iterator = List.<FluxVortex>of().iterator();
+
+        @Override
+        public void begin(MinimapElementRenderLocation location, Object context) {
+            iterator = shown().iterator();
         }
-        SHOWN.clear();
-        shownIn = null;
+
+        @Override
+        public boolean hasNext(MinimapElementRenderLocation location, Object context) {
+            return iterator.hasNext();
+        }
+
+        @Override
+        public FluxVortex getNext(MinimapElementRenderLocation location, Object context) {
+            return iterator.next();
+        }
+
+        @Override
+        public void end(MinimapElementRenderLocation location, Object context) {
+            iterator = List.<FluxVortex>of().iterator();
+        }
+    }
+
+    private static final class Reader extends MinimapElementReader<FluxVortex, Object> {
+        @Override
+        public boolean isHidden(FluxVortex vortex, Object context) {
+            return false;
+        }
+
+        @Override
+        public double getRenderX(FluxVortex vortex, Object context, float partialTicks) {
+            return vortex.x();
+        }
+
+        @Override
+        public double getRenderY(FluxVortex vortex, Object context, float partialTicks) {
+            return vortex.baseY();
+        }
+
+        @Override
+        public double getRenderZ(FluxVortex vortex, Object context, float partialTicks) {
+            return vortex.z();
+        }
+
+        @Override
+        public int getInteractionBoxLeft(FluxVortex vortex, Object context, float partialTicks) {
+            return -SIZE / 2;
+        }
+
+        @Override
+        public int getInteractionBoxRight(FluxVortex vortex, Object context, float partialTicks) {
+            return SIZE / 2;
+        }
+
+        @Override
+        public int getInteractionBoxTop(FluxVortex vortex, Object context, float partialTicks) {
+            return -SIZE / 2;
+        }
+
+        @Override
+        public int getInteractionBoxBottom(FluxVortex vortex, Object context, float partialTicks) {
+            return SIZE / 2;
+        }
+
+        @Override
+        public int getRenderBoxLeft(FluxVortex vortex, Object context, float partialTicks) {
+            return -SIZE;
+        }
+
+        @Override
+        public int getRenderBoxRight(FluxVortex vortex, Object context, float partialTicks) {
+            return SIZE;
+        }
+
+        @Override
+        public int getRenderBoxTop(FluxVortex vortex, Object context, float partialTicks) {
+            return -SIZE;
+        }
+
+        @Override
+        public int getRenderBoxBottom(FluxVortex vortex, Object context, float partialTicks) {
+            return SIZE;
+        }
+
+        @Override
+        public int getLeftSideLength(FluxVortex vortex, Minecraft minecraft) {
+            return 9;
+        }
+
+        @Override
+        public String getMenuName(FluxVortex vortex) {
+            Minecraft minecraft = Minecraft.getInstance();
+            return minecraft.level == null ? "Flux vortex" : VortexMapMarkers.title(vortex, minecraft.level.getGameTime());
+        }
+
+        @Override
+        public String getFilterName(FluxVortex vortex) {
+            return "Flux vortex";
+        }
+
+        @Override
+        public int getMenuTextFillLeftPadding(FluxVortex vortex) {
+            return 0;
+        }
+
+        @Override
+        public int getRightClickTitleBackgroundColor(FluxVortex vortex) {
+            return 0xFF1E2A48;
+        }
+
+        @Override
+        public boolean shouldScaleBoxWithOptionalScale() {
+            return true;
+        }
     }
 }

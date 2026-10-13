@@ -15,10 +15,8 @@ Writes, under src/main/resources/assets/skyseam/textures/:
   environment/flux_band.png     16x4   a band, for ripples
   environment/flux_slice.png    32x32  a slice across one vortex of the pair, seen from above or below: a glow brighter
                                        towards its middle with three pixel arms winding out of it (clamped)
-  gui/map/flux_vortex.png       16x16  the map icon (Xaero's maps can't take one; JourneyMap does): the two vortices
-                                       winding round each other up from a pool, under a crown, outlined dark
-  font/flux_vortex.png          8x8    the same icon as a font character (U+E3A5, assets/minecraft/font/default.json), for
-                                       Xaero's maps, whose waypoints can only show text
+  gui/map/flux_vortex.png       32x32  the map icon on Xaero's maps and JourneyMap: a ring round a dot with five blades
+                                       sweeping out like a whirlpool, white outlined in black, no background
   particle/flux_mote_{0..3}.png 8x8    a twinkling mote, four frames from a dot to a cross
   particle/flux_spark.png       8x8    a four-pointed spark
   particle/flux_dust.png        8x8    a puff of mist
@@ -176,56 +174,41 @@ def dust():
     return white(out * 0.8)
 
 
-def map_icon():
+def map_icon(size=32):
+    """The vortex's map icon, after the author's reference (a storm symbol): a ring round a dot, with five blades sweeping
+    out of it like a whirlpool; white with a black outline, no background, in whole pixels."""
     from PIL import Image
-    size = 16
+    ss = 8
+    n = size * ss
+    ys, xs = np.mgrid[0:n, 0:n]
+    dx = (xs + 0.5 - n / 2) / (n / 2)
+    dy = (ys + 0.5 - n / 2) / (n / 2)
+    r = np.hypot(dx, dy)
+    a = np.arctan2(dy, dx)
+    # The ring and the dot in the middle.
+    shape = ((r > 0.30) & (r < 0.47)) | (r < 0.15)
+    # Five blades: each grows out of the ring and curls round, thinning to a point.
+    blades = 5
+    for k in range(blades):
+        base = k * 2 * np.pi / blades
+        t = np.clip((r - 0.40) / 0.50, 0, 1)
+        centre = base + t * 1.25
+        diff = np.angle(np.exp(1j * (a - centre)))
+        width = 0.62 * (1 - t) ** 1.2
+        shape |= (r >= 0.40) & (r <= 0.90) & (diff > -0.06) & (diff < width)
+    small = shape.reshape(size, ss, size, ss).mean(axis=(1, 3)) > 0.5
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     px = img.load()
-    cyan = (90, 225, 255, 255)
-    violet = (170, 120, 255, 255)
-    white = (235, 250, 255, 255)
-    for y in range(2, 14):
-        t = (13 - y) / 11.0
-        a = t * np.pi * 2.2
-        for k, colour in ((0, cyan), (1, violet)):
-            x = 7.5 + np.sin(a + k * np.pi) * (2.6 + 0.8 * t)
-            px[int(round(x)), y] = colour
-        px[8 if y % 3 else 7, y] = white if y > 3 else px[8, y]
-    for x in range(4, 12):
-        px[x, 1] = white if 6 <= x <= 9 else cyan
-    for x in range(3, 13):
-        px[x, 14] = cyan if x % 2 else violet
-    # A dark outline round everything, so it reads on any map.
-    out = img.copy()
-    po = out.load()
     for y in range(size):
         for x in range(size):
-            if px[x, y][3] == 0 and any(0 <= x + dx < size and 0 <= y + dy < size and px[x + dx, y + dy][3] > 0
-                                        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
-                po[x, y] = (16, 22, 48, 230)
-    return out
-
-
-def font_icon():
-    """An 8 by 8 vortex: two strands, cyan and violet, crossing twice up a white core, a crown on top, a pool below."""
-    from PIL import Image
-    img = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
-    px = img.load()
-    cyan = (90, 225, 255, 255)
-    violet = (180, 130, 255, 255)
-    white = (240, 252, 255, 255)
-    rows = {1: (1, 6), 2: (2, 5), 3: (3, 4), 4: (3, 4), 5: (2, 5), 6: (2, 5)}
-    for y, (a, b) in rows.items():
-        left, right = (cyan, violet) if y < 4 else (violet, cyan)
-        px[a, y] = left
-        px[b, y] = right
-    for y in (2, 5):
-        px[3, y] = white
-        px[4, y] = white
-    for x in range(0, 8):
-        px[x, 0] = white if 2 <= x <= 5 else (0, 0, 0, 0)
-    for x in range(1, 7):
-        px[x, 7] = cyan if x % 2 else violet
+            if small[y, x]:
+                px[x, y] = (255, 255, 255, 255)
+    # A black outline round the white, one pixel wide.
+    for y in range(size):
+        for x in range(size):
+            if not small[y, x] and any(0 <= x + ox < size and 0 <= y + oy < size and small[y + oy, x + ox]
+                                       for ox in (-1, 0, 1) for oy in (-1, 0, 1)):
+                px[x, y] = (0, 0, 0, 255)
     return img
 
 
@@ -249,9 +232,9 @@ def main():
         img.save(path)
         print("wrote", path.relative_to(ROOT))
     font_path = TEX / "font" / "flux_vortex.png"
-    font_path.parent.mkdir(parents=True, exist_ok=True)
-    font_icon().save(font_path)
-    print("wrote", font_path.relative_to(ROOT))
+    if font_path.exists():
+        font_path.unlink()
+        print("removed", font_path.relative_to(ROOT))
     icon_path = TEX / "gui" / "map" / "flux_vortex.png"
     icon_path.parent.mkdir(parents=True, exist_ok=True)
     map_icon().save(icon_path)
