@@ -17,6 +17,8 @@ Writes, under src/main/resources/assets/skyseam/textures/:
                                        towards its middle with three pixel arms winding out of it (clamped)
   gui/map/flux_vortex.png       16x16  the map icon (Xaero's maps can't take one; JourneyMap does): the two vortices
                                        winding round each other up from a pool, under a crown, outlined dark
+  font/flux_vortex.png          8x8    the same icon as a font character (U+E3A5, assets/minecraft/font/default.json), for
+                                       Xaero's maps, whose waypoints can only show text
   particle/flux_mote_{0..3}.png 8x8    a twinkling mote, four frames from a dot to a cross
   particle/flux_spark.png       8x8    a four-pointed spark
   particle/flux_dust.png        8x8    a puff of mist
@@ -204,6 +206,29 @@ def map_icon():
     return out
 
 
+def font_icon():
+    """An 8 by 8 vortex: two strands, cyan and violet, crossing twice up a white core, a crown on top, a pool below."""
+    from PIL import Image
+    img = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
+    px = img.load()
+    cyan = (90, 225, 255, 255)
+    violet = (180, 130, 255, 255)
+    white = (240, 252, 255, 255)
+    rows = {1: (1, 6), 2: (2, 5), 3: (3, 4), 4: (3, 4), 5: (2, 5), 6: (2, 5)}
+    for y, (a, b) in rows.items():
+        left, right = (cyan, violet) if y < 4 else (violet, cyan)
+        px[a, y] = left
+        px[b, y] = right
+    for y in (2, 5):
+        px[3, y] = white
+        px[4, y] = white
+    for x in range(0, 8):
+        px[x, 0] = white if 2 <= x <= 5 else (0, 0, 0, 0)
+    for x in range(1, 7):
+        px[x, 7] = cyan if x % 2 else violet
+    return img
+
+
 def main():
     environment = {"flux_tube": tube(), "flux_strand": strand(), "flux_glow": glow(), "flux_pool": pool(), "flux_crown": crown(),
                    "flux_band": band(), "flux_slice": slice_()}
@@ -223,6 +248,10 @@ def main():
         path = TEX / "particle" / f"{name}.png"
         img.save(path)
         print("wrote", path.relative_to(ROOT))
+    font_path = TEX / "font" / "flux_vortex.png"
+    font_path.parent.mkdir(parents=True, exist_ok=True)
+    font_icon().save(font_path)
+    print("wrote", font_path.relative_to(ROOT))
     icon_path = TEX / "gui" / "map" / "flux_vortex.png"
     icon_path.parent.mkdir(parents=True, exist_ok=True)
     map_icon().save(icon_path)
