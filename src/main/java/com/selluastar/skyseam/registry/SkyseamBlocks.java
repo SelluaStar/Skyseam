@@ -8,6 +8,7 @@ import com.selluastar.skyseam.block.BloomcoralBlock;
 import com.selluastar.skyseam.block.CloudBlock;
 import com.selluastar.skyseam.block.LanternVineBlock;
 import com.selluastar.skyseam.block.SmallShroomBlock;
+import com.selluastar.skyseam.halcyon.flora.MurmurberryBlock;
 import com.selluastar.skyseam.halcyon.flora.SpringbloomBlock;
 
 import net.minecraft.world.level.block.AmethystClusterBlock;
@@ -195,6 +196,10 @@ public final class SkyseamBlocks {
     public static final DeferredBlock<SpringbloomBlock> SPRINGBLOOM = BLOCKS.register("springbloom",
             () -> new SpringbloomBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(0.4f).sound(SoundType.SLIME_BLOCK)
                     .lightLevel(state -> 9).noOcclusion().pushReaction(PushReaction.DESTROY)));
+    /** The Murmurberry (docs/DECISIONS.md K106): berries on the walls, floors and roofs of caves that flash at a sound. */
+    public static final DeferredBlock<MurmurberryBlock> MURMURBERRY = BLOCKS.register("murmurberry",
+            () -> new MurmurberryBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY).noCollission().instabreak()
+                    .sound(SoundType.CAVE_VINES).noOcclusion().pushReaction(PushReaction.DESTROY)));
 
     /** Every Halcyon block, in creative tab order. */
     public static List<DeferredBlock<? extends Block>> halcyonBlocks() {

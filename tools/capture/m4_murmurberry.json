@@ -1,0 +1,776 @@
+{
+ "settle": 200,
+ "steps": [
+  {
+   "command": "gamemode spectator"
+  },
+  {
+   "command": "gamerule sendCommandFeedback false"
+  },
+  {
+   "command": "gamerule doDaylightCycle false"
+  },
+  {
+   "command": "skyseam halcyon time set midnight"
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 200
+  },
+  {
+   "command": "execute at @s run summon marker ~ ~ ~ {Tags:[\"mb_origin\"]}"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run fill ~-12 ~-32 ~20 ~12 ~-23 ~52 minecraft:stone hollow"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run fill ~-11 ~-32 ~21 ~11 ~-32 ~51 minecraft:moss_block"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~1 ~-31 ~49 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-8 ~-31 ~48 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~5 ~-31 ~30 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-3 ~-31 ~46 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-7 ~-31 ~46 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~1 ~-31 ~37 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-7 ~-31 ~36 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~3 ~-31 ~49 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-7 ~-31 ~38 skyseam:murmurberry[facing=up,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~9 ~-31 ~26 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~5 ~-31 ~34 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~2 ~-31 ~38 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~1 ~-31 ~45 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~10 ~-31 ~43 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~8 ~-31 ~34 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~1 ~-31 ~23 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-10 ~-31 ~49 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-1 ~-31 ~46 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-10 ~-31 ~23 skyseam:murmurberry[facing=up,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~7 ~-31 ~50 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~10 ~-31 ~49 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~1 ~-31 ~44 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~1 ~-31 ~39 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-5 ~-31 ~36 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~10 ~-31 ~29 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-1 ~-31 ~39 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~0 ~-31 ~24 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~7 ~-31 ~48 skyseam:murmurberry[facing=up,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-5 ~-31 ~49 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-1 ~-31 ~30 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~0 ~-31 ~42 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~10 ~-31 ~36 skyseam:murmurberry[facing=up,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-3 ~-31 ~36 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-7 ~-31 ~37 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~9 ~-31 ~48 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-9 ~-31 ~50 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-9 ~-31 ~22 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~4 ~-31 ~30 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~6 ~-31 ~37 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~10 ~-31 ~42 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-8 ~-31 ~36 skyseam:murmurberry[facing=up,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~1 ~-31 ~48 skyseam:murmurberry[facing=up,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-4 ~-31 ~38 skyseam:murmurberry[facing=up,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~6 ~-31 ~40 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-10 ~-31 ~25 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-4 ~-31 ~29 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~8 ~-31 ~40 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-6 ~-31 ~46 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~3 ~-31 ~27 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~9 ~-31 ~49 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-1 ~-31 ~50 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-8 ~-31 ~50 skyseam:murmurberry[facing=up,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~7 ~-31 ~40 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-6 ~-31 ~47 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-8 ~-31 ~46 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~8 ~-31 ~45 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-1 ~-31 ~32 skyseam:murmurberry[facing=up,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-8 ~-31 ~37 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-6 ~-31 ~48 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~8 ~-31 ~46 skyseam:murmurberry[facing=up,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~1 ~-31 ~36 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-5 ~-31 ~28 skyseam:murmurberry[facing=up,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-10 ~-31 ~39 skyseam:murmurberry[facing=up,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-4 ~-24 ~38 skyseam:murmurberry[facing=down,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~10 ~-24 ~50 skyseam:murmurberry[facing=down,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-7 ~-24 ~23 skyseam:murmurberry[facing=down,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~9 ~-24 ~50 skyseam:murmurberry[facing=down,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-9 ~-24 ~36 skyseam:murmurberry[facing=down,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-10 ~-24 ~43 skyseam:murmurberry[facing=down,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~10 ~-24 ~29 skyseam:murmurberry[facing=down,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-2 ~-24 ~41 skyseam:murmurberry[facing=down,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~6 ~-24 ~23 skyseam:murmurberry[facing=down,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~1 ~-24 ~26 skyseam:murmurberry[facing=down,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-2 ~-24 ~22 skyseam:murmurberry[facing=down,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~10 ~-24 ~39 skyseam:murmurberry[facing=down,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~7 ~-24 ~29 skyseam:murmurberry[facing=down,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~0 ~-24 ~39 skyseam:murmurberry[facing=down,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-2 ~-24 ~23 skyseam:murmurberry[facing=down,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-9 ~-24 ~22 skyseam:murmurberry[facing=down,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~0 ~-24 ~40 skyseam:murmurberry[facing=down,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-10 ~-24 ~26 skyseam:murmurberry[facing=down,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~5 ~-24 ~45 skyseam:murmurberry[facing=down,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~7 ~-24 ~45 skyseam:murmurberry[facing=down,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-7 ~-24 ~48 skyseam:murmurberry[facing=down,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-6 ~-24 ~50 skyseam:murmurberry[facing=down,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~3 ~-24 ~28 skyseam:murmurberry[facing=down,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~5 ~-24 ~30 skyseam:murmurberry[facing=down,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-2 ~-24 ~35 skyseam:murmurberry[facing=down,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~9 ~-24 ~30 skyseam:murmurberry[facing=down,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~8 ~-24 ~39 skyseam:murmurberry[facing=down,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-5 ~-24 ~26 skyseam:murmurberry[facing=down,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~8 ~-24 ~36 skyseam:murmurberry[facing=down,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-2 ~-24 ~37 skyseam:murmurberry[facing=down,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~9 ~-24 ~35 skyseam:murmurberry[facing=down,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~10 ~-24 ~36 skyseam:murmurberry[facing=down,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-8 ~-24 ~29 skyseam:murmurberry[facing=down,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-1 ~-24 ~25 skyseam:murmurberry[facing=down,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~10 ~-24 ~28 skyseam:murmurberry[facing=down,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-10 ~-24 ~25 skyseam:murmurberry[facing=down,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-10 ~-24 ~37 skyseam:murmurberry[facing=down,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-10 ~-24 ~34 skyseam:murmurberry[facing=down,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~4 ~-24 ~48 skyseam:murmurberry[facing=down,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~1 ~-24 ~44 skyseam:murmurberry[facing=down,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-6 ~-24 ~36 skyseam:murmurberry[facing=down,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-8 ~-24 ~40 skyseam:murmurberry[facing=down,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-8 ~-24 ~49 skyseam:murmurberry[facing=down,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~1 ~-24 ~36 skyseam:murmurberry[facing=down,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~7 ~-24 ~28 skyseam:murmurberry[facing=down,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-4 ~-24 ~42 skyseam:murmurberry[facing=down,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-3 ~-24 ~37 skyseam:murmurberry[facing=down,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-27 ~31 skyseam:murmurberry[facing=east,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-27 ~26 skyseam:murmurberry[facing=east,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-28 ~25 skyseam:murmurberry[facing=east,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-27 ~34 skyseam:murmurberry[facing=east,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-29 ~35 skyseam:murmurberry[facing=east,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-30 ~46 skyseam:murmurberry[facing=east,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-31 ~40 skyseam:murmurberry[facing=east,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-28 ~48 skyseam:murmurberry[facing=east,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-29 ~49 skyseam:murmurberry[facing=east,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-28 ~44 skyseam:murmurberry[facing=east,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-28 ~38 skyseam:murmurberry[facing=east,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-29 ~29 skyseam:murmurberry[facing=east,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-28 ~27 skyseam:murmurberry[facing=east,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-26 ~35 skyseam:murmurberry[facing=east,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-27 ~39 skyseam:murmurberry[facing=east,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-28 ~31 skyseam:murmurberry[facing=east,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-31 ~41 skyseam:murmurberry[facing=east,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-31 ~29 skyseam:murmurberry[facing=east,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-30 ~45 skyseam:murmurberry[facing=east,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-31 ~49 skyseam:murmurberry[facing=east,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-26 ~23 skyseam:murmurberry[facing=east,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-30 ~37 skyseam:murmurberry[facing=west,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-27 ~40 skyseam:murmurberry[facing=west,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-27 ~28 skyseam:murmurberry[facing=west,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-31 ~42 skyseam:murmurberry[facing=west,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-31 ~43 skyseam:murmurberry[facing=west,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-28 ~32 skyseam:murmurberry[facing=west,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-31 ~29 skyseam:murmurberry[facing=west,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-28 ~39 skyseam:murmurberry[facing=west,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-30 ~30 skyseam:murmurberry[facing=west,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-26 ~42 skyseam:murmurberry[facing=west,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-29 ~40 skyseam:murmurberry[facing=west,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-26 ~31 skyseam:murmurberry[facing=west,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-28 ~40 skyseam:murmurberry[facing=west,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-29 ~45 skyseam:murmurberry[facing=west,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-27 ~46 skyseam:murmurberry[facing=west,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-29 ~22 skyseam:murmurberry[facing=west,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-27 ~31 skyseam:murmurberry[facing=west,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-30 ~50 skyseam:murmurberry[facing=west,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-26 ~29 skyseam:murmurberry[facing=west,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-28 ~25 skyseam:murmurberry[facing=west,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-29 ~39 skyseam:murmurberry[facing=west,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~11 ~-31 ~49 skyseam:murmurberry[facing=west,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~0 ~-26 ~51 skyseam:murmurberry[facing=north,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~5 ~-26 ~51 skyseam:murmurberry[facing=north,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-7 ~-30 ~51 skyseam:murmurberry[facing=north,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-7 ~-31 ~51 skyseam:murmurberry[facing=north,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~0 ~-28 ~51 skyseam:murmurberry[facing=north,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-5 ~-26 ~51 skyseam:murmurberry[facing=north,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-1 ~-30 ~51 skyseam:murmurberry[facing=north,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-2 ~-30 ~51 skyseam:murmurberry[facing=north,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~1 ~-30 ~51 skyseam:murmurberry[facing=north,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~10 ~-31 ~51 skyseam:murmurberry[facing=north,colourway=2]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~1 ~-31 ~25 skyseam:murmurberry[facing=up,colourway=0]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~2 ~-31 ~26 skyseam:murmurberry[facing=up,colourway=1]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~0 ~-24 ~26 skyseam:murmurberry[facing=down,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run setblock ~-11 ~-29 ~26 skyseam:murmurberry[facing=east,colourway=3]"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run tp @s ~0.5 ~-29.4 ~21.6 0 8"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "command": "effect give @s minecraft:night_vision infinite 0 true"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "mb_hall_off"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run tp @s ~2.0 ~-30.2 ~23.4 10 40"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "mb_close_off_first"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run tp @s ~0.5 ~-29.4 ~21.6 0 8"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "command": "effect clear @s minecraft:night_vision"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "mb_hall_dark"
+  },
+  {
+   "command": "skyseam halcyon murmurberry ripple"
+  },
+  {
+   "wait": 2
+  },
+  {
+   "shot": "mb_ripple_0s"
+  },
+  {
+   "wait": 18
+  },
+  {
+   "shot": "mb_ripple_1s"
+  },
+  {
+   "wait": 39
+  },
+  {
+   "shot": "mb_ripple_3s"
+  },
+  {
+   "wait": 59
+  },
+  {
+   "shot": "mb_ripple_6s"
+  },
+  {
+   "wait": 59
+  },
+  {
+   "shot": "mb_ripple_9s"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run tp @s ~2.0 ~-30.2 ~23.4 10 40"
+  },
+  {
+   "command": "effect give @s minecraft:night_vision infinite 0 true"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "shot": "mb_close_off"
+  },
+  {
+   "command": "effect clear @s minecraft:night_vision"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "command": "skyseam halcyon murmurberry ripple"
+  },
+  {
+   "wait": 7
+  },
+  {
+   "shot": "mb_close_lit_1"
+  },
+  {
+   "wait": 3
+  },
+  {
+   "shot": "mb_close_lit_2"
+  },
+  {
+   "wait": 6
+  },
+  {
+   "shot": "mb_close_lit_3"
+  },
+  {
+   "wait": 220
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run tp @s ~-8.5 ~-29.6 ~23.4 45 -20"
+  },
+  {
+   "command": "effect give @s minecraft:night_vision infinite 0 true"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "shot": "mb_wall_roof_off"
+  },
+  {
+   "command": "effect clear @s minecraft:night_vision"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "command": "skyseam halcyon murmurberry ripple"
+  },
+  {
+   "wait": 16
+  },
+  {
+   "shot": "mb_wall_roof_lit_1"
+  },
+  {
+   "wait": 6
+  },
+  {
+   "shot": "mb_wall_roof_lit_2"
+  },
+  {
+   "wait": 6
+  },
+  {
+   "shot": "mb_wall_roof_lit_3"
+  },
+  {
+   "wait": 220
+  },
+  {
+   "command": "gamemode survival"
+  },
+  {
+   "command": "execute at @e[tag=mb_origin,limit=1] run tp @s ~0.5 ~-31 ~21.6 0 10"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "walk": 30
+  },
+  {
+   "shot": "mb_walk_1"
+  },
+  {
+   "walk": 20
+  },
+  {
+   "shot": "mb_walk_2"
+  },
+  {
+   "wait": 30
+  },
+  {
+   "shot": "mb_walk_stopped"
+  },
+  {
+   "command": "gamemode spectator"
+  },
+  {
+   "command": "tp @s ~260 ~ ~-120"
+  },
+  {
+   "wait": 200
+  },
+  {
+   "command": "skyseam halcyon murmurberry find"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "effect give @s minecraft:night_vision infinite 0 true"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "mb_natural_off"
+  },
+  {
+   "command": "effect clear @s minecraft:night_vision"
+  },
+  {
+   "wait": 5
+  },
+  {
+   "command": "skyseam halcyon murmurberry ripple"
+  },
+  {
+   "wait": 14
+  },
+  {
+   "shot": "mb_natural_lit_1"
+  },
+  {
+   "wait": 8
+  },
+  {
+   "shot": "mb_natural_lit_2"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "quit": true
+  }
+ ]
+}

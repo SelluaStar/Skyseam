@@ -21,6 +21,8 @@ public final class SkyseamItems {
 
     public static final DeferredItem<BlockItem> SPRINGBLOOM = ITEMS.register("springbloom",
             () -> new BlockItem(SkyseamBlocks.SPRINGBLOOM.get(), new Item.Properties()));
+    public static final DeferredItem<BlockItem> MURMURBERRY = ITEMS.register("murmurberry",
+            () -> new BlockItem(SkyseamBlocks.MURMURBERRY.get(), new Item.Properties()));
 
     private SkyseamItems() {}
 
