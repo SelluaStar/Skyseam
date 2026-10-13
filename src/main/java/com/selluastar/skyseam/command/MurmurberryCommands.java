@@ -6,6 +6,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.selluastar.skyseam.halcyon.Arrival;
 import com.selluastar.skyseam.halcyon.flora.Murmurberries;
 import com.selluastar.skyseam.halcyon.flora.MurmurberryBlockEntity;
+import com.selluastar.skyseam.halcyon.flora.MurmurberryIndex;
 import com.selluastar.skyseam.network.MurmurPayload;
 
 import net.minecraft.commands.CommandSourceStack;
@@ -27,7 +28,8 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * Murmurberry commands (docs/DECISIONS.md K106), for testing and filming:
  * <ul>
  * <li>{@code /skyseam halcyon murmurberry find}: puts you a few steps from the nearest Murmurberry in the chunks
- * loaded round you, somewhere you can stand and see it, looking at it.</li>
+ * loaded round you, somewhere you can stand and see it, looking at it. {@code find field}: the same for the nearest
+ * one in a field or a thick clump (with {@value #CROWD} others within {@value #CROWD_RADIUS} blocks).</li>
  * <li>{@code /skyseam halcyon murmurberry ripple}: a sound where you stand, as if you had made one, without making any
  * other.</li>
  * </ul>
@@ -35,15 +37,19 @@ import net.neoforged.neoforge.network.PacketDistributor;
 final class MurmurberryCommands {
     /** How far to look, in chunks: only chunks already loaded are searched. */
     private static final int SEARCH_CHUNKS = 16;
+    /** {@code find field} looks for one with this many others within this many blocks. */
+    private static final int CROWD = 14;
+    private static final int CROWD_RADIUS = 5;
 
     private MurmurberryCommands() {}
 
     static LiteralArgumentBuilder<CommandSourceStack> build() {
-        return Commands.literal("murmurberry").then(Commands.literal("find").executes(MurmurberryCommands::find))
+        return Commands.literal("murmurberry").then(Commands.literal("find").executes(context -> find(context, false))
+                        .then(Commands.literal("field").executes(context -> find(context, true))))
                 .then(Commands.literal("ripple").executes(MurmurberryCommands::ripple));
     }
 
-    private static int find(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+    private static int find(CommandContext<CommandSourceStack> context, boolean field) throws CommandSyntaxException {
         CommandSourceStack source = context.getSource();
         ServerPlayer player = source.getPlayerOrException();
         ServerLevel level = source.getLevel();
@@ -57,7 +63,7 @@ final class MurmurberryCommands {
                     continue;
                 }
                 for (BlockEntity entity : chunk.getBlockEntities().values()) {
-                    if (entity instanceof MurmurberryBlockEntity) {
+                    if (entity instanceof MurmurberryBlockEntity && (!field || crowded(level, entity.getBlockPos()))) {
                         double distance = entity.getBlockPos().distToCenterSqr(player.position());
                         if (distance < bestDistance) {
                             bestDistance = distance;
@@ -68,7 +74,8 @@ final class MurmurberryCommands {
             }
         }
         if (best == null) {
-            source.sendFailure(Component.translatable("commands.skyseam.halcyon.murmurberry.none", SEARCH_CHUNKS * 16));
+            source.sendFailure(Component.translatable(field ? "commands.skyseam.halcyon.murmurberry.nofield" : "commands.skyseam.halcyon.murmurberry.none",
+                    SEARCH_CHUNKS * 16));
             return 0;
         }
         BlockPos found = best;
@@ -105,6 +112,17 @@ final class MurmurberryCommands {
             }
         }
         return best;
+    }
+
+    /** True if at least {@link #CROWD} other Murmurberries stand within {@link #CROWD_RADIUS} blocks of {@code pos}. */
+    private static boolean crowded(ServerLevel level, BlockPos pos) {
+        MurmurberryIndex index = MurmurberryIndex.of(level, false);
+        if (index == null) {
+            return false;
+        }
+        int[] near = {-1};
+        index.forEachWithin(Vec3.atCenterOf(pos), CROWD_RADIUS, other -> near[0]++);
+        return near[0] >= CROWD;
     }
 
     /** Nothing there to bump into. */

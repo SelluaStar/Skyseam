@@ -113,6 +113,28 @@ public final class MurmurberryGameTests {
         helper.succeed();
     }
 
+    /** Taller heights draw longer stalks, from 0.7 to 1.8 times as long; a placed one's height covers all five (K107). */
+    @GameTest(template = EMPTY)
+    public static void murmurberryHeightsGrowTaller(GameTestHelper helper) {
+        MurmurberryBlock block = SkyseamBlocks.MURMURBERRY.get();
+        float last = 0;
+        for (int height = 0; height <= 4; height++) {
+            float scale = MurmurberryBlock.stalkScale(MurmurberryBlock.state(block, Direction.UP, 0.5, height));
+            helper.assertTrue(scale > last, "Height " + height + " draws stalks " + scale + " long, no longer than height " + (height - 1));
+            last = scale;
+        }
+        helper.assertTrue(Math.abs(MurmurberryBlock.stalkScale(MurmurberryBlock.state(block, Direction.UP, 0.5, 0)) - 0.7f) < 1e-4
+                && Math.abs(last - 1.8f) < 1e-4, "Heights don't run from 0.7 to 1.8");
+        boolean[] seen = new boolean[5];
+        for (int k = 0; k < 100; k++) {
+            seen[MurmurberryBlock.heightFor((k + 0.5) / 100)] = true;
+        }
+        for (int height = 0; height <= 4; height++) {
+            helper.assertTrue(seen[height], "A placed Murmurberry is never height " + height);
+        }
+        helper.succeed();
+    }
+
     /** It needs the face it grows from: on a floor, a wall or a roof, taking that block away breaks it. */
     @GameTest(template = EMPTY)
     public static void murmurberryNeedsWhatItGrowsOn(GameTestHelper helper) {
@@ -123,13 +145,13 @@ public final class MurmurberryGameTests {
         helper.setBlock(wall, Blocks.STONE);
         helper.setBlock(roof, Blocks.STONE);
         MurmurberryBlock block = SkyseamBlocks.MURMURBERRY.get();
-        helper.setBlock(floor.above(), MurmurberryBlock.state(block, Direction.UP, 0.1));
-        helper.setBlock(wall.west(), MurmurberryBlock.state(block, Direction.WEST, 0.4));
-        helper.setBlock(roof.below(), MurmurberryBlock.state(block, Direction.DOWN, 0.9));
+        helper.setBlock(floor.above(), MurmurberryBlock.state(block, Direction.UP, 0.1, 0));
+        helper.setBlock(wall.west(), MurmurberryBlock.state(block, Direction.WEST, 0.4, 2));
+        helper.setBlock(roof.below(), MurmurberryBlock.state(block, Direction.DOWN, 0.9, 4));
         helper.assertBlockPresent(block, floor.above());
         helper.assertBlockPresent(block, wall.west());
         helper.assertBlockPresent(block, roof.below());
-        helper.assertFalse(MurmurberryBlock.state(block, Direction.EAST, 0.5).canSurvive(helper.getLevel(), helper.absolutePos(wall.west())),
+        helper.assertFalse(MurmurberryBlock.state(block, Direction.EAST, 0.5, 1).canSurvive(helper.getLevel(), helper.absolutePos(wall.west())),
                 "A Murmurberry holds on with nothing behind it");
         helper.setBlock(floor, Blocks.AIR);
         helper.setBlock(wall, Blocks.AIR);

@@ -294,7 +294,11 @@
   "commands.skyseam.halcyon.springbloom.found": "Beside the Springbloom at %s (it was %s blocks away).",
 
   "block.skyseam.murmurberry": "Murmurberry",
+  "subtitles.skyseam.murmurberry.chime": "Murmurberry chimes",
+  "subtitles.skyseam.murmurberry.pop": "Murmurberry pops",
+  "subtitles.skyseam.murmurberry.place": "Murmurberry placed",
   "commands.skyseam.halcyon.murmurberry.none": "No Murmurberry in the loaded chunks within %s blocks.",
+  "commands.skyseam.halcyon.murmurberry.nofield": "No field or thick clump of Murmurberries in the loaded chunks within %s blocks. Fields are most common in the Hush.",
   "commands.skyseam.halcyon.murmurberry.found": "By the Murmurberry at %s (it was %s blocks away).",
   "commands.skyseam.halcyon.murmurberry.ripple": "A sound here: every Murmurberry within %s blocks lights in turn."
 }

@@ -599,6 +599,59 @@ SPRINGBLOOM = ([(f"squish_{k + 1}", (lambda k=k: springbloom_squish(k))) for k i
                + [(f"launch_{k + 1}", (lambda k=k: springbloom_launch(k))) for k in range(2)])
 
 
+# ---- The Murmurberry (docs/DECISIONS.md K106, K107) -------------------------------------------------------------------
+
+# C5, D5, E5, G5, A5: a pentatonic scale, so any of them heard together sound sweet, and a ripple running across a
+# cave of them plays like wind chimes.
+MURMUR_NOTES = (523.25, 587.33, 659.25, 783.99, 880.0)
+
+
+def murmurberry_chime(k):
+    """A Murmurberry lighting up: a soft glassy bloop, like a bubble of light. A round tone that slides up into its note
+    as it swells (the balloon filling), a faint glass shimmer an octave above, and a breath of air, in the space of a
+    cave, gone in about a second. One take on each note of MURMUR_NOTES."""
+    seconds = 1.2
+    t = t_axis(seconds)
+    f0 = MURMUR_NOTES[k]
+    freq = f0 * (1 - 0.1 * np.exp(-t / 0.03))
+    phase = 2 * np.pi * np.cumsum(freq) / RATE
+    tone = np.sin(phase) + 0.22 * np.sin(2 * phase) * np.exp(-t / 0.25) + 0.07 * np.sin(3.01 * phase) * np.exp(-t / 0.12)
+    tone *= np.minimum(1, t / 0.014) * np.exp(-t / 0.3)
+    glass = bell(t, f0 * 2, ratios=(1, 2.76), amps=(0.16, 0.05), decay=0.45) * np.minimum(1, t / 0.01)
+    air = bandpass_noise(seconds, 2600 + 1400 * np.exp(-t / 0.2), q=0.8) * np.minimum(1, t / 0.02) * np.exp(-t / 0.16) * 0.04
+    return finish_level(reverb(tone + glass + air, seconds=1.0, wet=0.24), -21, fade_out=0.3)
+
+
+def murmurberry_pop(k):
+    """A Murmurberry broken: its berries pop like small balloons. A sharp crack, a burst of bright air, a little low
+    thump and the rubbery flap of the skin, then a rustle of its leaves. Two takes, the second smaller and higher."""
+    seconds = 0.5
+    t = t_axis(seconds)
+    size = (1.0, 0.75)[k]
+    burst = svf(rng.standard_normal(len(t)), 2800 / size, q=0.9) * np.exp(-t / (0.014 * size)) * 1.4
+    crack = rng.standard_normal(len(t)) * np.exp(-t / 0.003) * 0.7
+    thump = sub_boom(t, start=190 / size, end=95 / size, decay=0.05) * 0.8
+    flap = svf(rng.standard_normal(len(t)), 900 / size, q=2.5) * np.exp(-t / 0.06) * 0.35 * (0.6 + 0.4 * np.sin(2 * np.pi * 38 * t))
+    rustle = svf(rng.standard_normal(len(t)), 1900, q=0.7) * np.clip((t - 0.04) / 0.03, 0, 1) * np.exp(-np.maximum(0, t - 0.04) / 0.09) * 0.3
+    return finish_level(reverb(burst + crack + thump + flap + rustle, seconds=0.6, wet=0.15), -18, fade_out=0.1)
+
+
+def murmurberry_place(k):
+    """A Murmurberry placed: a soft rubbery squeak as its berries settle, and a rustle. Two takes."""
+    seconds = 0.38
+    t = t_axis(seconds)
+    freq = (700.0, 840.0)[k] * (1 + 0.25 * t / seconds)
+    phase = 2 * np.pi * np.cumsum(freq) / RATE
+    squeak = (np.sin(phase) + 0.3 * np.sin(2 * phase)) * np.minimum(1, t / 0.02) * np.exp(-t / 0.08) * 0.5
+    rustle = svf(rng.standard_normal(len(t)), 2200, q=0.7) * np.minimum(1, t / 0.005) * np.exp(-t / 0.1) * 0.6
+    return finish_level(squeak + rustle, -20, fade_out=0.08)
+
+
+MURMURBERRY = ([(f"chime_{k + 1}", (lambda k=k: murmurberry_chime(k))) for k in range(5)]
+               + [(f"pop_{k + 1}", (lambda k=k: murmurberry_pop(k))) for k in range(2)]
+               + [(f"place_{k + 1}", (lambda k=k: murmurberry_place(k))) for k in range(2)])
+
+
 APERTURE = [("charge", aperture_charge), ("ready", aperture_ready), ("mount", aperture_mount)]
 MIRROR_SEA = [("rebound", mirror_sea_rebound)]
 SKYCHART = [("unfold", skychart_unfold)]
@@ -613,7 +666,7 @@ LOOPS = {"seam/hum", "aperture/charge", "flux_vortex/loop"}
 # The Seam's closing crackle has its own folder (sounds/closing/), see docs/CLOSING-AUDIO.md.
 CLOSING = [("close", seam_close)]
 GROUPS = {"seam": SEAM, "closing": CLOSING, "aperture": APERTURE, "skychart": SKYCHART, "mirror_sea": MIRROR_SEA,
-          "flux_vortex": FLUX_VORTEX, "springbloom": SPRINGBLOOM}
+          "flux_vortex": FLUX_VORTEX, "springbloom": SPRINGBLOOM, "murmurberry": MURMURBERRY}
 
 
 def main(argv):

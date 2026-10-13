@@ -1569,3 +1569,48 @@ grey ... when it glows it should be the same but glowing and animated".
 4. Look at them unlit: grey see-through balloons. Lit: pastel blends with sprinkles and a halo.
 5. Settings (Mods, Skyseam, Config, Murmurberry): hearing range, delay at the edge, how thickly they grow.
 6. Send screenshots and `logs/latest.log`.
+
+## Murmurberry sounds, heights, clumps and fields (2026-10-13)
+
+DECISIONS K107. The author: "add sfx for them, add variable height for both the bulbs and the plant stem itself have
+them usually spawn in clumps and also have it so some areas spawn with fields of them with the variable height".
+
+**Built**
+- **Sounds** (`tools/audio/synth.py murmurberry`): as each berry lights, a soft glassy chime on one of five notes of a
+  pentatonic scale (C5, D5, E5, G5, A5), so a ripple plays like wind chimes and never clashes; a little lower from a
+  taller plant. Only berries within 20 blocks of a player chime, and at most 3 start in a tick. Broken, a balloon pop;
+  placed, a rubbery squeak.
+- **Heights:** a `height` (0 to 4) draws the stalks 0.7 to 1.8 times as long; each berry's own stalk varies by a
+  quarter either way and its size from 0.85 to 1.2 times. Placed ones get a random height.
+- **Clumps:** they now grow in clumps 2 to 4.5 blocks across, thickest and tallest in the middle, on the floors, walls
+  and roofs of caves and overhangs (replacing the even patches), with a stray one now and then.
+- **Fields:** in a few places a slow swell of noise makes a field, most spots in its heart holding one, tall and short
+  in rolling waves: under roofs anywhere, and in the Hush (whose standing dusk shows the light) on open grass too.
+- **Also:** `/skyseam halcyon murmurberry find field`; the capture tool can log the frame rate (`fps`) and turn
+  subtitles on (`subtitles`).
+
+**Verified (actually run)**
+- **The milestone check:** build ✓, runData ✓, **61/61 GameTests** ✓ (new: heights draw longer stalks, 0.7 to 1.8, and
+  a placed one can be any height; the sound definitions, subtitles and files are checked by the asset test), server
+  boot ✓. Sound files: `tools/audio/check.py` passes.
+- **The boot check:** in 300 chunks, 2,084 Murmurberries (1,083 on floors, 293 on walls, 708 hanging), 92% of them in
+  clumps (another within 3 blocks); by height, lowest first: 63, 474, 816, 572, 159. Deep in the Hush, 516 in 100
+  chunks, 330 of them in the open in its fields.
+- **The real client** (`tools/capture/m4_murmurberry_k107.json`): a hall of clumps and a field of every height; a sound
+  with subtitles on shows "Murmurberry chimes"; the light running across the field; a field grown in the Hush, lit at
+  its dusk; a clump grown under an overhang. Frame rate in that client: 117 looking at a bare wall, 85 with the hall's
+  field of about 150 in view, 64 while it is lit, 93 standing in the Hush's field. Sheet
+  [`docs/previews/m4-murmurberry-k107.png`](previews/m4-murmurberry-k107.png).
+
+**Not seen yet**
+- **The sounds heard by ear:** the chime was seen to play (its subtitle), but the sounds have only been checked as
+  files and spectrograms, not listened to.
+- **Weaker machines with big fields:** each Murmurberry is a GeckoLib model; the numbers above are from this machine.
+  `murmurberry.density` thins clumps, strays and fields.
+
+**Author's in-game test**
+1. `/skyseam halcyon tp hush`, then `/skyseam halcyon murmurberry find field`: a field of mixed heights.
+2. Break a block among them: the ring of light, with chimes as it passes.
+3. In a cave elsewhere, `/skyseam halcyon murmurberry find`: they should come in clumps.
+4. Break one (a pop) and place one (a squeak); placed ones come in different heights.
+5. Send screenshots and `logs/latest.log`.

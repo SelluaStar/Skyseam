@@ -58,7 +58,8 @@ import net.neoforged.neoforge.common.NeoForge;
  * {@code {"camera": "back"}} (or {@code "front"}, {@code "first"}) switches to that view. {@code {"config": true}} opens
  * Skyseam's settings screen, and {@code {"press": "Flux vortices"}} presses the first button on the open screen whose
  * label holds that text (for its pages); both keep the screen open until a {@code close} step, as does
- * {@code {"key": "gui.xaero_open_map"}}, which presses that key binding once.
+ * {@code {"key": "gui.xaero_open_map"}}, which presses that key binding once. {@code {"fps": "label"}} logs the frame
+ * rate over the last second, and {@code {"subtitles": true}} turns the game's subtitles on (to see a sound play).
  */
 public final class DevSceneCapture {
     public static final String PROPERTY = "skyseam.dev.capture";
@@ -118,6 +119,10 @@ public final class DevSceneCapture {
                     STEPS.add(new Step("jump", "", 0));
                 } else if (step.has("camera")) {
                     STEPS.add(new Step("camera", step.get("camera").getAsString(), 0));
+                } else if (step.has("fps")) {
+                    STEPS.add(new Step("fps", step.get("fps").getAsString(), 0));
+                } else if (step.has("subtitles")) {
+                    STEPS.add(new Step("subtitles", step.get("subtitles").getAsString(), 0));
                 }
             }
         } catch (IOException | RuntimeException e) {
@@ -185,6 +190,8 @@ public final class DevSceneCapture {
                     waiting = step.ticks();
                     return;
                 }
+                case "fps" -> Skyseam.LOGGER.info("Skyseam capture: fps {}: {}", step.value(), minecraft.getFps());
+                case "subtitles" -> minecraft.options.showSubtitles().set(Boolean.parseBoolean(step.value()));
                 case "jump" -> {
                     if (minecraft.player.onGround()) {
                         minecraft.player.jumpFromGround();

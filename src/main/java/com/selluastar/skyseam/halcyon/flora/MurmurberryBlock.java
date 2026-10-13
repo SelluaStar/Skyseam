@@ -45,8 +45,10 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * Drawn by GeckoLib ({@code client/flora/MurmurberryRenderer}).
  *
  * <p>{@link #FACING} is the way its berries point: up from a floor, down from a roof (those hang on longer stalks), out
- * from a wall (tipped upward). {@link #COLOURWAY} is which pastels it lights in. It has no collision and breaks at a
- * touch, and needs the face it grows from.
+ * from a wall (tipped upward). {@link #COLOURWAY} is which pastels it lights in, {@link #HEIGHT} how tall it grows
+ * (K107: its stalks from 0.7 to 1.8 times their usual length; each berry's own stalk and size vary a little more). It has
+ * no collision and breaks at a touch with a pop, and needs the face it grows from. Each berry chimes softly as it
+ * lights ({@link MurmurberryBlockEntity}).
  *
  * <p>The light is drawn, not cast: it lights nothing round it, so a ripple across a cave costs no lighting updates.
  */
@@ -55,27 +57,43 @@ public class MurmurberryBlock extends BaseEntityBlock implements SimpleWaterlogg
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
     /** Which pastels it lights in: pink and sky blue, pink and peach, mint and sky blue, lemon and lavender. */
     public static final IntegerProperty COLOURWAY = IntegerProperty.create("colourway", 0, 3);
+    /** How tall it grows, from 0 (low and squat) to 4 (tall): see {@link #stalkScale}. */
+    public static final IntegerProperty HEIGHT = IntegerProperty.create("height", 0, 4);
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
-    private static final Map<Direction, VoxelShape> SHAPES = new EnumMap<>(Direction.class);
+    /** How long its stalks are drawn at each {@link #HEIGHT}, against their usual length. */
+    private static final float[] STALK_SCALES = {0.7f, 0.9f, 1.15f, 1.45f, 1.8f};
+    /** How often a placed one comes at each height, out of 100. */
+    private static final int[] HEIGHT_ODDS = {15, 30, 30, 15, 10};
+    private static final Map<Direction, VoxelShape[]> SHAPES = new EnumMap<>(Direction.class);
 
     static {
-        // Up from the floor: the berries stand about 14 pixels high over a 10-pixel square; the same turned for the other faces.
-        SHAPES.put(Direction.UP, Block.box(3, 0, 3, 13, 14, 13));
-        SHAPES.put(Direction.DOWN, Block.box(3, 0, 3, 13, 16, 13));
-        SHAPES.put(Direction.NORTH, Block.box(3, 2, 4, 13, 15, 16));
-        SHAPES.put(Direction.SOUTH, Block.box(3, 2, 0, 13, 15, 12));
-        SHAPES.put(Direction.WEST, Block.box(4, 2, 3, 16, 15, 13));
-        SHAPES.put(Direction.EAST, Block.box(0, 2, 3, 12, 15, 13));
+        // Out from the face it grows on over a 10-pixel square, further the taller it is (the whole block from height 3).
+        for (Direction facing : Direction.values()) {
+            VoxelShape[] shapes = new VoxelShape[STALK_SCALES.length];
+            for (int height = 0; height < shapes.length; height++) {
+                double reach = Math.min(16, 9 + 2.5 * height);
+                shapes[height] = switch (facing) {
+                    case UP -> Block.box(3, 0, 3, 13, reach, 13);
+                    case DOWN -> Block.box(3, 16 - reach, 3, 13, 16, 13);
+                    case NORTH -> Block.box(3, 2, 16 - reach, 13, 15, 16);
+                    case SOUTH -> Block.box(3, 2, 0, 13, 15, reach);
+                    case WEST -> Block.box(16 - reach, 2, 3, 16, 15, 13);
+                    case EAST -> Block.box(0, 2, 3, reach, 15, 13);
+                };
+            }
+            SHAPES.put(facing, shapes);
+        }
     }
 
     public MurmurberryBlock(Properties properties) {
         super(properties);
-        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.UP).setValue(COLOURWAY, 0).setValue(WATERLOGGED, false));
+        registerDefaultState(stateDefinition.any().setValue(FACING, Direction.UP).setValue(COLOURWAY, 0).setValue(HEIGHT, 2)
+                .setValue(WATERLOGGED, false));
     }
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, COLOURWAY, WATERLOGGED);
+        builder.add(FACING, COLOURWAY, HEIGHT, WATERLOGGED);
     }
 
     @Override
@@ -83,9 +101,27 @@ public class MurmurberryBlock extends BaseEntityBlock implements SimpleWaterlogg
         return CODEC;
     }
 
-    /** A Murmurberry pointing {@code facing}, in a colourway picked by {@code roll} (0 to 1). */
-    public static BlockState state(Block block, Direction facing, double roll) {
-        return block.defaultBlockState().setValue(FACING, facing).setValue(COLOURWAY, Math.min(3, (int) (roll * 4)));
+    /** A Murmurberry pointing {@code facing}, {@code height} tall (0 to 4), in a colourway picked by {@code roll} (0 to 1). */
+    public static BlockState state(Block block, Direction facing, double roll, int height) {
+        return block.defaultBlockState().setValue(FACING, facing).setValue(COLOURWAY, Math.min(3, (int) (roll * 4)))
+                .setValue(HEIGHT, Math.max(0, Math.min(STALK_SCALES.length - 1, height)));
+    }
+
+    /** How long a Murmurberry's stalks are drawn, against their usual length (0.7 to 1.8). */
+    public static float stalkScale(BlockState state) {
+        return STALK_SCALES[state.getValue(HEIGHT)];
+    }
+
+    /** A height for a placed Murmurberry, from a roll between 0 and 1, by {@link #HEIGHT_ODDS}. */
+    public static int heightFor(double roll) {
+        int target = (int) (Math.max(0, Math.min(0.9999, roll)) * 100);
+        for (int height = 0; height < HEIGHT_ODDS.length; height++) {
+            if (target < HEIGHT_ODDS[height]) {
+                return height;
+            }
+            target -= HEIGHT_ODDS[height];
+        }
+        return HEIGHT_ODDS.length - 1;
     }
 
     @Nullable
@@ -96,7 +132,7 @@ public class MurmurberryBlock extends BaseEntityBlock implements SimpleWaterlogg
         boolean water = level.getFluidState(pos).getType() == Fluids.WATER;
         RandomSource random = context.getLevel().getRandom();
         // Out from the face clicked if it holds there, else from whichever face it can grow on that the player looks towards.
-        BlockState clicked = state(this, context.getClickedFace(), random.nextDouble()).setValue(WATERLOGGED, water);
+        BlockState clicked = state(this, context.getClickedFace(), random.nextDouble(), heightFor(random.nextDouble())).setValue(WATERLOGGED, water);
         if (clicked.canSurvive(level, pos)) {
             return clicked;
         }
@@ -111,7 +147,7 @@ public class MurmurberryBlock extends BaseEntityBlock implements SimpleWaterlogg
 
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPES.get(state.getValue(FACING));
+        return SHAPES.get(state.getValue(FACING))[state.getValue(HEIGHT)];
     }
 
     @Override

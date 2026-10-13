@@ -19,6 +19,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FastColor;
@@ -46,8 +47,10 @@ import software.bernie.geckolib.util.RenderUtil;
  * berries of one cluster light one after another within two ticks.</li>
  * </ul>
  *
- * <p>Each grows a little differently, by where it stands: its size, its turn, how many berries it bears (two to five),
- * and, hanging from a roof, how far its stalks hang (up to half again as long). On a wall its stalks tip upward.
+ * <p>Its {@link MurmurberryBlock#HEIGHT} sets how long its stalks are (0.7 to 1.8 times as long as made; K107). Each
+ * grows a little differently besides, by where it stands: its size, its turn, how many berries it bears (two to five),
+ * each berry's own stalk (three quarters to one and a quarter times as long) and size (0.85 to 1.2 times), and, hanging
+ * from a roof, how far its stalks hang (up to half again as long). On a wall its stalks tip upward.
  *
  * <p>Files: {@code geo/block/murmurberry.geo.json}, {@code animations/block/murmurberry.animation.json}, the textures
  * above; source {@code art/models/murmurberry.bbmodel} and {@code tools/textures/make_murmurberry_textures.py}
@@ -88,8 +91,11 @@ public class MurmurberryRenderer extends GeoBlockRenderer<MurmurberryBlockEntity
 
     @Override
     public AABB getRenderBoundingBox(MurmurberryBlockEntity berry) {
-        AABB box = new AABB(berry.getBlockPos()).inflate(0.75);
-        return facing(berry.getBlockState()) == Direction.DOWN ? box.expandTowards(0, -0.75, 0) : box;
+        BlockState state = berry.getBlockState();
+        // Its tallest berries reach about 1.3 times as far out as its stalks are drawn, hanging ones further.
+        double reach = 0.75 + (state.hasProperty(MurmurberryBlock.HEIGHT) ? 1.1 * (MurmurberryBlock.stalkScale(state) - 0.7) : 0);
+        AABB box = new AABB(berry.getBlockPos()).inflate(reach);
+        return facing(state) == Direction.DOWN ? box.expandTowards(0, -0.75, 0) : box;
     }
 
     private static Direction facing(BlockState state) {
@@ -276,17 +282,26 @@ public class MurmurberryRenderer extends GeoBlockRenderer<MurmurberryBlockEntity
                 default -> 5;
             };
             int first = (bits >>> 3) & 3;
-            // Hanging from a roof, its stalks hang longer; the berries keep their shape.
-            float stretch = facing == Direction.DOWN ? 1.15f + ((hash >>> 24) & 0xFF) / 255f * 0.4f : 1f;
+            // Its stalks as long as its height says, longer still hanging from a roof, and each berry's own a little longer
+            // or shorter; each berry its own size, and its shape kept however its stalk is stretched.
+            BlockState block = berry.getBlockState();
+            float plant = (block.hasProperty(MurmurberryBlock.HEIGHT) ? MurmurberryBlock.stalkScale(block) : 1f)
+                    * (facing == Direction.DOWN ? 1.15f + ((hash >>> 24) & 0xFF) / 255f * 0.4f : 1f);
+            BlockPos pos = berry.getBlockPos();
             for (int k = 0; k < BERRIES; k++) {
                 boolean hidden = k > 0 && Math.floorMod(k - 1 - first, 4) < BERRIES - shown;
+                long own = Mth.getSeed(pos.getX() * 7 + k, pos.getY() + 31 * k, pos.getZ());
+                float stalk = plant * (0.75f + 0.5f * ((own >>> 16) & 0xFF) / 255f);
+                float size = 0.85f + 0.35f * ((own >>> 24) & 0xFF) / 255f;
                 getBone(STEMS[k]).ifPresent(stem -> {
                     stem.setHidden(hidden);
-                    stem.setScaleY(stem.getScaleY() * stretch);
+                    stem.setScaleY(stem.getScaleY() * stalk);
                     stem.resetStateChanges();
                 });
                 getBone(BULBS[k]).ifPresent(bulb -> {
-                    bulb.setScaleY(bulb.getScaleY() / stretch);
+                    bulb.setScaleX(bulb.getScaleX() * size);
+                    bulb.setScaleY(bulb.getScaleY() * size / stalk);
+                    bulb.setScaleZ(bulb.getScaleZ() * size);
                     bulb.resetStateChanges();
                 });
             }
