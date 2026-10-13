@@ -129,7 +129,7 @@ public final class ClientVortices {
         fadeNear(level, list, camera, time);
         // Map mods' markers, once a second.
         if (level.getGameTime() % 20 == 0) {
-            VortexMapMarkers.update(list, level.getGameTime(), level.dimension(), camera);
+            VortexMapMarkers.update(list, level.getGameTime(), level.dimension());
         }
         if (distantHorizons) {
             try {

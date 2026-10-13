@@ -18,6 +18,15 @@
   {"command": "tp @s ~ ~ ~ 90 10"},
   {"wait": 40},
   {"shot": "maps_hud_turned"},
+  {"key": "gui.xaero_open_map"},
+  {"wait": 60},
+  {"shot": "maps_world_map"},
+  {"press": "-"},
+  {"wait": 20},
+  {"press": "-"},
+  {"wait": 20},
+  {"shot": "maps_world_map_far"},
+  {"close": true},
   {"quit": true}
  ]
 }

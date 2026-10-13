@@ -7,35 +7,50 @@ import com.selluastar.skyseam.halcyon.vortex.FluxVortex;
 
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
 
 /**
- * Flux vortices marked on the map mods players use (docs/DECISIONS.md K105): Xaero's Minimap and World Map
- * ({@link XaeroVortexMarkers}: a waypoint whose symbol is a vortex icon in the game's font) and JourneyMap
- * ({@link JourneyMapVortices}: a vortex icon), each named with what the vortex is doing and how long it has left.
- * Refreshed once a second from the vortices the server sends; neither mod is ever required, and each is left alone for
- * the session if anything goes wrong with it.
+ * Flux vortices marked on the map mods players use (docs/DECISIONS.md K105) with Skyseam's vortex icon
+ * ({@code textures/gui/map/flux_vortex.png}, white outlined in black): Xaero's Minimap ({@link XaeroVortexMarkers})
+ * and World Map ({@link XaeroWorldMapVortices}), drawn by their own element renderers, and JourneyMap
+ * ({@link JourneyMapVortices}); each says what the vortex is doing and how long it has left. Taken from the vortices
+ * the server sends; no map mod is ever required, and each is left alone for the session if anything goes wrong with it.
  */
 public final class VortexMapMarkers {
     private static boolean xaero = ModList.get().isLoaded("xaerominimap");
+    private static boolean xaeroWorldMap = ModList.get().isLoaded("xaeroworldmap");
     private static boolean journeyMap = ModList.get().isLoaded("journeymap");
+    private static List<FluxVortex> vortices = List.of();
 
     private VortexMapMarkers() {}
 
-    /** Puts a marker at each vortex alive now in {@code dimension} and takes the others away. */
-    public static void update(List<FluxVortex> vortices, long time, ResourceKey<Level> dimension, Vec3 camera) {
+    /** The vortices the maps draw, as last updated. */
+    static List<FluxVortex> vortices() {
+        return vortices;
+    }
+
+    /** Takes in the vortices of the level the camera is in, once a second. */
+    public static void update(List<FluxVortex> list, long time, ResourceKey<Level> dimension) {
+        vortices = List.copyOf(list);
         if (xaero) {
             try {
-                XaeroVortexMarkers.update(vortices, time, camera);
+                XaeroVortexMarkers.register();
             } catch (RuntimeException | LinkageError failed) {
                 xaero = false;
-                Skyseam.LOGGER.warn("Skyseam: could not mark flux vortices on Xaero's maps; left out for this session", failed);
+                Skyseam.LOGGER.warn("Skyseam: could not mark flux vortices on Xaero's Minimap; left out for this session", failed);
+            }
+        }
+        if (xaeroWorldMap) {
+            try {
+                XaeroWorldMapVortices.register();
+            } catch (RuntimeException | LinkageError failed) {
+                xaeroWorldMap = false;
+                Skyseam.LOGGER.warn("Skyseam: could not mark flux vortices on Xaero's World Map; left out for this session", failed);
             }
         }
         if (journeyMap) {
             try {
-                JourneyMapVortices.update(vortices, time, dimension);
+                JourneyMapVortices.update(list, time, dimension);
             } catch (RuntimeException | LinkageError failed) {
                 journeyMap = false;
                 Skyseam.LOGGER.warn("Skyseam: could not mark flux vortices on JourneyMap; left out for this session", failed);
@@ -45,10 +60,8 @@ public final class VortexMapMarkers {
 
     /** Takes every marker away (leaving the world). */
     public static void clear() {
+        vortices = List.of();
         try {
-            if (xaero) {
-                XaeroVortexMarkers.clear();
-            }
             if (journeyMap) {
                 JourneyMapVortices.clear();
             }

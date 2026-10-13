@@ -1499,7 +1499,7 @@ back in place of the hanging mesas, in the far version too.
 - **The phantom far version** the author saw: not reproduced. If it shows again, `logs/debug.log` says when each far
   vortex was handed to Distant Horizons and removed.
 - **Your own client and world.**
-- **Map markers (K105):** Xaero's Minimap and World Map show a waypoint with a small vortex icon at each vortex, named with what it is
-  doing and the time left (in the world and on the minimap within 512 blocks); JourneyMap shows a vortex icon with the
-  same detail. Seen in the screenshot client with each (`tools/capture/m3v_vortex_maps.json`); the world maps' own
-  screens weren't opened.
+- **Map markers (K105):** a white, black-outlined vortex icon (after the author's storm-symbol reference) at each
+  vortex on Xaero's Minimap and World Map (drawn by their own element renderers, not waypoints) and on JourneyMap, with
+  what it is doing and the time left on hover. Seen in the screenshot client on all three (`m3v_vortex_maps.json`,
+  sheet `build/previews/vortex-map-icons.png`); the hover text wasn't seen.

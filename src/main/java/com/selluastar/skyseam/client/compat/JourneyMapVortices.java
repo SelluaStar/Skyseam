@@ -24,7 +24,7 @@ import net.minecraft.world.level.Level;
 
 /**
  * Flux vortices on JourneyMap (docs/DECISIONS.md K105): a vortex icon at each ({@code textures/gui/map/flux_vortex.png}),
- * labelled, its hover text saying what the vortex is doing and how long it has left. JourneyMap finds this plugin by its
+ * its hover text saying what the vortex is doing and how long it has left (no label: it would cover the icon). JourneyMap finds this plugin by its
  * annotation; nothing else loads it unless JourneyMap is installed ({@link VortexMapMarkers}).
  */
 @JourneyMapPlugin(apiVersion = "2.0.0")
@@ -58,10 +58,9 @@ public final class JourneyMapVortices implements IClientPlugin {
             String title = VortexMapMarkers.title(vortex, time);
             MarkerOverlay marker = SHOWN.get(vortex.id());
             if (marker == null) {
-                MapImage icon = new MapImage(ICON, 16, 16).centerAnchors();
+                MapImage icon = new MapImage(ICON, 32, 32).setDisplayWidth(16).setDisplayHeight(16).centerAnchors();
                 marker = new MarkerOverlay(Skyseam.MOD_ID, BlockPos.containing(vortex.x(), vortex.baseY(), vortex.z()), icon);
                 marker.setDimension(dimension);
-                marker.setLabel("Flux vortex");
                 marker.setTitle(title);
                 show(client, marker);
                 SHOWN.put(vortex.id(), marker);
