@@ -59,8 +59,13 @@ public final class SkyseamConfig {
     public static final ModConfigSpec.IntValue VORTEX_NEARBY_AREA;
     public static final ModConfigSpec.IntValue VORTEX_NEARBY_EVERY_SECONDS;
     public static final ModConfigSpec.IntValue VORTEX_SEND_RADIUS;
-    public static final ModConfigSpec.IntValue VORTEX_LAUNCH_HEIGHT;
-    public static final ModConfigSpec.DoubleValue VORTEX_SHIP_SPEED;
+    public static final ModConfigSpec.DoubleValue VORTEX_LOW_GRAVITY;
+    public static final ModConfigSpec.IntValue VORTEX_GRAVITY_REACH;
+    public static final ModConfigSpec.DoubleValue VORTEX_LIFT_SPEED;
+    public static final ModConfigSpec.DoubleValue VORTEX_SHIP_PULL;
+    public static final ModConfigSpec.DoubleValue VORTEX_SHIP_ORBIT;
+    public static final ModConfigSpec.IntValue VORTEX_SHIP_REACH;
+    public static final ModConfigSpec.DoubleValue VORTEX_SHIP_SPIN;
     public static final ModConfigSpec.BooleanValue VORTEX_SCRAMBLE;
     public static final ModConfigSpec.IntValue SPRINGBLOOM_BASE_LAUNCH_HEIGHT;
     public static final ModConfigSpec.DoubleValue SPRINGBLOOM_CHANCE;
@@ -144,15 +149,34 @@ public final class SkyseamConfig {
                 .defineInRange("send_radius", 4608, 1024, 16384);
         b.pop();
         section(b, "flux_vortices.effects");
-        VORTEX_LAUNCH_HEIGHT = named(b, "flux_vortices.effects.launch_height").comment(
-                        "How high a vortex throws a creature that walks into it, in blocks. It lands with Slow Falling.")
-                .defineInRange("launch_height", 40, 4, 120);
-        VORTEX_SHIP_SPEED = named(b, "flux_vortices.effects.ship_down_speed").comment(
-                        "How fast a vortex drives a ship down, in blocks per second, at full strength.")
-                .defineInRange("ship_down_speed", 16.0, 0.0, 60.0);
+        VORTEX_LOW_GRAVITY = named(b, "flux_vortices.effects.low_gravity").comment(
+                        "How strong gravity is at a vortex's edge and inside it, against the usual: 0.2 is a fifth. It weakens",
+                        "gradually as anything (a player, a creature, a ship) comes closer. 1 leaves gravity alone.")
+                .defineInRange("low_gravity", 0.2, 0.0, 1.0);
+        VORTEX_GRAVITY_REACH = named(b, "flux_vortices.effects.gravity_reach").comment(
+                        "How far out from a vortex gravity starts to weaken, in blocks from its edge.")
+                .defineInRange("gravity_reach", 40, 0, 200);
+        VORTEX_LIFT_SPEED = named(b, "flux_vortices.effects.lift_speed").comment(
+                        "A player or creature that touches a vortex is drawn in and carried up it, round and round, at this many",
+                        "blocks per second, until it is flung out over the top. No Slow Falling: the fall hurts as usual.")
+                .defineInRange("lift_speed", 16.0, 1.0, 60.0);
+        VORTEX_SHIP_PULL = named(b, "flux_vortices.effects.ship_pull_speed").comment(
+                        "How fast a vortex draws a ship (a Create Aeronautics contraption) in towards it, in blocks per second, as",
+                        "it sweeps it round in a spiral. A ship's engines can fight it. 0 draws none in.")
+                .defineInRange("ship_pull_speed", 1.5, 0.0, 20.0);
+        VORTEX_SHIP_ORBIT = named(b, "flux_vortices.effects.ship_orbit_speed").comment(
+                        "How fast a vortex sweeps a ship round it, in blocks per second at its edge: with the pull, a spiral in,",
+                        "like something orbiting into a black hole.")
+                .defineInRange("ship_orbit_speed", 12.0, 0.0, 60.0);
+        VORTEX_SHIP_REACH = named(b, "flux_vortices.effects.ship_pull_reach").comment(
+                        "How far out from a vortex's edge it starts to draw ships in, in blocks.")
+                .defineInRange("ship_pull_reach", 48, 0, 256);
+        VORTEX_SHIP_SPIN = named(b, "flux_vortices.effects.ship_spin").comment(
+                        "How fast a ship inside a vortex is spun round, in degrees per second, until it leaves.")
+                .defineInRange("ship_spin", 45.0, 0.0, 360.0);
         VORTEX_SCRAMBLE = named(b, "flux_vortices.effects.scramble_spinning_parts").comment(
                         "Inside a vortex, every spinning part of a ship (propellers, shafts, gears) turns a random way at a random",
-                        "speed until the ship leaves. Off: ships are only driven down.")
+                        "speed until the ship leaves. Off: ships are only spun and drawn round.")
                 .define("scramble_spinning_parts", true);
         b.pop();
         b.pop();

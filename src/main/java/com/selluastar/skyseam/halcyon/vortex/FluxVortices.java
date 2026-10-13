@@ -17,7 +17,6 @@ import com.selluastar.skyseam.config.SkyseamConfig;
 import com.selluastar.skyseam.external.CreateBridge;
 import com.selluastar.skyseam.external.SableBridge;
 import com.selluastar.skyseam.external.Ship;
-import com.selluastar.skyseam.halcyon.Rebound;
 import com.selluastar.skyseam.network.VortexPayload;
 import com.selluastar.skyseam.registry.SkyseamSounds;
 import com.selluastar.skyseam.world.HalcyonLayout;
@@ -25,16 +24,18 @@ import com.selluastar.skyseam.world.halcyon.HalcyonChunkGenerator;
 import com.selluastar.skyseam.world.halcyon.plan.HalcyonPlan;
 import com.selluastar.skyseam.world.halcyon.plan.Noise;
 
-import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -44,7 +45,7 @@ import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 /**
- * The flux vortices at work on the server (docs/DECISIONS.md K97).
+ * The flux vortices at work on the server (docs/DECISIONS.md K97, K108).
  *
  * <ul>
  * <li>Every second it gathers the vortices round the Halcyon's players ({@link VortexField}) and any summoned, and
@@ -54,39 +55,80 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * <li>Every so often ({@code flux_vortices.near_you.every_seconds}), at a moment of their own, each player with no vortex
  * in the area round them ({@code area}) has a chance ({@code chance}) of one forming 32 to 50 blocks from them
  * ({@link #nearby}).</li>
- * <li>Each tick, a creature that walks into a column is thrown up ({@code launch_height}) and a little outward, so it
- * comes down beside it, with Slow Falling for the landing. Riders aboard a ship stay with their ship.</li>
- * <li>A ship in a column is driven down (towards {@code ship_down_speed}) and swept round it, and its spinning parts
- * turn a random way until it leaves ({@link CreateBridge}).</li>
+ * <li><b>Low gravity</b>: round a vortex gravity weakens, from {@code gravity_reach} blocks out from its edge (or above
+ * its top) to {@code low_gravity} of the usual at its edge and inside it ({@link #gravityAt}): for players and creatures
+ * their gravity attribute (they jump higher and fall slower), and a falling ship falls slower.</li>
+ * <li><b>Creatures</b> (players among them) that touch a column are drawn in towards a ring round its middle and carried
+ * up it, round and round, at {@code lift_speed}, until near the top they are flung out over its crown; no Slow Falling,
+ * and the fall hurts as any other ({@link #carry}). Those a ship carries (on its deck, in its seats) stay with it.</li>
+ * <li><b>Ships</b> within {@code ship_pull_reach} of a column's edge are swept round it and slowly drawn in, a spiral like
+ * something orbiting into a black hole ({@code ship_orbit_speed}, {@code ship_pull_speed}); their own engines can fight
+ * it. Inside a column a ship is spun round ({@code ship_spin}) and its spinning parts turn a random way
+ * ({@link CreateBridge}) until it leaves; then its spin is slowed to a stop ({@link #pull}).</li>
  * </ul>
  */
 public final class FluxVortices {
-    /** Vortices this close to a player (or summoned) are ticked: they throw creatures and drive ships. */
+    /** Vortices this close to a player (or summoned) are ticked: they draw creatures and ships in. */
     public static final double PHYSICS_RADIUS = 640;
     /** How far from the player such a vortex forms. */
     private static final double NEARBY_MIN = 32;
     private static final double NEARBY_MAX = 50;
     /** Far cells worked out per second, all players together. */
     private static final int CELLS_PER_SECOND = 96;
-    /** Ticks a thrown creature can't be thrown again. */
-    private static final int THROW_COOLDOWN = 30;
-    /** Seconds of Slow Falling after a throw. */
-    private static final int SLOW_FALLING_TICKS = 200;
-    /** How fast a ship's fall is sped up, blocks per second each tick, at full strength. */
-    private static final double SHIP_ACCELERATION = 1.6;
-    /** The swirl round the column a ship is swept towards, blocks per second, at full strength. */
-    private static final double SHIP_SWIRL = 5;
+    /** The ring round a column's axis, in blocks, that a carried creature is drawn to as it rides up. */
+    private static final double RIDE_RADIUS = 5;
+    /** How fast a carried creature goes round, in blocks per tick, at full strength. */
+    private static final double RIDE_SWIRL = 0.3;
+    /** How much of the way to the column's flow a carried creature's motion goes each tick. */
+    private static final double RIDE_GRIP = 0.25;
+    /** Past this share of a column's height a carried creature is flung out over the crown. */
+    private static final double CROWN = 0.9;
+    /**
+     * How fast the swirl round a vortex takes over a ship's motion at its edge, per second. Firm enough to carry off a ship
+     * hovering on levitite, whose friction holds it hard below 3 blocks a second; the drift in is slow, so engines can still
+     * fly out against it, swept round as they go.
+     */
+    private static final double SHIP_GRIP = 3.0;
+    /** How much of the way to the vortex's spin (and back to still, once it leaves) a ship's spin goes each tick. */
+    private static final double SPIN_GRIP = 0.08;
+    /** Ticks a ship that has left a vortex has its spin slowed. */
+    private static final int SETTLE_TICKS = 60;
+    /** The gravity modifier on creatures near a vortex. */
+    private static final ResourceLocation LIGHTER = Skyseam.id("flux_vortex_gravity");
 
     private static final Map<ResourceKey<Level>, List<FluxVortex>> ACTIVE = new HashMap<>();
     private static final Map<ResourceKey<Level>, List<FluxVortex>> SUMMONED = new HashMap<>();
     private static final Map<UUID, List<Long>> SENT = new HashMap<>();
     /** The round each player was last checked in for a vortex near them. */
     private static final Map<UUID, Long> NEARBY_ROLLED = new HashMap<>();
-    private static final Map<UUID, Long> THROWN = new HashMap<>();
+    /** Creatures inside a column last tick (to sound the whoosh as one is caught). */
     private static final Set<UUID> INSIDE = new HashSet<>();
+    /** Each level's creatures whose gravity a vortex has weakened. */
+    private static final Map<ResourceKey<Level>, Set<UUID>> LIGHTENED = new HashMap<>();
+    /** Each level's ships inside a column last tick. */
+    private static final Map<ResourceKey<Level>, Set<UUID>> SPUN = new HashMap<>();
+    /** Each level's ships that have left a column, and the ticks their spin is still slowed for. */
+    private static final Map<ResourceKey<Level>, Map<UUID, Integer>> SETTLING = new HashMap<>();
     /** Each level's ships whose spinning parts are scrambled, by ship. */
     private static final Map<ResourceKey<Level>, Map<UUID, CreateBridge.Scramble>> SCRAMBLED = new HashMap<>();
     private static long nextSummoned = 1;
+
+    /** The effect settings, read once a tick. */
+    private record Effects(double lowGravity, double gravityReach, double lift, double pull, double orbit, double pullReach, double spin,
+            boolean scramble) {
+        static Effects read() {
+            try {
+                return new Effects(SkyseamConfig.VORTEX_LOW_GRAVITY.get(), SkyseamConfig.VORTEX_GRAVITY_REACH.get(), SkyseamConfig.VORTEX_LIFT_SPEED.get(),
+                        SkyseamConfig.VORTEX_SHIP_PULL.get(), SkyseamConfig.VORTEX_SHIP_ORBIT.get(), SkyseamConfig.VORTEX_SHIP_REACH.get(),
+                        SkyseamConfig.VORTEX_SHIP_SPIN.get(), SkyseamConfig.VORTEX_SCRAMBLE.get());
+            } catch (IllegalStateException notLoaded) {
+                return new Effects(SkyseamConfig.VORTEX_LOW_GRAVITY.getDefault(), SkyseamConfig.VORTEX_GRAVITY_REACH.getDefault(),
+                        SkyseamConfig.VORTEX_LIFT_SPEED.getDefault(), SkyseamConfig.VORTEX_SHIP_PULL.getDefault(),
+                        SkyseamConfig.VORTEX_SHIP_ORBIT.getDefault(), SkyseamConfig.VORTEX_SHIP_REACH.getDefault(),
+                        SkyseamConfig.VORTEX_SHIP_SPIN.getDefault(), SkyseamConfig.VORTEX_SCRAMBLE.getDefault());
+            }
+        }
+    }
 
     private FluxVortices() {}
 
@@ -141,9 +183,10 @@ public final class FluxVortices {
         if (!(event.getLevel() instanceof ServerLevel level)) {
             return;
         }
-        boolean halcyon = level.dimension() == HalcyonLayout.LEVEL;
-        if (!halcyon && !SUMMONED.containsKey(level.dimension()) && !ACTIVE.containsKey(level.dimension())
-                && !SCRAMBLED.containsKey(level.dimension())) {
+        ResourceKey<Level> dimension = level.dimension();
+        boolean halcyon = dimension == HalcyonLayout.LEVEL;
+        if (!halcyon && !SUMMONED.containsKey(dimension) && !ACTIVE.containsKey(dimension) && !SCRAMBLED.containsKey(dimension)
+                && !LIGHTENED.containsKey(dimension) && !SPUN.containsKey(dimension) && !SETTLING.containsKey(dimension)) {
             return;
         }
         long time = level.getGameTime();
@@ -151,60 +194,55 @@ public final class FluxVortices {
             refresh(level, time % 200 == 0);
         }
         List<FluxVortex> vortices = active(level);
+        Effects effects = Effects.read();
         Set<UUID> shipsInside = new HashSet<>();
         Set<UUID> inside = new HashSet<>();
+        Map<LivingEntity, Double> gravity = new HashMap<>();
         for (FluxVortex vortex : vortices) {
             float strength = vortex.strength(time);
             if (strength < 0.05f) {
                 continue;
             }
-            List<Ship> ships = SableBridge.isActive(level)
-                    ? SableBridge.shipsWithin(level, new Vec3(vortex.x(), (vortex.baseY() + vortex.topY()) / 2.0, vortex.z()), vortex.height() / 2.0 + 64)
-                    : List.of();
+            double reach = vortex.radiusAt(vortex.topY()) + Math.max(effects.pullReach(), effects.gravityReach());
             List<Ship> caught = new ArrayList<>();
-            for (Ship ship : ships) {
-                if (catches(vortex, SableBridge.worldBounds(ship))) {
-                    caught.add(ship);
-                    shipsInside.add(ship.id());
-                    drive(vortex, ship, strength, level);
+            if (SableBridge.isActive(level)) {
+                Vec3 middle = new Vec3(vortex.x(), (vortex.baseY() + vortex.topY()) / 2.0, vortex.z());
+                for (Ship ship : SableBridge.shipsWithin(level, middle, vortex.height() / 2.0 + reach + 64)) {
+                    boolean in = catches(vortex, SableBridge.worldBounds(ship));
+                    if (in) {
+                        caught.add(ship);
+                        shipsInside.add(ship.id());
+                    }
+                    pull(vortex, ship, strength, in, effects, level);
                 }
             }
-            double reach = vortex.radiusAt(vortex.topY()) + 2;
-            AABB box = new AABB(vortex.x() - reach, vortex.baseY() - 2, vortex.z() - reach, vortex.x() + reach, vortex.topY(), vortex.z() + reach);
+            double around = vortex.radiusAt(vortex.topY()) + effects.gravityReach();
+            AABB box = new AABB(vortex.x() - around, vortex.baseY() - effects.gravityReach() - 2, vortex.z() - around, vortex.x() + around,
+                    vortex.topY() + effects.gravityReach(), vortex.z() + around);
             for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, box)) {
-                if (entity.isSpectator() || entity.isPassenger() || !vortex.contains(entity.getX(), entity.getY(), entity.getZ(), 0.6)) {
+                if (entity.isSpectator()) {
                     continue;
                 }
-                if (caught.stream().anyMatch(ship -> SableBridge.isAboard(entity, ship))) {
+                double factor = gravityAt(vortex, entity.position(), strength, effects.lowGravity(), effects.gravityReach());
+                if (factor < 1) {
+                    gravity.merge(entity, factor, Math::min);
+                }
+                if (entity.isPassenger() || !vortex.contains(entity.getX(), entity.getY(), entity.getZ(), 0.6)
+                        || caught.stream().anyMatch(ship -> SableBridge.isCarried(entity, ship))) {
                     continue;
                 }
                 inside.add(entity.getUUID());
-                Long last = THROWN.get(entity.getUUID());
-                if (!INSIDE.contains(entity.getUUID()) && (last == null || time - last >= THROW_COOLDOWN)) {
-                    launch(entity, vortex, strength, time);
+                if (!INSIDE.contains(entity.getUUID())) {
+                    level.playSound(null, entity.getX(), entity.getY(), entity.getZ(), SkyseamSounds.FLUX_VORTEX_LAUNCH.get(), SoundSource.AMBIENT, 1,
+                            0.9f + 0.2f * entity.getRandom().nextFloat());
                 }
+                carry(entity, vortex, strength, effects.lift());
             }
         }
         INSIDE.removeIf(id -> !inside.contains(id) && level.getEntity(id) != null);
         INSIDE.addAll(inside);
-        if (time % 200 == 0) {
-            THROWN.values().removeIf(last -> time - last > 2000);
-        }
-        // Ships that have left every column get their spinning parts back.
-        Map<UUID, CreateBridge.Scramble> scrambled = SCRAMBLED.get(level.dimension());
-        if (scrambled != null) {
-            Iterator<Map.Entry<UUID, CreateBridge.Scramble>> entries = scrambled.entrySet().iterator();
-            while (entries.hasNext()) {
-                Map.Entry<UUID, CreateBridge.Scramble> entry = entries.next();
-                if (!shipsInside.contains(entry.getKey())) {
-                    CreateBridge.restore(entry.getValue());
-                    entries.remove();
-                }
-            }
-            if (scrambled.isEmpty()) {
-                SCRAMBLED.remove(level.dimension());
-            }
-        }
+        lighten(level, gravity);
+        release(level, shipsInside);
     }
 
     /** True if a ship's box reaches into the column. */
@@ -218,48 +256,98 @@ public final class FluxVortices {
         return Math.hypot(nearX - vortex.x(), nearZ - vortex.z()) <= r;
     }
 
-    /** Throws a creature up the column and a little out of it, with Slow Falling for the landing. */
-    static void launch(LivingEntity entity, FluxVortex vortex, float strength, long time) {
-        double height = SkyseamConfig.VORTEX_LAUNCH_HEIGHT.get() * (0.6 + 0.4 * strength);
+    /**
+     * How strong gravity is at a point near a vortex, against the usual (1): it weakens from {@code reach} blocks out from
+     * the column's edge (or above its top, or below its foot) to {@code low} at its edge and inside it, eased, and less
+     * so while the vortex is forming or unravelling.
+     */
+    public static double gravityAt(FluxVortex vortex, Vec3 at, float strength, double low, double reach) {
+        double y = Mth.clamp(at.y, vortex.baseY(), vortex.topY());
+        double out = Math.max(0, Math.hypot(at.x - vortex.x(), at.z - vortex.z()) - vortex.radiusAt(y));
+        double off = Math.hypot(out, at.y - y);
+        double near = reach <= 0 ? (off <= 0 ? 1 : 0) : 1 - Mth.clamp(off / reach, 0, 1);
+        return 1 - (1 - low) * FluxVortex.smooth((float) near) * strength;
+    }
+
+    /**
+     * A creature touching a column: drawn in towards a ring {@link #RIDE_RADIUS} blocks round its middle and carried up
+     * it at {@code lift} blocks per second, round and round; past {@link #CROWN} of the way up it is flung out over the
+     * crown, to fall beside the column. No Slow Falling: its fall is counted from where it leaves.
+     */
+    static void carry(LivingEntity entity, FluxVortex vortex, float strength, double lift) {
         double dx = entity.getX() - vortex.x();
         double dz = entity.getZ() - vortex.z();
         double flat = Math.hypot(dx, dz);
         if (flat < 1.0e-3) {
-            double a = entity.getRandom().nextDouble() * Math.PI * 2;
+            double a = entity.getRandom().nextDouble() * Mth.TWO_PI;
             dx = Math.cos(a);
             dz = Math.sin(a);
             flat = 1;
         }
         double outX = dx / flat;
         double outZ = dz / flat;
-        Vec3 velocity = new Vec3(outX * 0.55 - outZ * 0.35, Rebound.launchSpeed(height, entity.getGravity()), outZ * 0.55 + outX * 0.35);
-        entity.setDeltaMovement(velocity);
-        entity.resetFallDistance();
-        entity.hurtMarked = true;
-        entity.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, SLOW_FALLING_TICKS, 0, false, false, true));
-        if (entity instanceof ServerPlayer player) {
-            player.connection.send(new ClientboundSetEntityMotionPacket(player));
+        double up = (entity.getY() - vortex.baseY()) / Math.max(1, vortex.height());
+        Vec3 want;
+        if (up > CROWN) {
+            want = new Vec3(outX * 0.9 - outZ * RIDE_SWIRL, 0.2, outZ * 0.9 + outX * RIDE_SWIRL);
+        } else {
+            double in = Mth.clamp((flat - RIDE_RADIUS) * 0.05, -0.1, 0.3);
+            want = new Vec3(-outZ * RIDE_SWIRL - outX * in, lift / 20, outX * RIDE_SWIRL - outZ * in);
         }
-        entity.level().playSound(null, entity.getX(), entity.getY(), entity.getZ(), SkyseamSounds.FLUX_VORTEX_LAUNCH.get(), SoundSource.AMBIENT, 1,
-                0.9f + 0.2f * entity.getRandom().nextFloat());
-        THROWN.put(entity.getUUID(), time);
+        Vec3 motion = entity.getDeltaMovement();
+        entity.setDeltaMovement(motion.add(want.scale(strength).subtract(motion).scale(RIDE_GRIP)));
+        entity.resetFallDistance();
+        // A player moves themselves: send them their new motion every tick.
+        entity.hurtMarked = true;
     }
 
-    /** Drives a ship down and round the column, and scrambles its spinning parts. */
-    private static void drive(FluxVortex vortex, Ship ship, float strength, ServerLevel level) {
-        Vec3 velocity = SableBridge.linearVelocity(ship);
-        double want = -SkyseamConfig.VORTEX_SHIP_SPEED.get() * strength;
-        double down = velocity.y > want ? Math.max(want - velocity.y, -SHIP_ACCELERATION * strength) : 0;
+    /**
+     * A ship near a column: falling slower, as all is lighter there; within {@code ship_pull_reach} of its edge swept round it and slowly
+     * drawn in, a spiral like something orbiting into a black hole, the flow taking over more of its motion the closer it
+     * is; inside it, still swept round (slower towards the middle, as a wheel turns), spun round at {@code ship_spin} and
+     * its spinning parts scrambled until it leaves.
+     */
+    private static void pull(FluxVortex vortex, Ship ship, float strength, boolean inside, Effects effects, ServerLevel level) {
         Vec3 at = SableBridge.position(ship);
+        double factor = gravityAt(vortex, at, strength, effects.lowGravity(), effects.gravityReach());
         double dx = at.x - vortex.x();
         double dz = at.z - vortex.z();
-        double flat = Math.max(1.0e-3, Math.hypot(dx, dz));
-        double tanX = -dz / flat;
-        double tanZ = dx / flat;
-        double swirl = velocity.x * tanX + velocity.z * tanZ;
-        double push = swirl < SHIP_SWIRL * strength ? 0.3 * strength : 0;
-        SableBridge.addVelocity(ship, new Vec3(tanX * push, down, tanZ * push));
-        if (!SkyseamConfig.VORTEX_SCRAMBLE.get()) {
+        double flat = Math.hypot(dx, dz);
+        double edge = vortex.radiusAt(Mth.clamp(at.y, vortex.baseY(), vortex.topY()));
+        boolean alongside = at.y >= vortex.baseY() - 8 && at.y <= vortex.topY() + 8;
+        double near = inside ? 1 : !alongside || effects.pullReach() <= 0 ? 0 : 1 - Mth.clamp((flat - edge) / effects.pullReach(), 0, 1);
+        if (factor >= 1 && near <= 0) {
+            return;
+        }
+        Vec3 velocity = SableBridge.linearVelocity(ship);
+        // Lighter: a falling ship falls slower, as if part of its weight were gone. One holding its height (levitite,
+        // envelopes, propellers) is left to it: taking weight off that would only fling it upward.
+        double lift = Math.min(-SableBridge.gravity(level).y * (1 - factor) / 20, Math.max(0, -velocity.y));
+        double pushX = 0;
+        double pushZ = 0;
+        if (near > 0 && flat > 1.0e-3) {
+            double outX = dx / flat;
+            double outZ = dz / flat;
+            double depth = inside ? Math.min(1, flat / edge) : 1;
+            double orbit = effects.orbit() * strength * (inside ? depth : Math.sqrt(near));
+            double in = effects.pull() * strength * (inside ? 0.5 * depth : 0.3 + 0.7 * near);
+            double grip = SHIP_GRIP * near / 20;
+            pushX = (-outZ * orbit - outX * in - velocity.x) * grip;
+            pushZ = (outX * orbit - outZ * in - velocity.z) * grip;
+            // What keeps it going round rather than flying off its curve: as much pull towards the middle as its speed round
+            // needs (at most what half again the orbit's speed would), the closer the more.
+            double round = Mth.clamp(velocity.z * outX - velocity.x * outZ, -1.5 * effects.orbit(), 1.5 * effects.orbit());
+            double centripetal = near * round * round / Math.max(flat, 4) / 20;
+            pushX -= outX * centripetal;
+            pushZ -= outZ * centripetal;
+        }
+        Vec3 spin = Vec3.ZERO;
+        if (inside) {
+            double want = Math.toRadians(effects.spin()) * strength;
+            spin = new Vec3(0, (want - SableBridge.angularVelocity(ship).y) * SPIN_GRIP, 0);
+        }
+        SableBridge.addVelocity(ship, new Vec3(pushX, lift, pushZ), spin);
+        if (!inside || !effects.scramble()) {
             return;
         }
         Map<UUID, CreateBridge.Scramble> scrambled = SCRAMBLED.computeIfAbsent(level.dimension(), key -> new LinkedHashMap<>());
@@ -270,6 +358,101 @@ public final class FluxVortices {
             Skyseam.LOGGER.debug("A flux vortex scrambled {} spinning parts of ship {}", scramble.size(), ship.id());
         } else {
             CreateBridge.hold(scramble);
+        }
+    }
+
+    /**
+     * Sets each creature's gravity near the vortices (in twentieths of the usual, so one moving about isn't sent a change
+     * every tick), and gives back the usual to those no longer near one.
+     */
+    private static void lighten(ServerLevel level, Map<LivingEntity, Double> gravity) {
+        Set<UUID> lightened = LIGHTENED.computeIfAbsent(level.dimension(), key -> new HashSet<>());
+        for (Map.Entry<LivingEntity, Double> entry : gravity.entrySet()) {
+            double amount = Math.round((entry.getValue() - 1) * 20) / 20.0;
+            AttributeInstance attribute = entry.getKey().getAttribute(Attributes.GRAVITY);
+            if (attribute == null) {
+                continue;
+            }
+            if (amount == 0) {
+                attribute.removeModifier(LIGHTER);
+                lightened.remove(entry.getKey().getUUID());
+                continue;
+            }
+            AttributeModifier current = attribute.getModifier(LIGHTER);
+            if (current == null || current.amount() != amount) {
+                attribute.addOrUpdateTransientModifier(new AttributeModifier(LIGHTER, amount, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+            }
+            lightened.add(entry.getKey().getUUID());
+        }
+        for (Iterator<UUID> ids = lightened.iterator(); ids.hasNext();) {
+            Entity entity = level.getEntity(ids.next());
+            if (entity == null) {
+                // Gone: the modifier was never saved.
+                ids.remove();
+            } else if (!(entity instanceof LivingEntity living) || !gravity.containsKey(living)) {
+                unlighten(entity);
+                ids.remove();
+            }
+        }
+        if (lightened.isEmpty()) {
+            LIGHTENED.remove(level.dimension());
+        }
+    }
+
+    private static void unlighten(Entity entity) {
+        if (entity instanceof LivingEntity living && living.getAttribute(Attributes.GRAVITY) != null) {
+            living.getAttribute(Attributes.GRAVITY).removeModifier(LIGHTER);
+        }
+    }
+
+    /**
+     * Ships that have left every column: their spinning parts get their own speeds back, and their spin is slowed to a
+     * stop over {@link #SETTLE_TICKS} ticks.
+     */
+    private static void release(ServerLevel level, Set<UUID> shipsInside) {
+        ResourceKey<Level> dimension = level.dimension();
+        Map<UUID, CreateBridge.Scramble> scrambled = SCRAMBLED.get(dimension);
+        if (scrambled != null) {
+            Iterator<Map.Entry<UUID, CreateBridge.Scramble>> entries = scrambled.entrySet().iterator();
+            while (entries.hasNext()) {
+                Map.Entry<UUID, CreateBridge.Scramble> entry = entries.next();
+                if (!shipsInside.contains(entry.getKey())) {
+                    CreateBridge.restore(entry.getValue());
+                    entries.remove();
+                }
+            }
+            if (scrambled.isEmpty()) {
+                SCRAMBLED.remove(dimension);
+            }
+        }
+        Set<UUID> spun = SPUN.getOrDefault(dimension, Set.of());
+        for (UUID id : spun) {
+            if (!shipsInside.contains(id)) {
+                SETTLING.computeIfAbsent(dimension, key -> new HashMap<>()).put(id, SETTLE_TICKS);
+            }
+        }
+        if (shipsInside.isEmpty()) {
+            SPUN.remove(dimension);
+        } else {
+            SPUN.put(dimension, shipsInside);
+        }
+        Map<UUID, Integer> settling = SETTLING.get(dimension);
+        if (settling == null) {
+            return;
+        }
+        Iterator<Map.Entry<UUID, Integer>> entries = settling.entrySet().iterator();
+        while (entries.hasNext()) {
+            Map.Entry<UUID, Integer> entry = entries.next();
+            Optional<Ship> ship = shipsInside.contains(entry.getKey()) ? Optional.empty() : SableBridge.find(level, entry.getKey());
+            if (ship.isEmpty() || entry.getValue() <= 0) {
+                entries.remove();
+                continue;
+            }
+            SableBridge.addVelocity(ship.get(), Vec3.ZERO, new Vec3(0, -SableBridge.angularVelocity(ship.get()).y * SPIN_GRIP, 0));
+            entry.setValue(entry.getValue() - 1);
+        }
+        if (settling.isEmpty()) {
+            SETTLING.remove(dimension);
         }
     }
 
@@ -412,9 +595,11 @@ public final class FluxVortices {
         }
     }
 
-    /** A player who changes level is told afresh what is there. */
+    /** A player who changes level is told afresh what is there, and has the usual gravity back. */
     public static void onChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         SENT.remove(event.getEntity().getUUID());
+        unlighten(event.getEntity());
+        LIGHTENED.values().forEach(ids -> ids.remove(event.getEntity().getUUID()));
         if (event.getEntity() instanceof ServerPlayer player) {
             PacketDistributor.sendToPlayer(player, new VortexPayload(List.of()));
         }
@@ -433,13 +618,14 @@ public final class FluxVortices {
         SUMMONED.clear();
         SENT.clear();
         NEARBY_ROLLED.clear();
-        THROWN.clear();
         INSIDE.clear();
+        LIGHTENED.clear();
+        SPUN.clear();
+        SETTLING.clear();
     }
 
-    /** GameTests only: forget throws and scrambles. */
+    /** GameTests only: forget that a creature was inside a column. */
     public static void forget(UUID entity) {
-        THROWN.remove(entity);
         INSIDE.remove(entity);
     }
 

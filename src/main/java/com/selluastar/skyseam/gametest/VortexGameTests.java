@@ -27,6 +27,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -162,104 +163,206 @@ public final class VortexGameTests {
         helper.succeed();
     }
 
+    /** Summons a vortex at full strength at once (skipping its forming), for {@code seconds}. */
+    private static FluxVortex fullStrength(ServerLevel level, Vec3 foot, int seconds) {
+        FluxVortex vortex = FluxVortices.summon(level, foot.x, foot.z, (int) foot.y, seconds);
+        FluxVortices.clearSummoned(level);
+        FluxVortex now = new FluxVortex(vortex.id(), vortex.x(), vortex.z(), vortex.baseY(), vortex.topY(), vortex.start() - 200, vortex.end());
+        FluxVortices.summonExact(level, now);
+        return now;
+    }
+
     /**
-     * A creature that walks into a vortex is thrown up, with Slow Falling for the landing. In the open sky near the
-     * End's origin: a GameTest's own area has a barrier ceiling, which would stop the throw.
+     * A pig standing on a block of planks at {@code at}; if {@code still}, one that never moves (a mob without its AI is
+     * moved by nothing, not even a vortex).
      */
-    @GameTest(template = EMPTY, batch = "m3_vortex_throw", timeoutTicks = 300)
-    public static void vortexThrowsCreaturesUp(GameTestHelper helper) {
-        ServerLevel level = TestShips.require(helper.getLevel().getServer().getLevel(Level.END), "The End is not loaded");
-        Vec3 foot = new Vec3(-2400.5, 230, -2400.5);
-        TestShips.forceLoad(level, foot, true);
-        BlockPos stand = BlockPos.containing(foot.add(2, -1, 0));
+    private static Pig standingPig(ServerLevel level, Vec3 at, boolean still) {
+        BlockPos stand = BlockPos.containing(at).below();
         level.setBlockAndUpdate(stand, Blocks.OAK_PLANKS.defaultBlockState());
-        FluxVortex vortex = FluxVortices.summon(level, foot.x, foot.z, (int) foot.y, 60);
         Pig pig = TestShips.require(EntityType.PIG.create(level), "No pig");
+        pig.setNoAi(still);
         pig.moveTo(Vec3.atBottomCenterOf(stand.above()));
         level.addFreshEntity(pig);
         FluxVortices.forget(pig.getUUID());
-        double startY = pig.getY();
-        double[] highest = {startY};
+        return pig;
+    }
+
+    /**
+     * Near a vortex gravity is low (docs/DECISIONS.md K108): a pig six blocks from its edge falls under a quarter of the
+     * usual gravity, one a hundred blocks off under all of it; once the vortex is gone the near one has it all back.
+     */
+    @GameTest(template = EMPTY, batch = "m3_vortex_gravity", timeoutTicks = 300)
+    public static void vortexLowersGravityNearIt(GameTestHelper helper) {
+        ServerLevel level = TestShips.require(helper.getLevel().getServer().getLevel(Level.END), "The End is not loaded");
+        Vec3 foot = new Vec3(-2400.5, 200, -2400.5);
+        Vec3 nearAt = new Vec3(foot.x + 20.5, foot.y + 30, foot.z);
+        Vec3 farAt = new Vec3(foot.x + 100.5, foot.y + 30, foot.z);
+        TestShips.forceLoad(level, nearAt, true);
+        TestShips.forceLoad(level, farAt, true);
+        FluxVortex vortex = fullStrength(level, foot, 60);
+        Pig near = standingPig(level, nearAt, true);
+        Pig far = standingPig(level, farAt, true);
+        double usual = far.getAttributeBaseValue(Attributes.GRAVITY);
+        double edge = vortex.radiusAt(nearAt.y);
         helper.startSequence()
-                .thenWaitUntil(() -> {
-                    highest[0] = Math.max(highest[0], pig.getY());
-                    helper.assertTrue(pig.getY() > startY + 12, "The pig was not thrown up: it is at Y " + pig.getY());
-                })
+                .thenWaitUntil(() -> helper.assertTrue(near.getGravity() < usual * 0.35,
+                        "Gravity " + String.format("%.1f", Math.hypot(near.getX() - foot.x, near.getZ() - foot.z) - edge) + " blocks from the edge is "
+                                + near.getGravity() + ", the usual " + usual))
                 .thenExecute(() -> {
-                    helper.assertTrue(pig.hasEffect(MobEffects.SLOW_FALLING), "The thrown pig has no Slow Falling");
-                    Skyseam.LOGGER.info("Skyseam vortex: threw a pig from Y {} past Y {} (the vortex's strength {})",
-                            String.format("%.1f", startY), String.format("%.1f", pig.getY()), String.format("%.2f", vortex.strength(level.getGameTime())));
+                    helper.assertTrue(far.getGravity() == usual, "Gravity a hundred blocks off is " + far.getGravity() + ", not the usual " + usual);
+                    Skyseam.LOGGER.info("Skyseam vortex: gravity {} blocks from the edge is {} of the usual", String.format("%.1f", 20.0 - edge),
+                            String.format("%.2f", near.getGravity() / usual));
                     FluxVortices.clearSummoned(level);
-                    FluxVortices.forget(pig.getUUID());
-                    pig.discard();
-                    level.setBlockAndUpdate(stand, Blocks.AIR.defaultBlockState());
-                    TestShips.forceLoad(level, foot, false);
+                })
+                .thenWaitUntil(() -> helper.assertTrue(near.getGravity() == usual, "Gravity is " + near.getGravity() + " after the vortex has gone"))
+                .thenExecute(() -> {
+                    near.discard();
+                    far.discard();
+                    level.setBlockAndUpdate(BlockPos.containing(nearAt).below(), Blocks.AIR.defaultBlockState());
+                    level.setBlockAndUpdate(BlockPos.containing(farAt).below(), Blocks.AIR.defaultBlockState());
+                    TestShips.forceLoad(level, nearAt, false);
+                    TestShips.forceLoad(level, farAt, false);
                 })
                 .thenSucceed();
     }
 
     /**
-     * Two rafts fall side by side near the End's origin (Sable's physics rounds positions at GameTest coordinates), one
-     * into a vortex: that one falls much faster, and the shaft its creative motor turns spins at a scrambled speed.
-     * Once the vortex is gone the shaft gets back exactly the speed it had.
+     * A pig that touches a vortex is drawn in and carried up it, round and round, with no Slow Falling and its fall
+     * counted from nothing; near the top it is flung out over the crown (docs/DECISIONS.md K108).
      */
-    @GameTest(template = EMPTY, batch = "m3_vortex_ship", timeoutTicks = 600)
-    public static void vortexDrivesShipsDownAndScramblesSpinningParts(GameTestHelper helper) {
+    @GameTest(template = EMPTY, batch = "m3_vortex_carry", timeoutTicks = 400)
+    public static void vortexCarriesCreaturesUpAndFlingsThemOut(GameTestHelper helper) {
         ServerLevel level = TestShips.require(helper.getLevel().getServer().getLevel(Level.END), "The End is not loaded");
-        Vec3 caughtAt = new Vec3(-2600.5, 230.5, -2600.5);
-        Vec3 freeAt = caughtAt.add(80, 0, 0);
-        TestShips.forceLoad(level, caughtAt, true);
+        Vec3 foot = new Vec3(-2400.5, 200, -2100.5);
+        Vec3 edgeAt = new Vec3(foot.x + 12, foot.y + 10, foot.z);
+        // Wide enough that the pig flung out over the crown stays in loaded, ticking chunks.
+        loadAround(level, foot, true);
+        FluxVortex vortex = fullStrength(level, foot, 60);
+        Pig pig = standingPig(level, edgeAt, false);
+        double startY = pig.getY();
+        double startOut = Math.hypot(pig.getX() - foot.x, pig.getZ() - foot.z);
+        double crownY = vortex.topY() - 12;
+        helper.startSequence()
+                .thenExecuteAfter(40, () -> {
+                    double out = Math.hypot(pig.getX() - foot.x, pig.getZ() - foot.z);
+                    Skyseam.LOGGER.info("Skyseam vortex: in 2 s a pig rose from Y {} to {} and from {} to {} blocks off the axis",
+                            String.format("%.1f", startY), String.format("%.1f", pig.getY()), String.format("%.1f", startOut), String.format("%.1f", out));
+                    helper.assertTrue(pig.getY() > startY + 10, "The pig was not carried up: it is at Y " + pig.getY());
+                    helper.assertTrue(out < startOut - 2, "The pig was not drawn in: it is " + out + " blocks off the axis");
+                    helper.assertFalse(pig.hasEffect(MobEffects.SLOW_FALLING), "The pig has Slow Falling");
+                    helper.assertTrue(pig.fallDistance < 1, "The pig's fall is counted while it is carried: " + pig.fallDistance);
+                    pig.teleportTo(foot.x + 6, crownY, foot.z);
+                    pig.setDeltaMovement(Vec3.ZERO);
+                })
+                .thenWaitUntil(() -> {
+                    double out = Math.hypot(pig.getX() - foot.x, pig.getZ() - foot.z);
+                    helper.assertTrue(out > vortex.radiusAt(pig.getY()) + 1, "The pig at the top has not been flung out: " + out + " blocks off the axis");
+                })
+                // Out of the column it falls, and its fall is counted, to hurt as any other.
+                .thenWaitUntil(() -> helper.assertTrue(pig.fallDistance > 4, "The flung pig's fall is not counted: " + pig.fallDistance))
+                .thenExecute(() -> {
+                    FluxVortices.clearSummoned(level);
+                    pig.discard();
+                    level.setBlockAndUpdate(BlockPos.containing(edgeAt).below(), Blocks.AIR.defaultBlockState());
+                    loadAround(level, foot, false);
+                })
+                .thenSucceed();
+    }
+
+    /**
+     * Two rafts side by side near the End's origin (Sable's physics rounds positions at GameTest coordinates), one
+     * seventeen blocks from a vortex's edge: it is swept round and drawn in, and falls slower than the other, far off.
+     * Then a raft inside the column, turning a shaft with a creative motor, is spun round and its shaft scrambled; once
+     * the vortex has gone the shaft gets back exactly its own speed and the spin stops (docs/DECISIONS.md K108).
+     */
+    @GameTest(template = EMPTY, batch = "m3_vortex_ship", timeoutTicks = 900)
+    public static void vortexPullsShipsInASpiralAndSpinsThem(GameTestHelper helper) {
+        ServerLevel level = TestShips.require(helper.getLevel().getServer().getLevel(Level.END), "The End is not loaded");
+        Vec3 foot = new Vec3(-2600.5, 190, -2600.5);
+        Vec3 pulledAt = new Vec3(foot.x + 30, 230.5, foot.z);
+        Vec3 freeAt = new Vec3(foot.x + 140, 230.5, foot.z);
+        Vec3 spunAt = new Vec3(foot.x - 3, 236.5, foot.z);
+        TestShips.forceLoad(level, foot, true);
+        TestShips.forceLoad(level, pulledAt, true);
         TestShips.forceLoad(level, freeAt, true);
-        BlockPos centre = BlockPos.containing(caughtAt);
+        List<BlockPos> pulledBlocks = raft(level, BlockPos.containing(pulledAt));
+        List<BlockPos> freeBlocks = raft(level, BlockPos.containing(freeAt));
+        BlockPos centre = BlockPos.containing(spunAt);
         BlockPos motor = centre.above().west();
         BlockPos shaft = centre.above();
-        List<BlockPos> caughtBlocks = raft(level, centre);
+        List<BlockPos> spunBlocks = raft(level, centre);
         level.setBlockAndUpdate(motor, block("creative_motor").defaultBlockState().setValue(BlockStateProperties.FACING, Direction.EAST));
         level.setBlockAndUpdate(shaft, block("shaft").defaultBlockState().setValue(BlockStateProperties.AXIS, Direction.Axis.X));
-        caughtBlocks.add(motor);
-        caughtBlocks.add(shaft);
-        List<BlockPos> freeBlocks = raft(level, BlockPos.containing(freeAt));
-        Ship[] ships = new Ship[2];
+        spunBlocks.add(motor);
+        spunBlocks.add(shaft);
+        Ship[] ships = new Ship[3];
         BlockPos[] plotShaft = new BlockPos[1];
         float[] original = new float[1];
+        double[] startOut = new double[1];
         helper.startSequence()
                 .thenExecuteAfter(10, () -> {
-                    ships[0] = TestShips.require(SableBridge.assemble(level, centre, caughtBlocks), "Could not assemble the caught raft");
+                    ships[0] = TestShips.require(SableBridge.assemble(level, BlockPos.containing(pulledAt), pulledBlocks), "Could not assemble the pulled raft");
                     ships[1] = TestShips.require(SableBridge.assemble(level, BlockPos.containing(freeAt), freeBlocks), "Could not assemble the free raft");
-                    plotShaft[0] = SableBridge.blocks(ships[0]).stream()
+                    ships[2] = TestShips.require(SableBridge.assemble(level, centre, spunBlocks), "Could not assemble the spun raft");
+                    plotShaft[0] = SableBridge.blocks(ships[2]).stream()
                             .filter(pos -> BuiltInRegistries.BLOCK.getKey(level.getBlockState(pos).getBlock()).getPath().equals("shaft"))
                             .findFirst().orElseThrow();
                 })
                 .thenWaitUntil(() -> helper.assertTrue(CreateBridge.speedAt(level, plotShaft[0]) != 0, "The shaft on the raft is not turning"))
                 .thenExecute(() -> {
                     original[0] = CreateBridge.speedAt(level, plotShaft[0]);
-                    FluxVortex vortex = FluxVortices.summon(level, caughtAt.x, caughtAt.z, (int) caughtAt.y - 40, 120);
-                    // Skip the forming, so it is at full strength at once.
-                    FluxVortices.clearSummoned(level);
-                    FluxVortices.summonExact(level, new FluxVortex(vortex.id(), vortex.x(), vortex.z(), vortex.baseY(), vortex.topY(),
-                            vortex.start() - 200, vortex.end()));
+                    Vec3 at = SableBridge.position(ships[0]);
+                    startOut[0] = Math.hypot(at.x - foot.x, at.z - foot.z);
+                    fullStrength(level, foot, 120);
                 })
-                .thenExecuteAfter(30, () -> {
-                    double caught = SableBridge.linearVelocity(ships[0]).y;
-                    double free = SableBridge.linearVelocity(ships[1]).y;
+                .thenExecuteAfter(60, () -> {
+                    Vec3 at = SableBridge.position(ships[0]);
+                    Vec3 velocity = SableBridge.linearVelocity(ships[0]);
+                    double out = Math.hypot(at.x - foot.x, at.z - foot.z);
+                    double outX = (at.x - foot.x) / out;
+                    double outZ = (at.z - foot.z) / out;
+                    double round = velocity.z * outX - velocity.x * outZ;
+                    double fall = velocity.y;
+                    double freeFall = SableBridge.linearVelocity(ships[1]).y;
+                    double spin = SableBridge.angularVelocity(ships[2]).y;
                     float scrambled = CreateBridge.speedAt(level, plotShaft[0]);
-                    Skyseam.LOGGER.info("Skyseam vortex: after 1.5 s the caught raft falls at {} blocks/s and the free one at {}; the shaft turned {} and now {}",
-                            String.format("%.2f", caught), String.format("%.2f", free), original[0], scrambled);
-                    helper.assertTrue(caught < free - 4, "The raft in the vortex falls at " + caught + " blocks/s, the free one at " + free);
-                    helper.assertTrue(FluxVortices.scrambleOf(level, ships[0].id()).isPresent(), "The raft's spinning parts were not scrambled");
+                    Skyseam.LOGGER.info("Skyseam vortex: in 3 s the pulled raft went from {} to {} blocks off the axis, going round at {} blocks/s and "
+                            + "falling at {} (the free one at {}); the raft inside spins at {} degrees/s, its shaft turned {} and now {}",
+                            String.format("%.1f", startOut[0]), String.format("%.1f", out), String.format("%.1f", round), String.format("%.1f", fall),
+                            String.format("%.1f", freeFall), String.format("%.0f", Math.toDegrees(spin)), original[0], scrambled);
+                    helper.assertTrue(out < startOut[0] - 0.5, "The raft was not drawn in: from " + startOut[0] + " to " + out + " blocks off the axis");
+                    helper.assertTrue(Math.abs(round) > 3, "The raft is not swept round: " + round + " blocks/s");
+                    helper.assertTrue(fall > freeFall + 3, "The raft near the vortex falls at " + fall + " blocks/s, the free one at " + freeFall);
+                    helper.assertTrue(Math.abs(spin) > Math.toRadians(15), "The raft inside is not spun: " + Math.toDegrees(spin) + " degrees/s");
+                    helper.assertTrue(FluxVortices.scrambleOf(level, ships[2].id()).isPresent(), "The raft's spinning parts were not scrambled");
                     helper.assertTrue(scrambled != original[0], "The shaft still turns at " + scrambled);
                     FluxVortices.clearSummoned(level);
                 })
                 .thenExecuteAfter(25, () -> {
                     float restored = CreateBridge.speedAt(level, plotShaft[0]);
                     helper.assertTrue(restored == original[0], "The shaft turns at " + restored + " after the vortex, not its own " + original[0]);
-                    helper.assertTrue(FluxVortices.scrambleOf(level, ships[0].id()).isEmpty(), "The raft is still held scrambled");
-                    SableBridge.remove(ships[0]);
-                    SableBridge.remove(ships[1]);
-                    TestShips.forceLoad(level, caughtAt, false);
+                    helper.assertTrue(FluxVortices.scrambleOf(level, ships[2].id()).isEmpty(), "The raft is still held scrambled");
+                })
+                .thenExecuteAfter(50, () -> {
+                    double spin = SableBridge.angularVelocity(ships[2]).y;
+                    helper.assertTrue(Math.abs(spin) < Math.toRadians(8), "The raft still spins at " + Math.toDegrees(spin) + " degrees/s after the vortex");
+                    for (Ship ship : ships) {
+                        SableBridge.remove(ship);
+                    }
+                    TestShips.forceLoad(level, foot, false);
+                    TestShips.forceLoad(level, pulledAt, false);
                     TestShips.forceLoad(level, freeAt, false);
                 })
                 .thenSucceed();
+    }
+
+    /** Force-loads (or lets go of) the chunks within about 40 blocks of a column. */
+    private static void loadAround(ServerLevel level, Vec3 at, boolean load) {
+        for (int dx = -32; dx <= 32; dx += 32) {
+            for (int dz = -32; dz <= 32; dz += 32) {
+                TestShips.forceLoad(level, at.add(dx, 0, dz), load);
+            }
+        }
     }
 
     private static List<BlockPos> raft(ServerLevel level, BlockPos centre) {

@@ -1,0 +1,305 @@
+{
+ "settle": 200,
+ "steps": [
+  {
+   "command": "gamemode spectator"
+  },
+  {
+   "command": "skyseam halcyon time set noon"
+  },
+  {
+   "command": "gamerule doDaylightCycle false"
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 200
+  },
+  {
+   "command": "tp @s ~ ~ ~ 0 0"
+  },
+  {
+   "command": "execute positioned ^ ^ ^60 run skyseam halcyon vortex here 3000"
+  },
+  {
+   "command": "execute positioned ^ ^ ^60 run summon marker ~ ~ ~ {Tags:[\"vx\"]}"
+  },
+  {
+   "wait": 200
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run fill ~-40 ~-1 ~-40 ~40 ~-1 ~40 minecraft:stone"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run fill ~30 ~120 ~-2 ~34 ~120 ~2 minecraft:oak_planks"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run setblock ~30 ~120 ~-2 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run setblock ~30 ~120 ~0 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run setblock ~30 ~120 ~2 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run setblock ~31 ~120 ~-1 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run setblock ~31 ~120 ~1 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run setblock ~32 ~120 ~-2 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run setblock ~32 ~120 ~0 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run setblock ~32 ~120 ~2 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run setblock ~33 ~120 ~-1 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run setblock ~33 ~120 ~1 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run setblock ~34 ~120 ~-2 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run setblock ~34 ~120 ~0 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run setblock ~34 ~120 ~2 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run setblock ~34 ~121 ~ minecraft:oak_log"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run skyseam ship assemble ~30 ~120 ~-2 ~34 ~121 ~2"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run tp @s ~ ~200 ~ 0 90"
+  },
+  {
+   "command": "gamerule sendCommandFeedback true"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run execute positioned ~ ~120 ~ run skyseam ship info"
+  },
+  {
+   "shot": "k8_raft_top_00s"
+  },
+  {
+   "wait": 39
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run execute positioned ~ ~120 ~ run skyseam ship info"
+  },
+  {
+   "shot": "k8_raft_top_02s"
+  },
+  {
+   "wait": 39
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run execute positioned ~ ~120 ~ run skyseam ship info"
+  },
+  {
+   "shot": "k8_raft_top_04s"
+  },
+  {
+   "wait": 39
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run execute positioned ~ ~120 ~ run skyseam ship info"
+  },
+  {
+   "shot": "k8_raft_top_06s"
+  },
+  {
+   "wait": 39
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run execute positioned ~ ~120 ~ run skyseam ship info"
+  },
+  {
+   "shot": "k8_raft_top_08s"
+  },
+  {
+   "wait": 39
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run execute positioned ~ ~120 ~ run skyseam ship info"
+  },
+  {
+   "shot": "k8_raft_top_10s"
+  },
+  {
+   "wait": 39
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run execute positioned ~ ~120 ~ run skyseam ship info"
+  },
+  {
+   "shot": "k8_raft_top_12s"
+  },
+  {
+   "wait": 39
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run execute positioned ~ ~120 ~ run skyseam ship info"
+  },
+  {
+   "shot": "k8_raft_top_14s"
+  },
+  {
+   "wait": 39
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run execute positioned ~ ~120 ~ run skyseam ship info"
+  },
+  {
+   "shot": "k8_raft_top_16s"
+  },
+  {
+   "wait": 39
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run execute positioned ~ ~120 ~ run skyseam ship info"
+  },
+  {
+   "shot": "k8_raft_top_18s"
+  },
+  {
+   "wait": 39
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run execute positioned ~ ~120 ~ run skyseam ship info"
+  },
+  {
+   "shot": "k8_raft_top_20s"
+  },
+  {
+   "wait": 39
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run execute positioned ~ ~120 ~ run skyseam ship info"
+  },
+  {
+   "shot": "k8_raft_top_22s"
+  },
+  {
+   "wait": 39
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run execute positioned ~ ~120 ~ run skyseam ship info"
+  },
+  {
+   "shot": "k8_raft_top_24s"
+  },
+  {
+   "wait": 39
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run tp @s ~-80 ~ ~ facing ~ ~2 ~"
+  },
+  {
+   "command": "gamemode survival"
+  },
+  {
+   "camera": "back"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "command": "attribute @s minecraft:generic.gravity get"
+  },
+  {
+   "command": "execute at @e[tag=vx,limit=1] run execute positioned over motion_blocking run tp @s ~-26 ~1 ~ facing ~ ~2 ~"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "command": "attribute @s minecraft:generic.gravity get"
+  },
+  {
+   "shot": "k8_player_near"
+  },
+  {
+   "walk": 25
+  },
+  {
+   "shot": "k8_player_caught"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "shot": "k8_player_ride_1s"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "shot": "k8_player_ride_3s"
+  },
+  {
+   "command": "attribute @s minecraft:generic.gravity get"
+  },
+  {
+   "wait": 100
+  },
+  {
+   "shot": "k8_player_ride_8s"
+  },
+  {
+   "wait": 140
+  },
+  {
+   "shot": "k8_player_ride_15s"
+  },
+  {
+   "wait": 120
+  },
+  {
+   "shot": "k8_player_ride_21s"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "shot": "k8_player_ride_24s"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "shot": "k8_player_falling"
+  },
+  {
+   "wait": 300
+  },
+  {
+   "shot": "k8_player_after"
+  },
+  {
+   "command": "data get entity @s Health"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "quit": true
+  }
+ ]
+}
