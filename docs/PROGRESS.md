@@ -1671,3 +1671,71 @@ spiral, like something orbiting into a black hole.
 4. Fly a ship near it: it should be swept round and slowly drawn in; inside, it spins and its propellers go wild until
    you get out. Settings under Config, Flux vortices, What they do.
 5. Send screenshots and `logs/latest.log`.
+
+## Wind lanes (2026-10-17)
+
+DECISIONS K109. The author: "Okay lets do the wind lanes now." The spec's Wind Lanes: "Visible ribbons of petals and
+light motes between landmarks. A ship inside a lane is nudged along it (a force if Sable allows, else a velocity nudge
+each tick). Direction flips with Tides." The Tides aren't built yet, so the Hush stands in for them.
+
+**Built** (`halcyon/wind/`, `client/halcyon/wind/`)
+- **Where:** a ring of lanes round the archipelago through the Arrival and the heart of one region of each kind,
+  sweeping round each landmark, and a spoke branching off it at each and running in to the Spindle, alternately blowing
+  in and out: 10 to 12 lanes, worked out from the seed alone. Each runs at about the height ships fly there in long,
+  gentle swings; it swings round the Obelisk to one side; it passes over, under or between the floating islands and rock
+  in its way, whichever strays least from its way, climbing and dropping no steeper than one block in three.
+- **Ships** inside a lane are carried along it: a velocity nudge each tick towards the wind's speed (16 blocks a second,
+  each lane 0.85 to 1.15 of that), firmest in its middle; a ship going faster is left alone, one flying against it is
+  held back, and its motion across the lane is its own. **Players and creatures in the air** (falling, gliding, jumping
+  in) are carried more gently; standing, swimming, riding or flying in creative they are left alone.
+- **Direction:** from each lane's first landmark to its last, and back through the Hush (the last quarter of the
+  Lantern-Sun's day), turning round over half a minute.
+- **Seen and heard:** three soft streaked ribbons in each lane (pale pink, gold and sky blue), the streaks running with
+  the wind, swaying a little; petals and motes of light riding the wind near you; the rush of the wind (subtitle "Wind
+  rushes").
+- **Commands:** `/skyseam halcyon lanes list|find|ride`. **Settings** (Config, Wind lanes): on or off, the wind's speed,
+  and how firmly ships are carried.
+
+**Verified (actually run)**
+- **The milestone check:** build ✓, runData ✓, **65/65 GameTests** ✓, server boot ✓. (In one GameTest run during the
+  work `seamMendsAfterTheShipLeaves` failed, one of the intermittent Seam tests the separate task is looking into; the
+  full check passed.)
+- **GameTests** (`WindLaneGameTests`): a test world has 12 lanes, 8,503 blocks in all, none through rock, a floating
+  island or the Obelisk, their middles at least 24 blocks over the ground and at most 23 degrees steep, none turning
+  more than 9 degrees in 4 blocks (5.7 and 7.5 at their sharpest in two test worlds), the same lanes every time; the
+  wind turns round in the Hush; a hovering levitite raft in a lane goes 12.2 blocks a second along it after 3 seconds
+  (the wind 16), the one beside it 0.0; a pig falling through one is blown along at 3.8 blocks a second.
+- **The real client** (`tools/capture/m4_wind_lanes.json`, `m4_wind_lanes_look.json`): the filming world has 10 lanes
+  (no Cirrus Reefs region far enough out); the ring passes 47 blocks inside the Arrival at Y 237 to 241, with the
+  spoke branching off there. A 3 by 3 raft with levitite assembled in the spoke went 1.0, then 12.6, then 13.1 blocks a
+  second, 44 blocks along in 4 seconds. A survival player falling through drifted 4 blocks a second along it. `lanes
+  list` read "turning round" as the Hush began and "blowing back (the Hush)" 35 seconds later. The subtitle showed
+  inside a lane. Sheet [`docs/previews/m4-wind-lanes.png`](previews/m4-wind-lanes.png).
+- **Found while filming:**
+  - Ribbons winding right round a lane's middle read as coils; wound more slowly, they drew loops wherever a lane was
+    seen end-on. Now each keeps its own side and sways.
+  - Lanes looked knotted from afar: they wiggled every 80 blocks or so, between points 48 apart (bends of up to 12
+    degrees in 4 blocks), and the ring turned about 95 degrees on the spot at the Arrival. Now they swing over about 300
+    blocks and the ring's corners are rounded.
+  - Lanes climbed to 392 to 412 round the Arrival: going over everything in the way carried them over stacks of tall
+    floating islands, and the slope limit held them up there for hundreds of blocks. Also, the Obelisk was taken to be
+    only as tall as its orb (it is 238 blocks tall). Now lanes take the clear gaps, under or between islands too, and
+    swing round the Obelisk.
+  - The spoke from the Arrival crossed the ring where the ring rounds the Arrival. Spokes now branch off the ring.
+  - The subtitle never showed in the first captures: the wind's loop had started before the capture turned subtitles
+    on (the capture's order, not the game's).
+
+**Not seen yet**
+- **A real Aeronautics ship flown by a player** along a lane, or against one: the rafts here had no engines.
+- **Shader packs (Iris) and Distant Horizons** with the ribbons: not looked at yet.
+- **Multiplayer:** each player's own client is sent their motion every tick while they are carried.
+- **The Tides:** when they are built they turn the lanes instead of the Hush.
+
+**Author's in-game test**
+1. `/skyseam halcyon tp arrival` and look round: the lanes are the ribbons; `/skyseam halcyon lanes find` puts you
+   beside the nearest one and `lanes list` names them all.
+2. Fly a ship into one: it should be carried along at about the wind's speed. In survival, jump or fall into one and
+   you are pushed along as you pass through.
+3. `/skyseam halcyon time set hush`: within about half a minute the lanes blow the other way.
+4. Settings under Config, Wind lanes.
+5. Send screenshots and `logs/latest.log`.

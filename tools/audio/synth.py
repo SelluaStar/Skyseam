@@ -599,6 +599,32 @@ SPRINGBLOOM = ([(f"squish_{k + 1}", (lambda k=k: springbloom_squish(k))) for k i
                + [(f"launch_{k + 1}", (lambda k=k: springbloom_launch(k))) for k in range(2)])
 
 
+# ---- The wind lanes (docs/DECISIONS.md K109) ----------------------------------------------------------------------
+
+
+def wind_lane_loop():
+    """A wind lane's rush of air, an 8 second seamless loop: a broad, soft wind that gusts and eases (three gusts a
+    loop), a thinner airy band sweeping up and down above it, and the faint whistle of air past something, the noise
+    crossfaded over the loop point. No tones, so it sits under the Halcyon's music and chimes."""
+    seconds = 8.0
+    fade = int(0.8 * RATE)
+    long_t = t_axis(seconds + 0.8)
+    gusts = 0.65 + 0.35 * np.sin(2 * np.pi * 3 * long_t / seconds) * np.sin(2 * np.pi * 1 * long_t / seconds + 0.7)
+    broad = swept_noise(long_t, 420 + 160 * np.sin(2 * np.pi * 2 * long_t / seconds), q=0.7, seed=41) * gusts
+    airy = swept_noise(long_t, 1700 + 700 * np.sin(2 * np.pi * 3 * long_t / seconds + 2), q=1.4, seed=42) * 0.35 * gusts
+    whistle = swept_noise(long_t, 2600 + 300 * np.sin(2 * np.pi * 4 * long_t / seconds), q=6.0, seed=43) * 0.08 * gusts ** 2
+    air = broad + airy + whistle
+    head = air[:fade].copy()
+    air = air[fade:]
+    ramp = np.linspace(0, 1, fade)
+    air[-fade:] = air[-fade:] * (1 - ramp) + head * ramp
+    air = air - np.mean(air)
+    return air / np.max(np.abs(air)) * PEAK * 0.7
+
+
+WIND_LANE = [("loop", wind_lane_loop)]
+
+
 # ---- The Murmurberry (docs/DECISIONS.md K106, K107) -------------------------------------------------------------------
 
 # C5, D5, E5, G5, A5: a pentatonic scale, so any of them heard together sound sweet, and a ripple running across a
@@ -662,11 +688,11 @@ SEAM = (
     + [(f"thread_snap_{k + 1}", (lambda k=k: seam_thread_snap(k))) for k in range(5)]
     + [("hum", seam_hum), ("ring_pulse", seam_ring_pulse), ("crossing", seam_crossing), ("mend", seam_mend)]
 )
-LOOPS = {"seam/hum", "aperture/charge", "flux_vortex/loop"}
+LOOPS = {"seam/hum", "aperture/charge", "flux_vortex/loop", "wind_lane/loop"}
 # The Seam's closing crackle has its own folder (sounds/closing/), see docs/CLOSING-AUDIO.md.
 CLOSING = [("close", seam_close)]
 GROUPS = {"seam": SEAM, "closing": CLOSING, "aperture": APERTURE, "skychart": SKYCHART, "mirror_sea": MIRROR_SEA,
-          "flux_vortex": FLUX_VORTEX, "springbloom": SPRINGBLOOM, "murmurberry": MURMURBERRY}
+          "flux_vortex": FLUX_VORTEX, "springbloom": SPRINGBLOOM, "murmurberry": MURMURBERRY, "wind_lane": WIND_LANE}
 
 
 def main(argv):
