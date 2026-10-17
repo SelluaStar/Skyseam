@@ -7,7 +7,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
  * with the spec's value as the default. Values are added by the milestone that uses them.
  *
  * <p>Laid out for the in-game screen (Mods, Skyseam, Config; docs/DECISIONS.md K103): the Halcyon first (its shape,
- * its flux vortices in four pages, the Springbloom, the Murmurberry, the Veil and Rebound), then the Seam, its sites and the Harmonic
+ * its flux vortices in four pages, the wind lanes, the Springbloom, the Murmurberry, the Veil and Rebound), then the Seam, its sites and the Harmonic
  * Aperture. Every entry and section has a name in the language file ({@code skyseam.configuration.<path>}); its
  * comment is its tooltip.
  */
@@ -69,6 +69,9 @@ public final class SkyseamConfig {
     public static final ModConfigSpec.BooleanValue VORTEX_SCRAMBLE;
     public static final ModConfigSpec.IntValue SPRINGBLOOM_BASE_LAUNCH_HEIGHT;
     public static final ModConfigSpec.DoubleValue SPRINGBLOOM_CHANCE;
+    public static final ModConfigSpec.BooleanValue WIND_LANES_ENABLED;
+    public static final ModConfigSpec.DoubleValue WIND_LANES_SPEED;
+    public static final ModConfigSpec.DoubleValue WIND_LANES_SHIP_PUSH;
     public static final ModConfigSpec.IntValue MURMURBERRY_RANGE;
     public static final ModConfigSpec.DoubleValue MURMURBERRY_MAX_DELAY_SECONDS;
     public static final ModConfigSpec.DoubleValue MURMURBERRY_DENSITY;
@@ -191,6 +194,23 @@ public final class SkyseamConfig {
                         "up to twice as high from one three times the size; each launch goes up to an eighth higher or lower. The",
                         "first landing after a launch does no harm.")
                 .defineInRange("base_launch_height", 24, 2, 64);
+        b.pop();
+
+        section(b, "wind_lanes");
+        WIND_LANES_ENABLED = named(b, "wind_lanes.enabled").comment(
+                        "Whether the Halcyon has its wind lanes: streams of moving air between its landmarks (the Arrival, a region of",
+                        "each kind round the archipelago, the Spindle), drawn as ribbons of light with petals and motes, that carry",
+                        "ships and anyone in the air along them.")
+                .define("enabled", true);
+        WIND_LANES_SPEED = named(b, "wind_lanes.speed").comment(
+                        "How fast the wind in a lane blows, in blocks per second (each lane a little faster or slower). It turns",
+                        "round through the Hush, the last quarter of the Lantern-Sun's day.")
+                .defineInRange("speed", 16.0, 0.0, 60.0);
+        WIND_LANES_SHIP_PUSH = named(b, "wind_lanes.ship_push").comment(
+                        "How firmly a lane carries a ship along it: how much of the difference between its speed along the lane",
+                        "and the wind's it makes up each second, in the lane's middle (less towards its edge). 0 carries none; a ship",
+                        "already outrunning the wind is left alone.")
+                .defineInRange("ship_push", 1.5, 0.0, 10.0);
         b.pop();
 
         section(b, "murmurberry");

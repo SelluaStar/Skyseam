@@ -46,6 +46,14 @@ public final class SkyseamParticles {
      */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> SPRINGBLOOM_SPORE = simple("springbloom_spore");
 
+    /**
+     * A petal riding a wind lane (client/particle/PetalParticle, docs/DECISIONS.md K109): pink, rose or white, fluttering
+     * and turning as it keeps the speed passed in.
+     */
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> PETAL = simple("petal");
+    /** A mote of light riding a wind lane (client/particle/WindMoteParticle): a twinkling glow that keeps the speed passed in. */
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> WIND_MOTE = simple("wind_mote");
+
     private SkyseamParticles() {}
 
     public static void register(IEventBus modBus) {

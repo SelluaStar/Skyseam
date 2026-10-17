@@ -60,6 +60,21 @@ public final class SkyseamRenderTypes {
                     .setWriteMaskState(RenderStateShard.COLOR_WRITE)
                     .createCompositeState(false)));
 
+    /**
+     * Textured soft light that is still seen by day, for the wind lanes' ribbons (docs/DECISIONS.md K109): the eyes shader
+     * (texture times colour, faded by fog; drawn glowing under shader packs) blended over what is behind rather than added
+     * to it, from both sides, without writing depth.
+     */
+    private static final Function<ResourceLocation, RenderType> RIBBON = Util.memoize(texture -> RenderType.create("skyseam_ribbon",
+            DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 16384, false, false,
+            RenderType.CompositeState.builder()
+                    .setShaderState(RenderStateShard.RENDERTYPE_EYES_SHADER)
+                    .setTextureState(new RenderStateShard.TextureStateShard(texture, false, false))
+                    .setTransparencyState(RenderStateShard.TRANSLUCENT_TRANSPARENCY)
+                    .setCullState(RenderStateShard.NO_CULL)
+                    .setWriteMaskState(RenderStateShard.COLOR_WRITE)
+                    .createCompositeState(false)));
+
     private SkyseamRenderTypes() {}
 
     public static RenderType glow() {
@@ -68,6 +83,10 @@ public final class SkyseamRenderTypes {
 
     public static RenderType flux(ResourceLocation texture) {
         return FLUX.apply(texture);
+    }
+
+    public static RenderType ribbon(ResourceLocation texture) {
+        return RIBBON.apply(texture);
     }
 
     public static RenderType interior(ResourceLocation texture) {

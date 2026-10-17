@@ -20,8 +20,12 @@ import com.selluastar.skyseam.client.halcyon.VeilMuffle;
 import com.selluastar.skyseam.client.halcyon.vortex.ClientVortices;
 import com.selluastar.skyseam.client.halcyon.vortex.FarDepth;
 import com.selluastar.skyseam.client.halcyon.vortex.VortexRenderer;
+import com.selluastar.skyseam.client.halcyon.wind.ClientWindLanes;
+import com.selluastar.skyseam.client.halcyon.wind.WindLaneRenderer;
 import com.selluastar.skyseam.client.particle.GlowParticle;
+import com.selluastar.skyseam.client.particle.PetalParticle;
 import com.selluastar.skyseam.client.particle.VortexParticle;
+import com.selluastar.skyseam.client.particle.WindMoteParticle;
 import com.selluastar.skyseam.client.particle.WispParticle;
 import com.selluastar.skyseam.client.seam.SeamClientEffects;
 import com.selluastar.skyseam.client.seam.SeamRenderer;
@@ -62,6 +66,8 @@ public final class SkyseamClient {
         NeoForge.EVENT_BUS.addListener(VeilMuffle::onPlaySound);
         NeoForge.EVENT_BUS.addListener(ClientVortices::onClientTick);
         NeoForge.EVENT_BUS.addListener(VortexRenderer::onRenderLevel);
+        NeoForge.EVENT_BUS.addListener(ClientWindLanes::onClientTick);
+        NeoForge.EVENT_BUS.addListener(WindLaneRenderer::onRenderLevel);
         // The in-game config screen (Mods > Skyseam > Config), for the shake and flash strength among others.
         ModList.get().getModContainerById(Skyseam.MOD_ID)
                 .ifPresent(container -> container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new));
@@ -71,6 +77,7 @@ public final class SkyseamClient {
             ClientGauge.clear();
             ClientSkychart.clear();
             ClientVortices.clear();
+            ClientWindLanes.clear();
         });
     }
 
@@ -109,6 +116,8 @@ public final class SkyseamClient {
         event.registerSpriteSet(SkyseamParticles.FLUX_GLINT.get(), sprites -> new VortexParticle.Provider(sprites, VortexParticle.Kind.GLINT));
         event.registerSpriteSet(SkyseamParticles.FLUX_SPARK.get(), sprites -> new GlowParticle.Provider(sprites, GlowParticle.Kind.SPARK));
         event.registerSpriteSet(SkyseamParticles.SPRINGBLOOM_SPORE.get(), SporeParticle.Provider::new);
+        event.registerSpriteSet(SkyseamParticles.PETAL.get(), PetalParticle.Provider::new);
+        event.registerSpriteSet(SkyseamParticles.WIND_MOTE.get(), WindMoteParticle.Provider::new);
     }
 
     @SubscribeEvent

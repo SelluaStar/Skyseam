@@ -102,6 +102,12 @@
       {"name": "skyseam:springbloom/launch_2", "attenuation_distance": 32}
     ]
   },
+  "wind_lane.loop": {
+    "subtitle": "subtitles.skyseam.wind_lane.loop",
+    "sounds": [
+      {"name": "skyseam:wind_lane/loop", "attenuation_distance": 48}
+    ]
+  },
   "murmurberry.chime": {
     "subtitle": "subtitles.skyseam.murmurberry.chime",
     "sounds": [

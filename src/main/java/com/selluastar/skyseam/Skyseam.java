@@ -20,6 +20,7 @@ import com.selluastar.skyseam.halcyon.Veil;
 import com.selluastar.skyseam.halcyon.flora.Murmurberries;
 import com.selluastar.skyseam.halcyon.flora.Springblooms;
 import com.selluastar.skyseam.halcyon.vortex.FluxVortices;
+import com.selluastar.skyseam.halcyon.wind.WindLanes;
 import com.selluastar.skyseam.network.SkyseamNetwork;
 import com.selluastar.skyseam.registry.SkyseamBlockEntities;
 import com.selluastar.skyseam.registry.SkyseamBlocks;
@@ -95,6 +96,10 @@ public final class Skyseam {
         NeoForge.EVENT_BUS.addListener(Rebound::onServerStopped);
         NeoForge.EVENT_BUS.addListener(FluxVortices::onLevelTick);
         NeoForge.EVENT_BUS.addListener(FluxVortices::onChangedDimension);
+        NeoForge.EVENT_BUS.addListener(WindLanes::onLevelTick);
+        NeoForge.EVENT_BUS.addListener(WindLanes::onLoggedIn);
+        NeoForge.EVENT_BUS.addListener(WindLanes::onChangedDimension);
+        NeoForge.EVENT_BUS.addListener(WindLanes::onServerStopped);
         NeoForge.EVENT_BUS.addListener(FluxVortices::onLoggedOut);
         NeoForge.EVENT_BUS.addListener(FluxVortices::onServerStopping);
         NeoForge.EVENT_BUS.addListener(Springblooms::onJump);

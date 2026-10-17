@@ -1,0 +1,137 @@
+{
+ "settle": 200,
+ "steps": [
+  {
+   "command": "gamemode spectator"
+  },
+  {
+   "command": "gamerule doDaylightCycle false"
+  },
+  {
+   "command": "skyseam halcyon time set noon"
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 200
+  },
+  {
+   "command": "skyseam halcyon lanes find"
+  },
+  {
+   "command": "execute at @s run summon marker ~ ~ ~ {Tags:[\"wl\"]}"
+  },
+  {
+   "wait": 120
+  },
+  {
+   "shot": "wl2_day_beside"
+  },
+  {
+   "command": "tp @s ~ ~ ~ ~-40 ~"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "wl2_day_along"
+  },
+  {
+   "command": "execute at @e[tag=wl,limit=1] run tp @s ~ ~40 ~ ~ 35"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "shot": "wl2_day_above"
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "tp @s ~ ~90 ~ facing 0 300 0"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "shot": "wl2_day_wide"
+  },
+  {
+   "command": "execute at @e[tag=wl,limit=1] run tp @s ~ ~200 ~"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "subtitles": true
+  },
+  {
+   "gui": true
+  },
+  {
+   "wait": 10
+  },
+  {
+   "command": "skyseam halcyon lanes ride"
+  },
+  {
+   "wait": 30
+  },
+  {
+   "shot": "wl2_inside_heard"
+  },
+  {
+   "gui": false
+  },
+  {
+   "wait": 30
+  },
+  {
+   "shot": "wl2_inside"
+  },
+  {
+   "command": "skyseam halcyon time set midnight"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "execute at @e[tag=wl,limit=1] run tp @s ~ ~ ~"
+  },
+  {
+   "command": "skyseam halcyon lanes find"
+  },
+  {
+   "command": "tp @s ~ ~ ~ ~180 ~"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "shot": "wl2_hush"
+  },
+  {
+   "command": "execute at @e[tag=wl,limit=1] run tp @s ~ ~40 ~ ~ 35"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "shot": "wl2_hush_above"
+  },
+  {
+   "quit": true
+  }
+ ]
+}

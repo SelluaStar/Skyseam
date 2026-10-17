@@ -1,0 +1,269 @@
+{
+ "settle": 200,
+ "steps": [
+  {
+   "command": "gamemode spectator"
+  },
+  {
+   "command": "gamerule doDaylightCycle false"
+  },
+  {
+   "command": "skyseam halcyon time set noon"
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 200
+  },
+  {
+   "command": "gamerule sendCommandFeedback true"
+  },
+  {
+   "command": "skyseam halcyon lanes list"
+  },
+  {
+   "command": "skyseam halcyon lanes find"
+  },
+  {
+   "command": "execute at @s run summon marker ~ ~ ~ {Tags:[\"wl\"]}"
+  },
+  {
+   "wait": 120
+  },
+  {
+   "shot": "wl_day_beside"
+  },
+  {
+   "command": "tp @s ~ ~ ~ ~-40 ~"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "shot": "wl_day_along"
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "tp @s ~ ~90 ~ facing 0 300 0"
+  },
+  {
+   "wait": 120
+  },
+  {
+   "shot": "wl_day_wide"
+  },
+  {
+   "command": "tp @s ~ ~ ~ ~180 20"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "shot": "wl_day_wide_2"
+  },
+  {
+   "command": "execute at @e[tag=wl,limit=1] run tp @s ~ ~200 ~"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "subtitles": true
+  },
+  {
+   "gui": true
+  },
+  {
+   "wait": 10
+  },
+  {
+   "command": "skyseam halcyon lanes ride"
+  },
+  {
+   "wait": 30
+  },
+  {
+   "shot": "wl_inside_heard"
+  },
+  {
+   "gui": false
+  },
+  {
+   "wait": 20
+  },
+  {
+   "shot": "wl_inside"
+  },
+  {
+   "command": "execute at @e[tag=wl,limit=1] run tp @s ~ ~ ~"
+  },
+  {
+   "command": "skyseam halcyon lanes ride"
+  },
+  {
+   "command": "execute at @s run fill ~-1 ~-3 ~-1 ~1 ~-3 ~1 minecraft:oak_planks"
+  },
+  {
+   "command": "execute at @s run setblock ~-1 ~-3 ~-1 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @s run setblock ~1 ~-3 ~-1 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @s run setblock ~ ~-3 ~ aeronautics:levitite"
+  },
+  {
+   "command": "execute at @s run setblock ~-1 ~-3 ~1 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @s run setblock ~1 ~-3 ~1 aeronautics:levitite"
+  },
+  {
+   "command": "execute at @s run skyseam ship assemble ~-1 ~-3 ~-1 ~1 ~-3 ~1"
+  },
+  {
+   "command": "execute at @s run summon marker ~ ~ ~ {Tags:[\"wr\"]}"
+  },
+  {
+   "command": "execute at @s run tp @s ~ ~6 ~ ~ 30"
+  },
+  {
+   "command": "execute at @e[tag=wr,limit=1] run skyseam ship info"
+  },
+  {
+   "shot": "wl_raft_0s"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "command": "execute at @e[tag=wr,limit=1] run skyseam ship info"
+  },
+  {
+   "shot": "wl_raft_2s"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "command": "execute at @e[tag=wr,limit=1] run skyseam ship info"
+  },
+  {
+   "shot": "wl_raft_4s"
+  },
+  {
+   "command": "execute at @e[tag=wl,limit=1] run tp @s ~ ~ ~"
+  },
+  {
+   "command": "skyseam halcyon lanes ride"
+  },
+  {
+   "command": "execute at @s run summon marker ~ ~ ~ {Tags:[\"wp\"]}"
+  },
+  {
+   "command": "gamemode survival"
+  },
+  {
+   "camera": "back"
+  },
+  {
+   "wait": 15
+  },
+  {
+   "shot": "wl_player_1"
+  },
+  {
+   "command": "data get entity @s Pos"
+  },
+  {
+   "command": "data get entity @s Motion"
+  },
+  {
+   "wait": 15
+  },
+  {
+   "shot": "wl_player_2"
+  },
+  {
+   "command": "data get entity @s Pos"
+  },
+  {
+   "command": "data get entity @s Motion"
+  },
+  {
+   "command": "gamemode spectator"
+  },
+  {
+   "camera": "first"
+  },
+  {
+   "command": "skyseam halcyon time set dusk"
+  },
+  {
+   "command": "execute at @e[tag=wl,limit=1] run tp @s ~ ~ ~"
+  },
+  {
+   "command": "skyseam halcyon lanes find"
+  },
+  {
+   "wait": 80
+  },
+  {
+   "shot": "wl_dusk"
+  },
+  {
+   "command": "skyseam halcyon time set hush"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "command": "skyseam halcyon lanes list"
+  },
+  {
+   "wait": 700
+  },
+  {
+   "command": "skyseam halcyon lanes list"
+  },
+  {
+   "command": "execute at @e[tag=wl,limit=1] run tp @s ~ ~ ~"
+  },
+  {
+   "command": "skyseam halcyon lanes find"
+  },
+  {
+   "command": "tp @s ~ ~ ~ ~180 ~"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "shot": "wl_hush"
+  },
+  {
+   "command": "skyseam halcyon lanes ride"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "shot": "wl_hush_inside"
+  },
+  {
+   "quit": true
+  }
+ ]
+}

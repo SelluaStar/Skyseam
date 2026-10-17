@@ -69,6 +69,10 @@ public final class SkyseamSounds {
     /** Something jumps off a Springbloom and it springs: a boing and a whoosh. */
     public static final DeferredHolder<SoundEvent, SoundEvent> SPRINGBLOOM_LAUNCH = local("springbloom.launch");
 
+    // The wind lanes (docs/DECISIONS.md K109).
+    /** The rush of a wind lane's air, a loop the client plays from the lane's nearest point. */
+    public static final DeferredHolder<SoundEvent, SoundEvent> WIND_LANE_LOOP = local("wind_lane.loop");
+
     // The Murmurberry (docs/DECISIONS.md K106, K107).
     /** A Murmurberry lights up: a soft glassy chime, on one of five notes of a pentatonic scale. Played by each client. */
     public static final DeferredHolder<SoundEvent, SoundEvent> MURMURBERRY_CHIME = local("murmurberry.chime");

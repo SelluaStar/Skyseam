@@ -38,6 +38,10 @@ public final class Landmarks {
     public static final int ORB_ABOVE_TERRACE = 82;
     /** How far the Obelisk's foot hangs below its terrace: the bottom of its lowest slice. */
     public static final int FOOT_DEPTH = 26;
+    /** The top of the Obelisk's capstone, above its terrace (tools/structures/make_sundered_obelisk.py). */
+    public static final int TOP_ABOVE_TERRACE = 212;
+    /** How far the Obelisk, its terrace and the rubble drifting round it reach from its axis. */
+    public static final int OBELISK_REACH = 24;
     private static final double LANE_BOX = 64;
     private static final double CORRIDOR = 36;
 
