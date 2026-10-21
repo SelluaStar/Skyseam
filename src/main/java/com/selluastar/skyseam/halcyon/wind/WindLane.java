@@ -8,8 +8,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * One wind lane (docs/DECISIONS.md K109): a stream of moving air between two landmarks of the Halcyon (spec "Wind
- * Lanes": "visible ribbons of petals and light motes between landmarks"). Its middle is a smooth curve through
+ * One wind lane (docs/DECISIONS.md K109, K110): a stream of moving air across the Halcyon's sky (spec "Wind Lanes":
+ * "visible ribbons of petals and light motes"). Its middle is a smooth curve through
  * {@link #points()}, traced every {@link #STEP} blocks; it reaches {@link #RADIUS} blocks out from that middle. The air
  * runs from its first point to its last, or back while the lanes are turned ({@link WindLanes#flow}).
  *

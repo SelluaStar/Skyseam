@@ -98,6 +98,7 @@ public final class Skyseam {
         NeoForge.EVENT_BUS.addListener(FluxVortices::onChangedDimension);
         NeoForge.EVENT_BUS.addListener(WindLanes::onLevelTick);
         NeoForge.EVENT_BUS.addListener(WindLanes::onLoggedIn);
+        NeoForge.EVENT_BUS.addListener(WindLanes::onLoggedOut);
         NeoForge.EVENT_BUS.addListener(WindLanes::onChangedDimension);
         NeoForge.EVENT_BUS.addListener(WindLanes::onServerStopped);
         NeoForge.EVENT_BUS.addListener(FluxVortices::onLoggedOut);

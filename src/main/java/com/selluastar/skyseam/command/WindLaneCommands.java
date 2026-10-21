@@ -19,13 +19,17 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * {@code /skyseam halcyon lanes} (op 2), for testing and filming the wind lanes (docs/DECISIONS.md K109): {@code list}
- * names the lanes of the level with how far off each is and which way it blows now; {@code find} puts you beside the
- * nearest, looking down it the way the wind blows; {@code ride} puts you in its middle.
+ * {@code /skyseam halcyon lanes} (op 2), for testing and filming the wind lanes (docs/DECISIONS.md K109, K110):
+ * {@code list} names the lanes within {@link #LISTED} blocks with how far off each is and which way it blows now;
+ * {@code find} puts you beside the nearest (within {@link #SEARCHED}), looking down it the way the wind blows;
+ * {@code ride} puts you in its middle.
  */
 final class WindLaneCommands {
     /** How far beside a lane's middle {@code find} puts you. */
     private static final double BESIDE = 18;
+    /** How far round you {@code list} names lanes, and {@code find} and {@code ride} look for one. */
+    private static final double LISTED = 1500;
+    private static final double SEARCHED = 3000;
 
     private WindLaneCommands() {}
 
@@ -39,12 +43,12 @@ final class WindLaneCommands {
     private static int list(CommandContext<CommandSourceStack> context) {
         CommandSourceStack source = context.getSource();
         ServerLevel level = source.getLevel();
-        List<WindLane> lanes = WindLanes.lanes(level);
+        Vec3 at = source.getPosition();
+        List<WindLane> lanes = WindLanes.lanesNear(level, at, LISTED, true).lanes().stream().filter(lane -> distance(lane, at) <= LISTED).toList();
         if (lanes.isEmpty()) {
             source.sendFailure(Component.translatable("commands.skyseam.halcyon.lanes.none"));
             return 0;
         }
-        Vec3 at = source.getPosition();
         double flow = WindLanes.flow(LanternSun.clock(level.getGameTime(), LanternSun.offset(level.getServer())));
         String way = flow > 0.5 ? "first" : flow < -0.5 ? "back" : "turning";
         for (WindLane lane : lanes.stream().sorted(Comparator.comparingDouble(lane -> distance(lane, at))).toList()) {
@@ -66,7 +70,7 @@ final class WindLaneCommands {
         ServerPlayer player = source.getPlayerOrException();
         ServerLevel level = source.getLevel();
         WindLane.Near near = null;
-        for (WindLane lane : WindLanes.lanes(level)) {
+        for (WindLane lane : WindLanes.lanesNear(level, player.position(), SEARCHED, true).lanes()) {
             WindLane.Near here = lane.nearest(player.position(), Double.MAX_VALUE);
             if (here != null && (near == null || here.distance() < near.distance())) {
                 near = here;

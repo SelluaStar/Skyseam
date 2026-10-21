@@ -14,7 +14,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Server to client: the wind lanes of the level the player is in (docs/DECISIONS.md K109), as the points each one's
+ * Server to client: the wind lanes round the player (docs/DECISIONS.md K109, K110), as the points each one's
  * middle passes through, so the client traces the same curves to draw them. Which way the wind runs the client works
  * out itself, from the Lantern-Sun's clock it shares with the server.
  */

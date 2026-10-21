@@ -3,45 +3,51 @@ package com.selluastar.skyseam.halcyon.wind;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
+import com.selluastar.skyseam.Skyseam;
 import com.selluastar.skyseam.world.halcyon.HalcyonRegion;
 import com.selluastar.skyseam.world.halcyon.plan.HalcyonPlan;
 import com.selluastar.skyseam.world.halcyon.plan.Landmarks;
 import com.selluastar.skyseam.world.halcyon.shape.SolidFeature;
 
+import net.minecraft.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Where the Halcyon's wind lanes run (docs/DECISIONS.md K109), from the world's seed alone, so the server works them
- * out once and every restart agrees.
+ * Where the Halcyon's wind lanes run (docs/DECISIONS.md K110, replacing K109's network between the landmarks): all over
+ * the dimension, from the world's seed alone, so every server and restart agree and nothing is saved.
  *
- * <p>The landmarks they join: the Arrival, where ships come in (the Obelisk just inside it), the heart of one region of
- * each of the archipelago's five kinds (the Petalwash, the Cirrus Reefs, the Hush, the Wreckfields and the Mirror
- * Shoals), and the Spindle, whose lanes end at its ring of floating islands rather than at the massif. A ring of lanes
- * goes round the archipelago from landmark to landmark, sweeping round each without a break (passing a little inside it
- * where the ring turns sharply), and a spoke branches off it at each, running in to the Spindle: twelve in all.
+ * <p>The Halcyon is cut into square cells ({@code wind_lanes.spacing} blocks wide); each holds one lane or none
+ * ({@code wind_lanes.chance}), worked out the first time something asks for a lane near it (on a background thread,
+ * for the server's ticks). A lane is 600 to 1,300
+ * blocks long, its middle somewhere in its cell. Its heading follows a slow swirl of the sky's air across the whole
+ * Halcyon, a little to either side, so neighbouring lanes run much the same way, like weather, rather than every which
+ * way; the wind in it blows one way along it by day and back through the Hush.
  *
- * <p>Each lane leaves its landmark at the height ships fly there (the Arrival's 240, about 60 above a region's land,
- * the Spindle's ring at 280) and wanders a little on its way, sideways and up and down in long, gentle swings. Then its
- * heights are settled: through the gaps clear of the ground and of the floating islands and rock stacks in its way
- * (under them, between them or over them) that keep it nearest that way all along, climbing and dropping no steeper than
- * one block in three, and under 392 unless that is the only way by. The Obelisk, 238 blocks tall, they swing round to one
- * side.
+ * <p>Each lane wanders in long, gentle swings, sideways and up and down, at about the height ships fly (190 to 310), and
+ * swings round the Obelisk to one side. Then its heights are settled: through the gaps clear of the ground and of the
+ * floating islands and rock stacks in its way (under them, between them or over them) that keep it nearest that way all
+ * along, climbing and dropping no steeper than one block in three, and under 392 unless that is the only way by.
  */
 public final class WindLaneNetwork {
-    /** The archipelago's region kinds, each given a landmark at the heart of one of its regions. */
-    private static final HalcyonRegion[] REGIONS = {HalcyonRegion.PETALWASH, HalcyonRegion.CIRRUS_REEFS, HalcyonRegion.HUSH,
-            HalcyonRegion.WRECKFIELDS, HalcyonRegion.MIRROR_SHOALS};
-    /** How far out from the middle a region's landmark is looked for. */
-    private static final double REGION_RADIUS = 760;
-    /** Where the Spindle's lanes end: just past its ring of floating islands. */
-    private static final double SPINDLE_RADIUS = 360;
-    private static final double SPINDLE_Y = 280;
+    /** How long a lane is, at least and at most. */
+    private static final double SHORTEST = 600;
+    private static final double LONGEST = 1300;
+    /** How high a lane would be at its ends, at least and at most. */
+    private static final double LOWEST = 190;
+    private static final double HIGHEST = 310;
+    /** Across how many blocks the sky's air turns right round, and how far a lane may head off from it either way. */
+    private static final double SWIRL = 2600;
+    private static final double VEER = Math.toRadians(30);
     /** Points along a lane are this far apart before it is traced. */
     private static final double SPACING = 48;
     /**
@@ -68,124 +74,140 @@ public final class WindLaneNetwork {
     private static final double CEILING = 392;
     /** The very highest a lane's middle may be (the sky ends at 512). */
     private static final double TOP = 470;
-    /**
-     * The ring's corner at each landmark is rounded off over this many of its points either side (each about
-     * {@link #SPACING} apart), smoothed this many times: at its sharpest the ring turns a right angle or more there.
-     */
-    private static final int ROUND_POINTS = 4;
-    private static final int ROUND_PASSES = 6;
-    private static final Map<HalcyonPlan, List<WindLane>> CACHE = new WeakHashMap<>();
+    /** Heights are weighed this many blocks apart when a lane's way through the gaps is chosen. */
+    private static final double STEP_Y = 4;
+    /** Cells' lanes kept worked out, most recently asked for kept longest. */
+    private static final int CACHE = 1024;
+    private static final Map<String, List<WindLane>> CELLS = new LinkedHashMap<>(256, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, List<WindLane>> eldest) {
+            return size() > CACHE;
+        }
+    };
+    /** Cells being worked out on a background thread. */
+    private static final Set<String> PENDING = new HashSet<>();
 
     private WindLaneNetwork() {}
 
-    /** A landmark a lane joins. */
-    record Landmark(String name, Vec3 at, double bearing) {}
+    /** Lanes near somewhere: those worked out, and whether every cell that could hold one has been. */
+    public record Near(List<WindLane> lanes, boolean complete) {}
 
-    /** The world's lanes, worked out once per plan. */
-    public static synchronized List<WindLane> of(HalcyonPlan plan) {
-        return CACHE.computeIfAbsent(plan, WindLaneNetwork::build);
-    }
-
-    private static List<WindLane> build(HalcyonPlan plan) {
-        List<Landmark> ring = new ArrayList<>();
-        Landmarks landmarks = plan.landmarks;
-        ring.add(new Landmark("the Arrival", landmarks.arrival, Math.atan2(landmarks.arrival.z, landmarks.arrival.x)));
-        double arrivalBearing = Math.atan2(landmarks.outZ, landmarks.outX);
-        for (int k = 0; k < REGIONS.length; k++) {
-            double bearing = arrivalBearing + (k + 1) * Math.PI * 2 / (REGIONS.length + 1);
-            Vec3 from = new Vec3(Math.cos(bearing) * REGION_RADIUS, 0, Math.sin(bearing) * REGION_RADIUS);
-            Vec3 heart = plan.deepIn(REGIONS[k], from);
-            if (heart == null || Math.hypot(heart.x, heart.z) < SPINDLE_RADIUS + 200) {
-                continue;
-            }
-            double y = Mth.clamp(Math.max(plan.landHeight((int) heart.x, (int) heart.z), 64) + 60, 200, 300);
-            ring.add(new Landmark("the " + name(REGIONS[k]), new Vec3(heart.x, y, heart.z), Math.atan2(heart.z, heart.x)));
-        }
-        ring.sort(Comparator.comparingDouble(Landmark::bearing));
+    /**
+     * The lanes that come within {@code reach} of {@code (x, z)} (across, not up), in cells {@code spacing} wide. With
+     * {@code now}, every cell's lane is worked out first, on this thread; without, cells not yet worked out are set to be
+     * on a background thread and left out until they are (so a server tick never waits on them).
+     */
+    public static Near near(HalcyonPlan plan, double x, double z, double reach, int spacing, double chance, boolean now) {
+        // A lane reaches half its length (and its wandering) out of its cell.
+        double out = reach + LONGEST / 2 + WANDER + SKIRT;
+        int x0 = Mth.floor((x - out) / spacing);
+        int x1 = Mth.floor((x + out) / spacing);
+        int z0 = Mth.floor((z - out) / spacing);
+        int z1 = Mth.floor((z + out) / spacing);
         List<WindLane> lanes = new ArrayList<>();
-        long seed = plan.noise.cellHash(0x57, 0x1D, 0x1A4E);
-        int n = ring.size();
-        // Where the ring passes each landmark, for its spoke to start from.
-        List<Vec3> passes = new ArrayList<>();
-        ring.forEach(landmark -> passes.add(landmark.at()));
-        if (n > 1) {
-            // The ring as one closed course, each lane's points but its last (the next lane's first). It sweeps round each
-            // landmark rather than turning on the spot there, passing a little inside it where it turns sharply, and its
-            // heights are settled all round it together, so it runs on unbroken from each lane into the next.
-            List<Vec3> loop = new ArrayList<>();
-            int[] starts = new int[n + 1];
-            for (int k = 0; k < n; k++) {
-                List<Vec3> path = path(plan, k, ring.get(k).at(), ring.get((k + 1) % n).at(), seed);
-                starts[k] = loop.size();
-                loop.addAll(path.subList(0, path.size() - 1));
-            }
-            starts[n] = loop.size();
-            if (n > 2) {
-                for (int k = 0; k < n; k++) {
-                    round(loop, starts[k]);
+        boolean complete = true;
+        for (int cx = x0; cx <= x1; cx++) {
+            for (int cz = z0; cz <= z1; cz++) {
+                List<WindLane> here = now ? cell(plan, cx, cz, spacing, chance) : ready(plan, cx, cz, spacing, chance);
+                if (here == null) {
+                    complete = false;
+                    continue;
+                }
+                for (WindLane lane : here) {
+                    AABB box = lane.bounds();
+                    if (x >= box.minX - reach && x <= box.maxX + reach && z >= box.minZ - reach && z <= box.maxZ + reach) {
+                        lanes.add(lane);
+                    }
                 }
             }
-            settle(plan, loop, true);
-            int size = loop.size();
-            for (int k = 0; k < n; k++) {
-                passes.set(k, loop.get(starts[k]));
-            }
-            for (int k = 0; k < n; k++) {
-                List<Vec3> points = new ArrayList<>(loop.subList(starts[k], starts[k + 1]));
-                points.add(loop.get(starts[k + 1] % size));
-                Vec3 before = loop.get(Math.floorMod(starts[k] - 1, size));
-                Vec3 after = loop.get((starts[k + 1] + 1) % size);
-                lanes.add(new WindLane(k, ring.get(k).name() + " to " + ring.get((k + 1) % n).name(), points, pace(plan, k), before, after));
-            }
         }
-        // Each landmark's spoke branches off the ring where it passes the landmark, rather than crossing it.
-        for (int k = 0; k < n; k++) {
-            Landmark landmark = ring.get(k);
-            Vec3 from = passes.get(k);
-            Vec3 spindle = new Vec3(Math.cos(landmark.bearing()) * SPINDLE_RADIUS, SPINDLE_Y, Math.sin(landmark.bearing()) * SPINDLE_RADIUS);
-            // Spokes alternate, some blowing in to the Spindle and some out from it.
-            boolean in = lanes.size() % 2 == 0;
-            int id = lanes.size();
-            List<Vec3> points = path(plan, id, in ? from : spindle, in ? spindle : from, seed);
-            settle(plan, points, false);
-            lanes.add(new WindLane(id, in ? landmark.name() + " to the Spindle" : "the Spindle to " + landmark.name(), points, pace(plan, id)));
-        }
-        return List.copyOf(lanes);
+        return new Near(lanes, complete);
     }
 
-    /** Rounds off the ring's corner at point {@code corner} of its closed course, smoothing the points either side of it. */
-    private static void round(List<Vec3> loop, int corner) {
-        int size = loop.size();
-        int reach = Math.min(ROUND_POINTS, (size - 1) / 2);
-        // From the last unmoved point before it to the first after, the corner in the middle.
-        Vec3[] window = new Vec3[2 * reach + 1];
-        for (int i = 0; i < window.length; i++) {
-            window[i] = loop.get(Math.floorMod(corner - reach + i, size));
-        }
-        for (int pass = 0; pass < ROUND_PASSES; pass++) {
-            Vec3[] next = window.clone();
-            for (int i = 1; i + 1 < window.length; i++) {
-                next[i] = window[i - 1].add(window[i].scale(2)).add(window[i + 1]).scale(0.25);
+    /** The lane of one cell, or none, worked out now if it hasn't been. */
+    public static List<WindLane> cell(HalcyonPlan plan, int cx, int cz, int spacing, double chance) {
+        String key = key(plan, cx, cz, spacing, chance);
+        synchronized (CELLS) {
+            List<WindLane> lanes = CELLS.get(key);
+            if (lanes != null) {
+                return lanes;
             }
-            window = next;
         }
-        for (int i = 0; i < window.length; i++) {
-            loop.set(Math.floorMod(corner - reach + i, size), window[i]);
+        List<WindLane> lanes = build(plan, cx, cz, spacing, chance);
+        synchronized (CELLS) {
+            CELLS.put(key, lanes);
         }
+        return lanes;
     }
 
-    private static double pace(HalcyonPlan plan, int id) {
-        return 0.85 + 0.3 * plan.noise.hash(id, 0, 0, 0x1A4E);
+    /** The lane of one cell, or none, if it has been worked out; else null, and it is set to be on a background thread. */
+    private static List<WindLane> ready(HalcyonPlan plan, int cx, int cz, int spacing, double chance) {
+        String key = key(plan, cx, cz, spacing, chance);
+        synchronized (CELLS) {
+            List<WindLane> lanes = CELLS.get(key);
+            if (lanes != null || !PENDING.add(key)) {
+                return lanes;
+            }
+        }
+        CompletableFuture.supplyAsync(() -> build(plan, cx, cz, spacing, chance), Util.backgroundExecutor()).whenComplete((lanes, failed) -> {
+            synchronized (CELLS) {
+                PENDING.remove(key);
+                if (lanes != null) {
+                    CELLS.put(key, lanes);
+                }
+            }
+            if (failed != null) {
+                Skyseam.LOGGER.error("Skyseam: couldn't work out the wind lane of cell {}, {}", cx, cz, failed);
+            }
+        });
+        return null;
     }
 
-    private static String name(HalcyonRegion region) {
+    private static String key(HalcyonPlan plan, int cx, int cz, int spacing, double chance) {
+        return System.identityHashCode(plan) + ":" + spacing + ":" + chance + ":" + cx + ":" + cz;
+    }
+
+    private static List<WindLane> build(HalcyonPlan plan, int cx, int cz, int spacing, double chance) {
+        if (plan.noise.hash(cx, 0, cz, 0x1A40) >= chance) {
+            return List.of();
+        }
+        // An id of its own, from its cell: positive, so it never meets a summoned lane's (negative).
+        int id = (int) (Math.floorMod(plan.noise.cellHash(cx, cz, 0x1A41), Integer.MAX_VALUE - 1) + 1);
+        double mx = (cx + 0.15 + 0.7 * plan.noise.hash(cx, 1, cz, 0x1A42)) * spacing;
+        double mz = (cz + 0.15 + 0.7 * plan.noise.hash(cx, 2, cz, 0x1A42)) * spacing;
+        // The sky's air swirls slowly across the Halcyon; each lane runs with it, give or take.
+        double heading = Math.PI * 2 * plan.noise.fbm(mx + 7000, mz - 3000, SWIRL, 2)
+                + (plan.noise.hash(cx, 3, cz, 0x1A42) - 0.5) * 2 * VEER;
+        double length = Mth.lerp(plan.noise.hash(cx, 4, cz, 0x1A42), SHORTEST, LONGEST);
+        double dx = Math.cos(heading) * length / 2;
+        double dz = Math.sin(heading) * length / 2;
+        Vec3 a = new Vec3(mx - dx, Mth.lerp(plan.noise.hash(cx, 5, cz, 0x1A42), LOWEST, HIGHEST), mz - dz);
+        Vec3 b = new Vec3(mx + dx, Mth.lerp(plan.noise.hash(cx, 6, cz, 0x1A42), LOWEST, HIGHEST), mz + dz);
+        List<Vec3> points = path(plan, id, a, b, plan.noise.cellHash(cx, cz, 0x1A43));
+        settle(plan, points);
+        double pace = 0.85 + 0.3 * plan.noise.hash(cx, 7, cz, 0x1A42);
+        return List.of(new WindLane(id, name(plan, mx, mz, heading), points, pace));
+    }
+
+    /** What a lane is called, for commands and the log: "the north-east lane over the Petalwash". */
+    private static String name(HalcyonPlan plan, double x, double z, double heading) {
+        String[] ways = {"east", "south-east", "south", "south-west", "west", "north-west", "north", "north-east"};
+        String way = ways[Math.floorMod(Math.round(heading / (Math.PI / 4)), 8)];
+        return "the " + way + " lane over " + place(plan.region(x, z));
+    }
+
+    private static String place(HalcyonRegion region) {
         return switch (region) {
-            case PETALWASH -> "Petalwash";
-            case CIRRUS_REEFS -> "Cirrus Reefs";
-            case HUSH -> "Hush";
-            case WRECKFIELDS -> "Wreckfields";
-            case MIRROR_SHOALS -> "Mirror Shoals";
-            default -> region.biome();
+            case SPINDLE -> "the Spindle";
+            case HUSH -> "the Hush";
+            case CIRRUS_REEFS -> "the Cirrus Reefs";
+            case PETALWASH -> "the Petalwash";
+            case MIRROR_SHOALS -> "the Mirror Shoals";
+            case WRECKFIELDS -> "the Wreckfields";
+            case SUNREACH_CLIFFS -> "the Sunreach Cliffs";
+            case CAPWOOD -> "the Capwood";
+            case ELDERWOOD -> "the Elderwood";
+            case UNDERBLOOM -> "the Underbloom";
         };
     }
 
@@ -218,7 +240,7 @@ public final class WindLaneNetwork {
         List<Vec3> points = new ArrayList<>(count);
         for (int k = 0; k < count; k++) {
             double t = k / (double) (count - 1);
-            // Wandering fades out towards each end, so the lane meets its landmarks, and while it swings round the Obelisk.
+            // Wandering fades out towards each end, and while it swings round the Obelisk.
             double ends = Math.sin(Math.PI * t);
             double round = swing == 0 ? 0 : bell((t * length - passing) / span);
             double wander = WANDER * ends * plan.noise.fbm(t * length / WANDER_LENGTH + id * 17.3, seed % 1000 + id * 31.1, 1, 1);
@@ -243,9 +265,9 @@ public final class WindLaneNetwork {
      * any gap clear of the ground (and the Obelisk) and of the floating islands and rock there: under them, between them
      * or over them. It takes the gaps that keep it nearest where it would be all along, going from one to the next no
      * steeper than the slope allows, and keeps under the ceiling unless that is the only way by; then, within them, it is
-     * as near where it would be as it may be. A closed course (the ring) runs on from its last point to its first.
+     * as near where it would be as it may be.
      */
-    private static void settle(HalcyonPlan plan, List<Vec3> points, boolean closed) {
+    private static void settle(HalcyonPlan plan, List<Vec3> points) {
         int count = points.size();
         double[] want = new double[count];
         double[] along = new double[count];
@@ -253,7 +275,6 @@ public final class WindLaneNetwork {
             want[k] = points.get(k).y;
             along[k] = k == 0 ? 0 : along[k - 1] + flat(points.get(k - 1), points.get(k));
         }
-        double around = closed ? along[count - 1] + flat(points.get(count - 1), points.get(0)) : 0;
         // What stands at each point, and a quarter and half of the way to each neighbour, so nothing slips between them.
         List<double[][]> gaps = new ArrayList<>(count);
         for (int k = 0; k < count; k++) {
@@ -261,7 +282,7 @@ public final class WindLaneNetwork {
             double floor = floor(plan, point.x, point.z);
             List<SolidFeature> solids = new ArrayList<>(solidsNear(plan, point.x, point.z));
             for (int side = -1; side <= 1; side += 2) {
-                int j = closed ? Math.floorMod(k + side, count) : k + side;
+                int j = k + side;
                 if (j < 0 || j >= count) {
                     continue;
                 }
@@ -275,7 +296,7 @@ public final class WindLaneNetwork {
             }
             gaps.add(gaps(floor, solids));
         }
-        int[] chosen = choose(gaps, want, along, around, closed);
+        int[] chosen = choose(gaps, want, along);
         double[] low = new double[count];
         double[] high = new double[count];
         for (int k = 0; k < count; k++) {
@@ -289,9 +310,6 @@ public final class WindLaneNetwork {
             double most = Double.POSITIVE_INFINITY;
             for (int j = 0; j < count; j++) {
                 double apart = Math.abs(along[j] - along[k]);
-                if (closed) {
-                    apart = Math.min(apart, around - apart);
-                }
                 least = Math.max(least, low[j] - SLOPE * apart);
                 most = Math.min(most, high[j] + SLOPE * apart);
             }
@@ -330,63 +348,72 @@ public final class WindLaneNetwork {
 
     /**
      * Which gap a lane passes through at each point: the way along that strays least from where it would be (and least
-     * over the ceiling), from gap to gap no steeper than the slope allows where it can be. A closed course is tried from
-     * each gap at its first point, coming back round into it.
+     * over the ceiling), climbing and dropping no steeper than the slope allows. Worked out over its heights every
+     * {@link #STEP_Y} blocks, every way along at once, so a lane coming off a stack is never led into a low gap it can't
+     * drop to in time, nor kept low where it must start climbing to clear the next. Only if there is no way at all does it
+     * take a step steeper than the slope, the smallest it can.
      */
-    private static int[] choose(List<double[][]> gaps, double[] want, double[] along, double around, boolean closed) {
+    private static int[] choose(List<double[][]> gaps, double[] want, double[] along) {
         int count = gaps.size();
-        int[] best = null;
-        double bestCost = Double.POSITIVE_INFINITY;
-        for (int first = 0; first < (closed ? gaps.get(0).length : 1); first++) {
-            double[][] cost = new double[count][];
-            int[][] from = new int[count][];
-            for (int k = 0; k < count; k++) {
-                cost[k] = new double[gaps.get(k).length];
-                from[k] = new int[gaps.get(k).length];
-                Arrays.fill(cost[k], Double.POSITIVE_INFINITY);
-            }
-            for (int g = 0; g < gaps.get(0).length; g++) {
-                if (!closed || g == first) {
-                    cost[0][g] = stray(gaps.get(0)[g], want[0]);
+        int levels = (int) (TOP / STEP_Y) + 1;
+        double[][] cost = new double[count][levels];
+        int[][] from = new int[count][levels];
+        for (int k = 0; k < count; k++) {
+            double reach = k == 0 ? 0 : SLOPE * (along[k] - along[k - 1]);
+            for (int i = 0; i < levels; i++) {
+                double y = i * STEP_Y;
+                if (gapAt(gaps.get(k), y) < 0) {
+                    cost[k][i] = Double.POSITIVE_INFINITY;
+                    continue;
                 }
-            }
-            for (int k = 1; k < count; k++) {
-                double reach = SLOPE * (along[k] - along[k - 1]);
-                for (int g = 0; g < gaps.get(k).length; g++) {
-                    for (int h = 0; h < gaps.get(k - 1).length; h++) {
-                        double c = cost[k - 1][h] + jump(gaps.get(k - 1)[h], gaps.get(k)[g], reach) + stray(gaps.get(k)[g], want[k]);
-                        if (c < cost[k][g]) {
-                            cost[k][g] = c;
-                            from[k][g] = h;
+                double here = Math.abs(y - want[k]) + 2 * Math.max(0, y - CEILING);
+                if (k == 0) {
+                    cost[k][i] = here;
+                    continue;
+                }
+                double best = Double.POSITIVE_INFINITY;
+                int steps = (int) (reach / STEP_Y);
+                for (int j = Math.max(0, i - steps); j <= Math.min(levels - 1, i + steps); j++) {
+                    if (cost[k - 1][j] < best) {
+                        best = cost[k - 1][j];
+                        from[k][i] = j;
+                    }
+                }
+                if (best == Double.POSITIVE_INFINITY) {
+                    // No way here within the slope: the smallest step steeper than it, at a cost no other way could reach.
+                    for (int j = 0; j < levels; j++) {
+                        double c = cost[k - 1][j] + 1.0e7 + 1.0e5 * (Math.abs(j - i) * STEP_Y - reach);
+                        if (c < best) {
+                            best = c;
+                            from[k][i] = j;
                         }
                     }
                 }
-            }
-            for (int g = 0; g < gaps.get(count - 1).length; g++) {
-                double c = cost[count - 1][g] + (closed ? jump(gaps.get(count - 1)[g], gaps.get(0)[first], SLOPE * (around - along[count - 1])) : 0);
-                if (c < bestCost) {
-                    bestCost = c;
-                    best = new int[count];
-                    best[count - 1] = g;
-                    for (int k = count - 1; k > 0; k--) {
-                        best[k - 1] = from[k][best[k]];
-                    }
-                }
+                cost[k][i] = best + here;
             }
         }
-        return best;
+        int end = 0;
+        for (int i = 1; i < levels; i++) {
+            if (cost[count - 1][i] < cost[count - 1][end]) {
+                end = i;
+            }
+        }
+        int[] chosen = new int[count];
+        for (int k = count - 1, i = end; k >= 0; k--) {
+            chosen[k] = Math.max(0, gapAt(gaps.get(k), i * STEP_Y));
+            i = from[k][i];
+        }
+        return chosen;
     }
 
-    /** How far a lane in this gap strays from where it would be, counting what is over the ceiling three times. */
-    private static double stray(double[] gap, double want) {
-        double y = Mth.clamp(want, gap[0], gap[1]);
-        return Math.abs(y - want) + 2 * Math.max(0, y - CEILING);
-    }
-
-    /** Nothing if a lane can go from one gap to the next within {@code reach} up or down, else a great deal. */
-    private static double jump(double[] a, double[] b, double reach) {
-        double apart = Math.max(b[0] - (a[1] + reach), (a[0] - reach) - b[1]);
-        return apart <= 0 ? 0 : 1000 + 100 * apart;
+    /** Which of a point's gaps holds height {@code y} (to within half a step, for a gap narrower than one), or -1. */
+    private static int gapAt(double[][] gaps, double y) {
+        for (int g = 0; g < gaps.length; g++) {
+            if (y >= gaps[g][0] - STEP_Y / 2 && y <= gaps[g][1] + STEP_Y / 2) {
+                return g;
+            }
+        }
+        return -1;
     }
 
     private static List<SolidFeature> solidsNear(HalcyonPlan plan, double x, double z) {

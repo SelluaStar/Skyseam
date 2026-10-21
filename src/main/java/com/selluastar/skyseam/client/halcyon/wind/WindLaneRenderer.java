@@ -55,8 +55,8 @@ public final class WindLaneRenderer {
     /** Blocks along the lane for one length of the ribbon's texture. */
     private static final double TEXTURE_LENGTH = 32;
     /**
-     * Fading in from a loose end of a lane (a spoke's) over this many blocks, so where lanes meet at a landmark they don't
-     * tangle; and over {@link #JOIN_FADE} where a lane of the ring runs on into the next, whose ribbons sway out of step.
+     * Fading in from a lane's loose end over this many blocks, so it doesn't stop short; and over {@link #JOIN_FADE} where
+     * a lane runs on into another (one with points before or after it), whose ribbons sway out of step.
      */
     private static final double END_FADE = 100;
     private static final double JOIN_FADE = 30;

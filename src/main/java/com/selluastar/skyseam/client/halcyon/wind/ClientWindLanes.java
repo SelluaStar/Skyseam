@@ -17,7 +17,7 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 
 /**
- * The wind lanes on the client (docs/DECISIONS.md K109): the lanes of the level the player is in, sent by the server
+ * The wind lanes on the client (docs/DECISIONS.md K109, K110): the lanes round the player, sent by the server
  * ({@link WindLanePayload}). Near the camera they fill with petals and motes riding the wind, and the wind is heard
  * ({@link WindLaneLoopSound}); their ribbons are drawn by {@link WindLaneRenderer}. Which way the wind blows comes from
  * the Lantern-Sun's clock, which the client shares with the server.
@@ -56,7 +56,7 @@ public final class ClientWindLanes {
         loop = null;
     }
 
-    /** Which way the wind blows now (1 first landmark to last, -1 back), between ticks. */
+    /** Which way the wind blows now (1 each lane's first point to its last, -1 back), between ticks. */
     public static double flow(double gameTime) {
         return WindLanes.flow(gameTime + LanternSun.offset(true));
     }

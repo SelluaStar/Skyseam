@@ -1739,3 +1739,43 @@ each tick). Direction flips with Tides." The Tides aren't built yet, so the Hush
 3. `/skyseam halcyon time set hush`: within about half a minute the lanes blow the other way.
 4. Settings under Config, Wind lanes.
 5. Send screenshots and `logs/latest.log`.
+
+## Wind lanes all over the Halcyon (2026-10-20)
+
+DECISIONS K110. The author: "THE WIND lanes shouldnt be from specific plaaces. it should be around the dimension rather
+than one spot". The ring round the archipelago and the spokes to the Spindle are gone; what a lane does, how it looks and
+which way it blows are as before (K109).
+
+**Built** (`halcyon/wind/WindLaneNetwork`, `WindLanes`)
+- **Everywhere:** the Halcyon is cut into 720-block cells, and most (85 %) hold a lane 600 to 1,300 blocks long. Lanes
+  head the way a slow swirl of the sky's air runs there, so neighbouring lanes run much the same way, like weather.
+  Each is named for its heading and the region under it ("the west lane over the Cirrus Reefs").
+- **Heights:** lanes pass under, between or over the floating islands and rock in their way, by the route that strays
+  least from their way while keeping to the slope, now chosen over the whole lane at once.
+- **Worked out as you go,** on a background thread, and sent to each player within 900 blocks of them as they travel.
+- **Settings** (Config, Wind lanes): lane spacing (cell size) and the chance a cell has a lane, beside the old three.
+  `lanes list` names those within 1,500 blocks; `find` and `ride` look 3,000 out.
+
+**Verified (actually run)**
+- **GameTests:** 65/65 in the full check (see the commit); during the work `seamMendsAfterTheShipLeaves` failed in some
+  runs, one of the intermittent Seam tests the separate task is looking into.
+- **`windLanesCoverTheHalcyon`:** 122 lanes in 144 cells (a square 8,640 blocks across), lanes far out in every direction,
+  none through rock, a floating island or the Obelisk, at least 23 blocks over the ground, at most 25 degrees steep, the
+  sharpest bend 7.6 degrees in 4 blocks (in two test worlds), the same lanes every time. One goes to 465 over a stack far
+  out. Working out 144 cells took 2.4 seconds (off the server thread in play).
+- **The real client** (`tools/capture/m4_wind_lanes.json`): 16 lanes within 1,500 blocks of the Arrival, every way round;
+  a levitite raft in "the west lane over the Cirrus Reefs" was carried west at 10.5 then 9.3 blocks a second; a falling
+  survival player drifted along it; the lanes turned round in the Hush; no server stall (the first try, working them out on
+  the server thread, stalled it for 2 seconds on arriving). Sheet
+  [`docs/previews/m4-wind-lanes-k110.png`](previews/m4-wind-lanes-k110.png).
+
+**Not seen yet**
+- As in K109: a real Aeronautics ship with engines, shader packs and Distant Horizons, multiplayer.
+- **Flying far out** for a long while (lanes are worked out as you go; their ribbons may pop in at the edge of a new area
+  for a moment).
+
+**Author's in-game test**
+1. Fly anywhere in the Halcyon: lanes should be in sight wherever you are. `/skyseam halcyon lanes list` names those near.
+2. `/skyseam halcyon lanes find`, then fly a ship into it.
+3. Try Config, Wind lanes, Lane spacing and Chance for more or fewer.
+4. Send screenshots and `logs/latest.log`.
