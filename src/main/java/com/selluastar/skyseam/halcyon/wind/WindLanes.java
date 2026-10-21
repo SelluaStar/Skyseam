@@ -2,10 +2,10 @@ package com.selluastar.skyseam.halcyon.wind;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -16,6 +16,7 @@ import com.selluastar.skyseam.halcyon.LanternSun;
 import com.selluastar.skyseam.network.WindLanePayload;
 import com.selluastar.skyseam.world.HalcyonLayout;
 import com.selluastar.skyseam.world.halcyon.HalcyonChunkGenerator;
+import com.selluastar.skyseam.world.halcyon.plan.HalcyonPlan;
 
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -36,14 +37,15 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * along it ... direction flips with Tides").
  *
  * <ul>
- * <li>The Halcyon's lanes come from its seed ({@link WindLaneNetwork}); commands and tests may add their own anywhere
- * ({@link #summon}). Each player is sent the lanes of the level they are in when they join it.</li>
+ * <li>The Halcyon's lanes come from its seed, all over it ({@link WindLaneNetwork}); commands and tests may add their
+ * own anywhere ({@link #summon}). Each player is sent the lanes within {@link #SENT_RANGE} blocks of them, and again
+ * whenever they have gone {@link #RESEND} blocks from where they were last sent them.</li>
  * <li>A ship inside a lane is carried along it: each tick its motion along the lane goes part of the way to the wind's
  * speed ({@code wind_lanes.speed}), the more the nearer the lane's middle ({@code wind_lanes.ship_push}). A ship already
  * outrunning the wind is left to it; one flying against it is held back. Its motion across the lane is its own.</li>
  * <li>So are players and creatures in the air in a lane (gliding, falling, jumping off an island into it), but not those
  * standing, swimming, riding, or flying in creative.</li>
- * <li>The wind runs from each lane's first landmark to its last, and the other way through the Hush, the last quarter
+ * <li>The wind runs one way along each lane, and the other way through the Hush, the last quarter
  * of the Lantern-Sun's day ({@link #flow}): until the Tides exist, the Hush stands in for the Tide that turns them. It
  * dies down and builds up again the other way over half a minute.</li>
  * </ul>
@@ -55,8 +57,19 @@ public final class WindLanes {
     private static final double RIDER_RANGE = 96;
     /** How firmly a lane carries a player or creature in the air at its middle, per second. */
     private static final double RIDER_PUSH = 1.2;
+    /** Each player is sent the lanes this far round them (the ribbons are drawn out to 640), and again once this far on. */
+    private static final double SENT_RANGE = 900;
+    private static final double RESEND = 256;
+    /** Ships are looked for in lanes this far round them, and players' lanes for their own use (commands) this far. */
+    private static final double SHIP_RANGE = 64;
     private static final Map<ResourceKey<Level>, List<WindLane>> SUMMONED = new HashMap<>();
-    private static int nextSummoned = 1000;
+    /** Summoned lanes' ids count down from -1, so they never meet the Halcyon's own (positive). */
+    private static int nextSummoned = -1;
+    /** Where each player was last sent their lanes, and in which level. */
+    private static final Map<UUID, Vec3> SENT_AT = new HashMap<>();
+    private static final Map<UUID, ResourceKey<Level>> SENT_IN = new HashMap<>();
+    /** Whether every lane round them was worked out when they were sent; if not, they are sent them again once it is. */
+    private static final Map<UUID, Boolean> SENT_WHOLE = new HashMap<>();
 
     private WindLanes() {}
 
@@ -65,18 +78,47 @@ public final class WindLanes {
         return setting(SkyseamConfig.WIND_LANES_ENABLED);
     }
 
-    /** The lanes of a level: the Halcyon's own, and any summoned there. */
-    public static List<WindLane> lanes(Level level) {
-        List<WindLane> out = new ArrayList<>(SUMMONED.getOrDefault(level.dimension(), List.of()));
-        if (level instanceof ServerLevel server && server.dimension() == HalcyonLayout.LEVEL && enabled()) {
-            HalcyonChunkGenerator.plan(server).ifPresent(plan -> out.addAll(WindLaneNetwork.of(plan)));
-        }
-        return out;
+    /** How far apart the Halcyon's lanes are (the cells they are laid out in), and the chance a cell has one. */
+    public static int spacing() {
+        return setting(SkyseamConfig.WIND_LANES_SPACING);
+    }
+
+    public static double chance() {
+        return setting(SkyseamConfig.WIND_LANES_CHANCE);
     }
 
     /**
-     * Which way the wind runs at a moment of the Lantern-Sun's day ({@link LanternSun#clock}): 1 from first landmark to
-     * last through the day, -1 through the Hush, turning over {@link #TURN_TICKS} ticks round each change, smoothly.
+     * The lanes of a level that come within {@code reach} of {@code at} (across): the Halcyon's own, and any summoned. The
+     * Halcyon's not yet worked out are left out, and set to be (see {@link WindLaneNetwork#near}).
+     */
+    public static List<WindLane> lanesNear(Level level, Vec3 at, double reach) {
+        return lanesNear(level, at, reach, false).lanes();
+    }
+
+    /** As {@link #lanesNear(Level, Vec3, double)}; with {@code now}, the Halcyon's are all worked out first. */
+    public static WindLaneNetwork.Near lanesNear(Level level, Vec3 at, double reach, boolean now) {
+        List<WindLane> out = new ArrayList<>();
+        for (WindLane lane : SUMMONED.getOrDefault(level.dimension(), List.of())) {
+            AABB box = lane.bounds();
+            if (at.x >= box.minX - reach && at.x <= box.maxX + reach && at.z >= box.minZ - reach && at.z <= box.maxZ + reach) {
+                out.add(lane);
+            }
+        }
+        boolean complete = true;
+        if (level instanceof ServerLevel server && server.dimension() == HalcyonLayout.LEVEL && enabled()) {
+            Optional<HalcyonPlan> plan = HalcyonChunkGenerator.plan(server);
+            if (plan.isPresent()) {
+                WindLaneNetwork.Near near = WindLaneNetwork.near(plan.get(), at.x, at.z, reach, spacing(), chance(), now);
+                out.addAll(near.lanes());
+                complete = near.complete();
+            }
+        }
+        return new WindLaneNetwork.Near(out, complete);
+    }
+
+    /**
+     * Which way the wind runs at a moment of the Lantern-Sun's day ({@link LanternSun#clock}): 1 from each lane's first
+     * point to its last through the day, -1 through the Hush, turning over {@link #TURN_TICKS} ticks round each change, smoothly.
      */
     public static double flow(double clock) {
         double cycle = LanternSun.CYCLE_TICKS;
@@ -127,9 +169,14 @@ public final class WindLanes {
         if (!halcyon && !SUMMONED.containsKey(level.dimension())) {
             return;
         }
-        List<WindLane> lanes = lanes(level);
-        if (lanes.isEmpty()) {
-            return;
+        if (level.getGameTime() % 20 == 0) {
+            for (ServerPlayer player : level.players()) {
+                Vec3 sent = SENT_AT.get(player.getUUID());
+                if (sent == null || SENT_IN.get(player.getUUID()) != level.dimension() || flat(sent, player.position()) > RESEND
+                        || !SENT_WHOLE.getOrDefault(player.getUUID(), false)) {
+                    send(player);
+                }
+            }
         }
         double clock = LanternSun.clock(level.getGameTime(), LanternSun.offset(level.getServer()));
         double shipPush = setting(SkyseamConfig.WIND_LANES_SHIP_PUSH);
@@ -137,7 +184,8 @@ public final class WindLanes {
             for (Ship ship : SableBridge.allShips(level)) {
                 AABB bounds = SableBridge.worldBounds(ship);
                 double size = Math.min(bounds.getXsize(), Math.min(bounds.getYsize(), bounds.getZsize())) / 2;
-                WindLane.Near near = inside(lanes, SableBridge.position(ship), size);
+                Vec3 at = SableBridge.position(ship);
+                WindLane.Near near = inside(lanesNear(level, at, SHIP_RANGE), at, size);
                 if (near != null) {
                     Vec3 velocity = SableBridge.linearVelocity(ship);
                     double push = carry(velocity, near, windSpeed(near.lane(), clock), shipPush * Math.max(near.depth(), 0.25));
@@ -147,8 +195,9 @@ public final class WindLanes {
                 }
             }
         }
-        for (LivingEntity rider : riders(level, lanes)) {
-            WindLane.Near near = inside(lanes, rider.position(), 0);
+        for (Map.Entry<LivingEntity, List<WindLane>> entry : riders(level).entrySet()) {
+            LivingEntity rider = entry.getKey();
+            WindLane.Near near = inside(entry.getValue(), rider.position(), 0);
             if (near == null) {
                 continue;
             }
@@ -174,19 +223,24 @@ public final class WindLanes {
         return (wind - along) * Math.min(1, push / 20);
     }
 
-    /** Players and creatures in the air near players (or in a summoned lane), that a lane may carry. */
-    private static Set<LivingEntity> riders(ServerLevel level, List<WindLane> lanes) {
-        Set<LivingEntity> riders = new HashSet<>();
+    /** Players and creatures in the air near players (or in a summoned lane) that a lane may carry, with the lanes near them. */
+    private static Map<LivingEntity, List<WindLane>> riders(ServerLevel level) {
+        Map<LivingEntity, List<WindLane>> riders = new HashMap<>();
         for (ServerPlayer player : level.players()) {
             AABB box = player.getBoundingBox().inflate(RIDER_RANGE);
-            if (lanes.stream().anyMatch(lane -> lane.bounds().intersects(box))) {
-                riders.addAll(level.getEntitiesOfClass(LivingEntity.class, box, WindLanes::airborne));
+            List<WindLane> lanes = lanesNear(level, player.position(), RIDER_RANGE).stream().filter(lane -> lane.bounds().intersects(box)).toList();
+            if (!lanes.isEmpty()) {
+                level.getEntitiesOfClass(LivingEntity.class, box, WindLanes::airborne).forEach(rider -> riders.put(rider, lanes));
             }
         }
         for (WindLane lane : SUMMONED.getOrDefault(level.dimension(), List.of())) {
-            riders.addAll(level.getEntitiesOfClass(LivingEntity.class, lane.bounds(), WindLanes::airborne));
+            level.getEntitiesOfClass(LivingEntity.class, lane.bounds(), WindLanes::airborne).forEach(rider -> riders.putIfAbsent(rider, List.of(lane)));
         }
         return riders;
+    }
+
+    private static double flat(Vec3 a, Vec3 b) {
+        return Math.hypot(a.x - b.x, a.z - b.z);
     }
 
     private static boolean airborne(LivingEntity entity) {
@@ -216,26 +270,41 @@ public final class WindLanes {
     // ---- Telling the clients ----------------------------------------------------------------------------------------
 
     private static void sendAll(ServerLevel level) {
-        WindLanePayload payload = WindLanePayload.of(lanes(level));
-        for (ServerPlayer player : level.players()) {
-            PacketDistributor.sendToPlayer(player, payload);
-        }
+        level.players().forEach(WindLanes::send);
+    }
+
+    /** Sends a player the lanes round them, and notes where. */
+    private static void send(ServerPlayer player) {
+        WindLaneNetwork.Near near = lanesNear(player.serverLevel(), player.position(), SENT_RANGE, false);
+        PacketDistributor.sendToPlayer(player, WindLanePayload.of(near.lanes()));
+        SENT_AT.put(player.getUUID(), player.position());
+        SENT_IN.put(player.getUUID(), player.level().dimension());
+        SENT_WHOLE.put(player.getUUID(), near.complete());
     }
 
     public static void onLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            PacketDistributor.sendToPlayer(player, WindLanePayload.of(lanes(player.serverLevel())));
+            send(player);
         }
+    }
+
+    public static void onLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
+        SENT_AT.remove(event.getEntity().getUUID());
+        SENT_IN.remove(event.getEntity().getUUID());
+        SENT_WHOLE.remove(event.getEntity().getUUID());
     }
 
     public static void onChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            PacketDistributor.sendToPlayer(player, WindLanePayload.of(lanes(player.serverLevel())));
+            send(player);
         }
     }
 
     public static void onServerStopped(ServerStoppedEvent event) {
         SUMMONED.clear();
+        SENT_AT.clear();
+        SENT_IN.clear();
+        SENT_WHOLE.clear();
     }
 
     private static <T> T setting(net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<T> value) {

@@ -72,6 +72,8 @@ public final class SkyseamConfig {
     public static final ModConfigSpec.BooleanValue WIND_LANES_ENABLED;
     public static final ModConfigSpec.DoubleValue WIND_LANES_SPEED;
     public static final ModConfigSpec.DoubleValue WIND_LANES_SHIP_PUSH;
+    public static final ModConfigSpec.IntValue WIND_LANES_SPACING;
+    public static final ModConfigSpec.DoubleValue WIND_LANES_CHANCE;
     public static final ModConfigSpec.IntValue MURMURBERRY_RANGE;
     public static final ModConfigSpec.DoubleValue MURMURBERRY_MAX_DELAY_SECONDS;
     public static final ModConfigSpec.DoubleValue MURMURBERRY_DENSITY;
@@ -198,9 +200,8 @@ public final class SkyseamConfig {
 
         section(b, "wind_lanes");
         WIND_LANES_ENABLED = named(b, "wind_lanes.enabled").comment(
-                        "Whether the Halcyon has its wind lanes: streams of moving air between its landmarks (the Arrival, a region of",
-                        "each kind round the archipelago, the Spindle), drawn as ribbons of light with petals and motes, that carry",
-                        "ships and anyone in the air along them.")
+                        "Whether the Halcyon has its wind lanes: streams of moving air all over it, drawn as ribbons of light with",
+                        "petals and motes, that carry ships and anyone in the air along them.")
                 .define("enabled", true);
         WIND_LANES_SPEED = named(b, "wind_lanes.speed").comment(
                         "How fast the wind in a lane blows, in blocks per second (each lane a little faster or slower). It turns",
@@ -211,6 +212,13 @@ public final class SkyseamConfig {
                         "and the wind's it makes up each second, in the lane's middle (less towards its edge). 0 carries none; a ship",
                         "already outrunning the wind is left alone.")
                 .defineInRange("ship_push", 1.5, 0.0, 10.0);
+        WIND_LANES_SPACING = named(b, "wind_lanes.spacing").comment(
+                        "The Halcyon is cut into square cells this many blocks wide, each with one lane or none (600 to 1,300 blocks",
+                        "long, its middle in the cell). Smaller cells: more lanes, closer together.")
+                .defineInRange("spacing", 720, 256, 4096);
+        WIND_LANES_CHANCE = named(b, "wind_lanes.chance").comment(
+                        "The chance a cell has a lane.")
+                .defineInRange("chance", 0.85, 0.0, 1.0);
         b.pop();
 
         section(b, "murmurberry");

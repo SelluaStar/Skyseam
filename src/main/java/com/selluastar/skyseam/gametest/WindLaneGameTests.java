@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.selluastar.skyseam.Skyseam;
+import com.selluastar.skyseam.config.SkyseamConfig;
 import com.selluastar.skyseam.external.SableBridge;
 import com.selluastar.skyseam.external.Ship;
 import com.selluastar.skyseam.halcyon.LanternSun;
@@ -37,22 +38,28 @@ public final class WindLaneGameTests {
 
     private WindLaneGameTests() {}
 
+    /** How far out from the middle the lanes are looked at, each way, in cells of the default spacing. */
+    private static final int CELLS = 6;
+
     /**
-     * The lanes of a seed's world join its landmarks: a ring round the archipelago and spokes in to the Spindle, one of
-     * them from the Arrival (where the ring passes it); every one at least ten blocks clear of the ground all along, never through a floating island,
-     * rock or the Obelisk, never steep, and curving smoothly; the same lanes every time.
+     * The lanes of a seed's world lie all over it, not round one place: most cells of a square 8,640 blocks across have
+     * one, out to its far corners in every direction; every one at least ten blocks clear of the ground all along, never
+     * through a floating island, rock or the Obelisk, never steep, and curving smoothly; the same lanes every time.
      */
-    @GameTest(template = EMPTY)
-    public static void windLanesJoinTheLandmarks(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 400)
+    public static void windLanesCoverTheHalcyon(GameTestHelper helper) {
         HalcyonPlan plan = HalcyonPlan.fresh(12345L);
-        List<WindLane> lanes = WindLaneNetwork.of(plan);
-        helper.assertTrue(lanes.size() >= 8, "Only " + lanes.size() + " wind lanes");
-        Vec3 arrival = plan.landmarks.arrival;
-        // At the Arrival: the ring sweeps round it, a little inside it where it turns, and its spoke branches off there.
-        helper.assertTrue(lanes.stream().anyMatch(lane -> flat(lane.points().get(0), arrival) < 64 || flat(lane.points().get(lane.points().size() - 1),
-                arrival) < 64), "No lane starts or ends at the Arrival");
-        long spokes = lanes.stream().filter(lane -> lane.name().contains("Spindle")).count();
-        helper.assertTrue(spokes >= 4, "Only " + spokes + " lanes run to the Spindle");
+        List<WindLane> lanes = field(plan);
+        int cells = (2 * CELLS) * (2 * CELLS);
+        helper.assertTrue(lanes.size() >= cells / 2, "Only " + lanes.size() + " wind lanes in " + cells + " cells");
+        // Far out, every way round.
+        for (int quarter = 0; quarter < 4; quarter++) {
+            int q = quarter;
+            helper.assertTrue(lanes.stream().anyMatch(lane -> {
+                Vec3 middle = lane.sample(lane.size() / 2);
+                return Math.hypot(middle.x, middle.z) > 2500 && (middle.x > 0) == (q % 2 == 0) && (middle.z > 0) == (q < 2);
+            }), "No lane far out in quarter " + q);
+        }
         BlockPos gate = plan.landmarks.gate;
         double total = 0;
         double lowest = Double.MAX_VALUE;
@@ -61,7 +68,7 @@ public final class WindLaneGameTests {
         double steepest = 0;
         String steepestAt = "";
         for (WindLane lane : lanes) {
-            helper.assertTrue(lane.length() > 150 && lane.length() < 2600, lane.name() + " is " + lane.length() + " blocks long");
+            helper.assertTrue(lane.length() > 500 && lane.length() < 2000, lane.name() + " is " + lane.length() + " blocks long");
             total += lane.length();
             for (int k = 0; k < lane.size(); k++) {
                 Vec3 at = lane.sample(k);
@@ -90,7 +97,13 @@ public final class WindLaneGameTests {
         for (long seed : new long[] {12345L, 20261008L}) {
             double sharpest = 0;
             String where = "";
-            for (WindLane lane : WindLaneNetwork.of(HalcyonPlan.fresh(seed))) {
+            long started = System.nanoTime();
+            List<WindLane> lanesHere = seed == 12345L ? lanes : field(HalcyonPlan.fresh(seed));
+            if (seed != 12345L) {
+                Skyseam.LOGGER.info("Skyseam wind lanes, seed {}: {} cells worked out in {} ms", seed, 4 * CELLS * CELLS,
+                        (System.nanoTime() - started) / 1_000_000);
+            }
+            for (WindLane lane : lanesHere) {
                 for (int k = 1; k < lane.size(); k++) {
                     double turn = Math.toDegrees(Math.acos(Math.max(-1, Math.min(1, lane.tangent(k).dot(lane.tangent(k - 1))))));
                     if (turn > sharpest) {
@@ -103,16 +116,25 @@ public final class WindLaneGameTests {
             Skyseam.LOGGER.info("Skyseam wind lanes, seed {}: at their sharpest they turn {} degrees in 4 blocks, {}", seed, String.format("%.1f", sharpest),
                     where);
         }
-        List<WindLane> again = WindLaneNetwork.of(HalcyonPlan.fresh(12345L));
+        List<WindLane> again = field(HalcyonPlan.fresh(12345L));
         helper.assertTrue(again.size() == lanes.size() && again.get(0).points().equals(lanes.get(0).points()), "The same seed made different lanes");
-        Skyseam.LOGGER.info("Skyseam wind lanes: {} lanes, {} blocks in all, their middles at least {} blocks over the ground and at most "
-                + "{} high ({}), at most {} degrees steep; {}", lanes.size(), Math.round(total), String.format("%.0f", lowest),
-                String.format("%.0f", highest), highestAt, String.format("%.0f", degrees), lanes.stream().map(WindLane::name).toList());
+        Skyseam.LOGGER.info("Skyseam wind lanes: {} lanes in {} cells, {} blocks in all, their middles at least {} blocks over the ground and at "
+                + "most {} high ({}), at most {} degrees steep", lanes.size(), cells, Math.round(total), String.format("%.0f", lowest),
+                String.format("%.0f", highest), highestAt, String.format("%.0f", degrees));
         helper.succeed();
     }
 
-    private static double flat(Vec3 a, Vec3 b) {
-        return Math.hypot(a.x - b.x, a.z - b.z);
+    /** The lanes of the cells round the middle, at the default spacing and chance. */
+    private static List<WindLane> field(HalcyonPlan plan) {
+        List<WindLane> lanes = new ArrayList<>();
+        int spacing = SkyseamConfig.WIND_LANES_SPACING.getDefault();
+        double chance = SkyseamConfig.WIND_LANES_CHANCE.getDefault();
+        for (int cx = -CELLS; cx < CELLS; cx++) {
+            for (int cz = -CELLS; cz < CELLS; cz++) {
+                lanes.addAll(WindLaneNetwork.cell(plan, cx, cz, spacing, chance));
+            }
+        }
+        return lanes;
     }
 
     private static boolean insideSolid(HalcyonPlan plan, Vec3 at) {
