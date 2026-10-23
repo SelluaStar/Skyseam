@@ -54,7 +54,8 @@ import net.neoforged.neoforge.common.NeoForge;
  * so screenshots show only the world, unless a {@code {"gui": true}} step shows it. {@code {"use": "main"}} (or
  * {@code "off"}) right-clicks with that hand, on the block looked at if there is one; screens it opens stay open
  * until a {@code {"close": true}} step. {@code {"jump": true}} makes the player jump, if they stand on something,
- * {@code {"walk": 20}} holds the forward key for that many ticks (and waits them out), and
+ * {@code {"walk": 20}} holds the forward key for that many ticks (and waits them out), {@code {"sprint": 20}} the same
+ * with the sprint key held too, and
  * {@code {"camera": "back"}} (or {@code "front"}, {@code "first"}) switches to that view. {@code {"config": true}} opens
  * Skyseam's settings screen, and {@code {"press": "Flux vortices"}} presses the first button on the open screen whose
  * label holds that text (for its pages); both keep the screen open until a {@code close} step, as does
@@ -115,6 +116,8 @@ public final class DevSceneCapture {
                     STEPS.add(new Step("close", "", 0));
                 } else if (step.has("walk")) {
                     STEPS.add(new Step("walk", "", step.get("walk").getAsInt()));
+                } else if (step.has("sprint")) {
+                    STEPS.add(new Step("sprint", "", step.get("sprint").getAsInt()));
                 } else if (step.has("jump")) {
                     STEPS.add(new Step("jump", "", 0));
                 } else if (step.has("camera")) {
@@ -160,6 +163,7 @@ public final class DevSceneCapture {
             if (--waiting == 0 && walking) {
                 walking = false;
                 minecraft.options.keyUp.setDown(false);
+                minecraft.options.keySprint.setDown(false);
             }
             return;
         }
@@ -184,9 +188,13 @@ public final class DevSceneCapture {
                     case "front" -> net.minecraft.client.CameraType.THIRD_PERSON_FRONT;
                     default -> net.minecraft.client.CameraType.FIRST_PERSON;
                 });
-                case "walk" -> {
+                case "walk", "sprint" -> {
                     walking = true;
                     minecraft.options.keyUp.setDown(true);
+                    if (step.kind().equals("sprint")) {
+                        minecraft.options.keySprint.setDown(true);
+                        minecraft.player.setSprinting(true);
+                    }
                     waiting = step.ticks();
                     return;
                 }

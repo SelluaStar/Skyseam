@@ -1,4 +1,46 @@
 {
+  "tide.turn": {
+    "subtitle": "subtitles.skyseam.tide.turn",
+    "sounds": [
+      {"name": "skyseam:tide/turn"}
+    ]
+  },
+  "ambience.calm": {
+    "subtitle": "subtitles.skyseam.ambience.calm",
+    "sounds": [
+      {"name": "skyseam:tide/ambience_calm", "stream": true}
+    ]
+  },
+  "ambience.prismfall": {
+    "subtitle": "subtitles.skyseam.ambience.prismfall",
+    "sounds": [
+      {"name": "skyseam:tide/ambience_prismfall", "stream": true}
+    ]
+  },
+  "ambience.gale": {
+    "subtitle": "subtitles.skyseam.ambience.gale",
+    "sounds": [
+      {"name": "skyseam:tide/ambience_gale", "stream": true}
+    ]
+  },
+  "ambience.bloom": {
+    "subtitle": "subtitles.skyseam.ambience.bloom",
+    "sounds": [
+      {"name": "skyseam:tide/ambience_bloom", "stream": true}
+    ]
+  },
+  "ambience.stillness": {
+    "subtitle": "subtitles.skyseam.ambience.stillness",
+    "sounds": [
+      {"name": "skyseam:tide/ambience_stillness", "stream": true}
+    ]
+  },
+  "ambience.hush": {
+    "subtitle": "subtitles.skyseam.ambience.hush",
+    "sounds": [
+      {"name": "skyseam:tide/ambience_hush", "stream": true}
+    ]
+  },
   "seam.hairline": {
     "subtitle": "subtitles.skyseam.seam.hairline",
     "sounds": [{"name": "skyseam:seam/hairline", "attenuation_distance": 384}]

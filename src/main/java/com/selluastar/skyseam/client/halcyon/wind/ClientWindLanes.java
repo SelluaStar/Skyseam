@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
 
-import com.selluastar.skyseam.halcyon.LanternSun;
+import com.selluastar.skyseam.client.halcyon.tide.ClientTides;
 import com.selluastar.skyseam.halcyon.wind.WindLane;
 import com.selluastar.skyseam.halcyon.wind.WindLanes;
 import com.selluastar.skyseam.network.WindLanePayload;
@@ -20,7 +20,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
  * The wind lanes on the client (docs/DECISIONS.md K109, K110): the lanes round the player, sent by the server
  * ({@link WindLanePayload}). Near the camera they fill with petals and motes riding the wind, and the wind is heard
  * ({@link WindLaneLoopSound}); their ribbons are drawn by {@link WindLaneRenderer}. Which way the wind blows comes from
- * the Lantern-Sun's clock, which the client shares with the server.
+ * the Tides' forecast, which the server sends ({@link ClientTides}).
  */
 public final class ClientWindLanes {
     /** Petals and motes ride the lane this far each way from the camera's nearest point, in traced points (4 blocks each). */
@@ -58,12 +58,12 @@ public final class ClientWindLanes {
 
     /** Which way the wind blows now (1 each lane's first point to its last, -1 back), between ticks. */
     public static double flow(double gameTime) {
-        return WindLanes.flow(gameTime + LanternSun.offset(true));
+        return WindLanes.flow(ClientTides.forecast(), gameTime);
     }
 
     /** The wind's speed now in a lane, blocks per second along it. */
     public static double windSpeed(WindLane lane, double gameTime) {
-        return WindLanes.windSpeed(lane, gameTime + LanternSun.offset(true));
+        return WindLanes.windSpeed(lane, flow(gameTime));
     }
 
     public static void onClientTick(ClientTickEvent.Post event) {

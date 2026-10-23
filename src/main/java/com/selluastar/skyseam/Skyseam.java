@@ -20,6 +20,8 @@ import com.selluastar.skyseam.halcyon.Veil;
 import com.selluastar.skyseam.halcyon.flora.Murmurberries;
 import com.selluastar.skyseam.halcyon.flora.Springblooms;
 import com.selluastar.skyseam.halcyon.vortex.FluxVortices;
+import com.selluastar.skyseam.echo.NoiseBus;
+import com.selluastar.skyseam.halcyon.tide.Tides;
 import com.selluastar.skyseam.halcyon.wind.WindLanes;
 import com.selluastar.skyseam.network.SkyseamNetwork;
 import com.selluastar.skyseam.registry.SkyseamBlockEntities;
@@ -110,6 +112,14 @@ public final class Skyseam {
         NeoForge.EVENT_BUS.addListener(Murmurberries::onGameEvent);
         NeoForge.EVENT_BUS.addListener(Murmurberries::onLevelTick);
         NeoForge.EVENT_BUS.addListener(Murmurberries::onServerStopped);
+        NeoForge.EVENT_BUS.addListener(Tides::onServerTick);
+        NeoForge.EVENT_BUS.addListener(Tides::onLevelTick);
+        NeoForge.EVENT_BUS.addListener(Tides::onLoggedIn);
+        NeoForge.EVENT_BUS.addListener(Tides::onServerStopped);
+        NeoForge.EVENT_BUS.addListener(NoiseBus::onPlayerTick);
+        NeoForge.EVENT_BUS.addListener(NoiseBus::onExplosion);
+        NeoForge.EVENT_BUS.addListener(NoiseBus::onGameEvent);
+        NeoForge.EVENT_BUS.addListener(NoiseBus::onServerStopped);
     }
 
     private static void commonSetup(FMLCommonSetupEvent event) {

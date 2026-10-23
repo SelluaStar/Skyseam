@@ -1779,3 +1779,71 @@ which way it blows are as before (K109).
 2. `/skyseam halcyon lanes find`, then fly a ship into it.
 3. Try Config, Wind lanes, Lane spacing and Chance for more or fewer.
 4. Send screenshots and `logs/latest.log`.
+
+## The Tides and the noise bus (2026-10-22)
+
+DECISIONS K111, K112. The author: "now lets complete. and that will be it for m4 we will come back to the almanac later
+The noise bus and Tides."
+
+**Built**
+- **The Tides** (`halcyon/tide/`, `client/halcyon/tide/`): Calm most of the time; about every 25 minutes one Tide runs
+  for 6 to 10, from the world's seed and the time (nothing saved but one started by command):
+  - **Prismfall**: glass falls from the open sky, glinting; Prism Dust (a new item) falls onto the ground near you to
+    gather; the sky leans pale glass-blue.
+  - **Gale**: a crosswind carries ships and anyone in the air across it; streaks race past; the sky greys; the wind
+    lanes blow back hard.
+  - **Bloom**: pollen drifts on the air; the sky warms; helpers will make twice as much (when they exist, M5).
+  - **Stillness** (rare): the wind lanes stop, every sound deepens, noise carries twice as far, the sky dims.
+  - The wind lanes blow back while any Tide runs (the Hush no longer turns them).
+  - As a Tide begins and ends you are told and hear it turn; live through one as it runs out and you earn its
+    advancement (a new Halcyon tab: The Halcyon, then Glass Rain, Weather the Gale, In Full Bloom, The Quiet Hour).
+  - The Halcyon has ambience now: a loop each for Calm, the four Tides and the Hush, crossfading.
+  - **The Tide Vane** (brass ingots under a pinch of Prism Dust): its arrow and gem show the Tide running, or the next
+    when it is under ten minutes off; use it for the forecast; a comparator reads which.
+  - `/skyseam halcyon tide` (forecast), `tide start <tide> [minutes]`, `tide stop`. Settings under Config, Tides.
+  - Other mods and pack scripts can listen for a Tide changing (`TideEvent.Changed`).
+- **The noise bus** (`echo/NoiseBus`): sprinting on the ground, explosions and struck bells make noises with a radius,
+  which the Tides stretch or shrink; creatures that hunt by sound will register to hear them (Hollow Listeners, the
+  Cantor). `NoiseBus.ping` is ready for the Echo Sounder. `/skyseam noise emit <radius> [kind]` and `/skyseam noise
+  watch` (each noise near you in chat, with a ring of light at its reach).
+- **The capture tool** has a `sprint` step.
+
+**Verified (actually run)**
+- **The milestone check:** build ✓, runData ✓, **71/71 GameTests** ✓, server boot ✓.
+- **GameTests** (`TideGameTests`, `NoiseGameTests`, `WindLaneGameTests`): one Tide in each of 400 slots, 6 to 10
+  minutes long, never overlapping, the same every time (Prismfall 114, Gale 109, Bloom 137, Stillness 40, a Tide
+  running 32 % of the time); a forced Tide takes over and a forced Calm stops one; the Tide Vane shows a forced
+  Prismfall and gives a comparator 3; a noise reaches listeners within its radius, nearest first, and a keener one
+  further off; a Stillness carries noise twice as far and a Prismfall or Gale 0.7 as far, easing in, and nowhere but
+  the Halcyon; a struck bell carries 64 blocks and an explosion of power 2 carries 48; the wind lanes blow back in each
+  Tide, 1.6 times as hard in a Gale, not at all in a Stillness, turning smoothly.
+- **The real client** (`tools/capture/m4_tides.json`, `m4_tides_land.json`): each Tide forced in turn at the Arrival:
+  the vane's gem and arrow changed with each; `lanes list` read "blowing back with the Tide", "blowing back hard (Gale)"
+  and "still (Stillness)"; a ping of 30 carried 21 in a Prismfall and a Gale and 60 in a Stillness; a Bloom left to run
+  out earned "In Full Bloom"; "The Halcyon" was earned on arriving; the message "Glass begins to fall: a Prismfall" and
+  the subtitle "The Tide turns" showed as a Prismfall began. On the highlands, sprinting made a noise every half second
+  (16 blocks), and with the dust set to every 2 seconds, 11 and then 19 pinches of Prism Dust fell within reach in a
+  Prismfall (none fell at the Arrival, over the sea, as meant). All the new sounds pass `tools/audio/check.py`, whose
+  loop check now measures a join against the sound's own movement from sample to sample (bright hiss moved more than
+  its old fixed limit). Sheet [`docs/previews/m4-tides.png`](previews/m4-tides.png).
+- **Found while filming:** the shards, pollen and Gale streaks were too faint to see at first (now larger and many
+  more); Prism Dust falling round a player over the sea was lost far below (now it only falls onto ground near them).
+
+**Not seen yet**
+- **The ambience by ear**: the loops play (their subtitles show) but only the author can judge how they sound.
+- **The Gale's crosswind** on a real ship or a gliding player, and Stillness's deeper sound by ear.
+- **Shader packs and Distant Horizons** with the Tides' sky tints and particles; **multiplayer**.
+
+**M4 against the spec's list** (Tides, wind lanes, Moorings, Almanac skeleton, the noise bus, the music manager, the
+audio synthesis tool): the Tides, wind lanes, noise bus and the audio tool (since M1) are built. The Almanac is left for
+later, as the author asked. **Moorings** (the Mooring Post that docks a ship, holds cargo and sets your respawn) and
+**the music manager** (its slots, all empty) are not built yet.
+
+**Author's in-game test**
+1. In the Halcyon, `/skyseam halcyon tide` shows the Tide running and the next; `/skyseam halcyon tide start gale`
+   (or `prismfall`, `bloom`, `stillness`) runs one now. Watch the sky, listen, and look at the wind lanes.
+2. In a Prismfall, stand on land and gather the Prism Dust that falls; craft a Tide Vane (four brass ingots under a
+   pinch of dust) and use it.
+3. `/skyseam noise watch`, then sprint, ring a bell or set off TNT, in Calm and in a Stillness.
+4. Let a Tide run out while you're in the Halcyon for its advancement. Settings under Config, Tides.
+5. Send screenshots and `logs/latest.log`.

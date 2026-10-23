@@ -85,7 +85,8 @@ public final class SkyseamCommands {
                 .then(seam())
                 .then(ship())
                 .then(site())
-                .then(HalcyonCommands.build()));
+                .then(HalcyonCommands.build())
+                .then(NoiseCommands.build()));
     }
 
     // ---- /skyseam seam -----------------------------------------------------------------------------------------

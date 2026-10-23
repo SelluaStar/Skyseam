@@ -23,6 +23,11 @@ public final class SkyseamItems {
             () -> new BlockItem(SkyseamBlocks.SPRINGBLOOM.get(), new Item.Properties()));
     public static final DeferredItem<BlockItem> MURMURBERRY = ITEMS.register("murmurberry",
             () -> new BlockItem(SkyseamBlocks.MURMURBERRY.get(), new Item.Properties()));
+    /** Prism Dust (spec section 13): glass dust that falls in a Prismfall, and from Prismite. */
+    public static final DeferredItem<Item> PRISM_DUST = ITEMS.registerSimpleItem("prism_dust");
+    /** The Tide Vane (docs/DECISIONS.md K111). */
+    public static final DeferredItem<BlockItem> TIDE_VANE = ITEMS.register("tide_vane",
+            () -> new BlockItem(SkyseamBlocks.TIDE_VANE.get(), new Item.Properties()));
 
     private SkyseamItems() {}
 

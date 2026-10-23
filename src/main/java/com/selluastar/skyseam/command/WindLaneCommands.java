@@ -6,7 +6,8 @@ import java.util.List;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import com.selluastar.skyseam.halcyon.LanternSun;
+import com.selluastar.skyseam.halcyon.tide.Tide;
+import com.selluastar.skyseam.halcyon.tide.Tides;
 import com.selluastar.skyseam.halcyon.wind.WindLane;
 import com.selluastar.skyseam.halcyon.wind.WindLanes;
 
@@ -49,8 +50,9 @@ final class WindLaneCommands {
             source.sendFailure(Component.translatable("commands.skyseam.halcyon.lanes.none"));
             return 0;
         }
-        double flow = WindLanes.flow(LanternSun.clock(level.getGameTime(), LanternSun.offset(level.getServer())));
-        String way = flow > 0.5 ? "first" : flow < -0.5 ? "back" : "turning";
+        double flow = WindLanes.flow(Tides.forecast(level.getServer()), level.getGameTime());
+        Tide tide = Tides.tide(level);
+        String way = flow > 0.5 ? "first" : flow < -1.5 ? "gale" : flow < -0.5 ? "back" : tide == Tide.STILLNESS && Math.abs(flow) < 0.2 ? "still" : "turning";
         for (WindLane lane : lanes.stream().sorted(Comparator.comparingDouble(lane -> distance(lane, at))).toList()) {
             int away = (int) distance(lane, at);
             source.sendSuccess(() -> Component.translatable("commands.skyseam.halcyon.lanes.entry", lane.name(), (int) lane.length(), away,
@@ -80,7 +82,7 @@ final class WindLaneCommands {
             source.sendFailure(Component.translatable("commands.skyseam.halcyon.lanes.none"));
             return 0;
         }
-        double flow = WindLanes.flow(LanternSun.clock(level.getGameTime(), LanternSun.offset(level.getServer())));
+        double flow = WindLanes.flow(Tides.forecast(level.getServer()), level.getGameTime());
         Vec3 down = near.tangent().scale(flow < 0 ? -1 : 1);
         Vec3 side = near.tangent().cross(new Vec3(0, 1, 0));
         side = side.lengthSqr() < 1.0e-6 ? new Vec3(1, 0, 0) : side.normalize();

@@ -12,7 +12,9 @@ import org.jetbrains.annotations.Nullable;
 import com.selluastar.skyseam.config.SkyseamConfig;
 import com.selluastar.skyseam.external.SableBridge;
 import com.selluastar.skyseam.external.Ship;
-import com.selluastar.skyseam.halcyon.LanternSun;
+import com.selluastar.skyseam.halcyon.tide.Tide;
+import com.selluastar.skyseam.halcyon.tide.TideSchedule;
+import com.selluastar.skyseam.halcyon.tide.Tides;
 import com.selluastar.skyseam.network.WindLanePayload;
 import com.selluastar.skyseam.world.HalcyonLayout;
 import com.selluastar.skyseam.world.halcyon.HalcyonChunkGenerator;
@@ -45,14 +47,14 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * outrunning the wind is left to it; one flying against it is held back. Its motion across the lane is its own.</li>
  * <li>So are players and creatures in the air in a lane (gliding, falling, jumping off an island into it), but not those
  * standing, swimming, riding, or flying in creative.</li>
- * <li>The wind runs one way along each lane, and the other way through the Hush, the last quarter
- * of the Lantern-Sun's day ({@link #flow}): until the Tides exist, the Hush stands in for the Tide that turns them. It
- * dies down and builds up again the other way over half a minute.</li>
+ * <li>The wind runs one way along each lane in Calm and the other way while a Tide runs ({@link #flow}; docs/DECISIONS.md
+ * K111): back harder in a Gale, and not at all in Stillness. It dies down and builds up again the other way over the
+ * half minute the Tide takes to come in, and back as it dies away.</li>
  * </ul>
  */
 public final class WindLanes {
-    /** How long the wind takes to turn round, in ticks. */
-    public static final int TURN_TICKS = 600;
+    /** How much harder the wind blows back in a Gale than in the other Tides ("tailwinds on lanes"). */
+    public static final double GALE_BOOST = 1.6;
     /** Players and creatures this far from a player are looked at (beyond, nothing is moving to see). */
     private static final double RIDER_RANGE = 96;
     /** How firmly a lane carries a player or creature in the air at its middle, per second. */
@@ -117,23 +119,19 @@ public final class WindLanes {
     }
 
     /**
-     * Which way the wind runs at a moment of the Lantern-Sun's day ({@link LanternSun#clock}): 1 from each lane's first
-     * point to its last through the day, -1 through the Hush, turning over {@link #TURN_TICKS} ticks round each change, smoothly.
+     * Which way and how hard the wind runs at game time {@code time} for a forecast of the Tides: 1 along each lane in
+     * Calm; while a Tide runs, -1 (back), -{@link #GALE_BOOST} in a Gale, 0 in Stillness; easing between them as the Tide
+     * comes in and dies away ({@link TideSchedule#RAMP}).
      */
-    public static double flow(double clock) {
-        double cycle = LanternSun.CYCLE_TICKS;
-        double c = ((clock % cycle) + cycle) % cycle;
-        double half = TURN_TICKS / 2.0;
-        double hush = LanternSun.Phase.HUSH.ordinal() * (double) LanternSun.PHASE_TICKS;
-        // How far turned, 0 to 1: rising round the Hush's start, falling round the day's (the cycle's end and start).
-        double turned = c < cycle / 2 ? 1 - smooth((c + half) / TURN_TICKS)
-                : Math.min(smooth((c - (hush - half)) / TURN_TICKS), 1 - smooth((c - (cycle - half)) / TURN_TICKS));
-        return 1 - 2 * turned;
-    }
-
-    private static double smooth(double t) {
-        double x = Mth.clamp(t, 0, 1);
-        return x * x * (3 - 2 * x);
+    public static double flow(TideSchedule.Forecast forecast, double time) {
+        Tide tide = forecast.tide(time);
+        double strength = forecast.strength(tide, time);
+        return switch (tide) {
+            case CALM -> 1;
+            case STILLNESS -> 1 - strength;
+            case GALE -> 1 - strength * (1 + GALE_BOOST);
+            default -> 1 - 2 * strength;
+        };
     }
 
     /** The wind's speed in the settings, blocks per second, before each lane's own pace and its turning. */
@@ -141,9 +139,9 @@ public final class WindLanes {
         return setting(SkyseamConfig.WIND_LANES_SPEED);
     }
 
-    /** The wind's speed now in a lane, in blocks per second along it (negative while turned). */
-    public static double windSpeed(WindLane lane, double clock) {
-        return speed() * lane.pace() * flow(clock);
+    /** The wind's speed in a lane for the wind's {@link #flow}, in blocks per second along it (negative while turned). */
+    public static double windSpeed(WindLane lane, double flow) {
+        return speed() * lane.pace() * flow;
     }
 
     /** The lane, and the nearest point of its middle, that {@code at} is inside (the deepest, if several); or null. */
@@ -178,7 +176,7 @@ public final class WindLanes {
                 }
             }
         }
-        double clock = LanternSun.clock(level.getGameTime(), LanternSun.offset(level.getServer()));
+        double flow = flow(Tides.forecast(level.getServer()), level.getGameTime());
         double shipPush = setting(SkyseamConfig.WIND_LANES_SHIP_PUSH);
         if (SableBridge.isActive(level)) {
             for (Ship ship : SableBridge.allShips(level)) {
@@ -188,7 +186,7 @@ public final class WindLanes {
                 WindLane.Near near = inside(lanesNear(level, at, SHIP_RANGE), at, size);
                 if (near != null) {
                     Vec3 velocity = SableBridge.linearVelocity(ship);
-                    double push = carry(velocity, near, windSpeed(near.lane(), clock), shipPush * Math.max(near.depth(), 0.25));
+                    double push = carry(velocity, near, windSpeed(near.lane(), flow), shipPush * Math.max(near.depth(), 0.25));
                     if (push != 0) {
                         SableBridge.addVelocity(ship, near.tangent().scale(push));
                     }
@@ -202,7 +200,7 @@ public final class WindLanes {
                 continue;
             }
             // Blocks per tick for creatures.
-            double push = carry(rider.getDeltaMovement().scale(20), near, windSpeed(near.lane(), clock), RIDER_PUSH * near.depth()) / 20;
+            double push = carry(rider.getDeltaMovement().scale(20), near, windSpeed(near.lane(), flow), RIDER_PUSH * near.depth()) / 20;
             if (push != 0) {
                 rider.setDeltaMovement(rider.getDeltaMovement().add(near.tangent().scale(push)));
                 rider.hurtMarked = true;
@@ -243,7 +241,8 @@ public final class WindLanes {
         return Math.hypot(a.x - b.x, a.z - b.z);
     }
 
-    private static boolean airborne(LivingEntity entity) {
+    /** In the air, of their own: not standing, swimming, riding, floating, flying in creative or watching. */
+    public static boolean airborne(LivingEntity entity) {
         if (entity.isSpectator() || entity.isPassenger() || entity.onGround() || entity.isInWater() || entity.isNoGravity()) {
             return false;
         }

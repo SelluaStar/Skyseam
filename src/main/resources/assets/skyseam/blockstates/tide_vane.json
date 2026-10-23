@@ -1,0 +1,79 @@
+{
+  "variants": {
+    "facing=north,showing=calm": {
+      "model": "skyseam:block/tide_vane_calm"
+    },
+    "facing=north,showing=prismfall": {
+      "model": "skyseam:block/tide_vane_prismfall"
+    },
+    "facing=north,showing=gale": {
+      "model": "skyseam:block/tide_vane_gale"
+    },
+    "facing=north,showing=bloom": {
+      "model": "skyseam:block/tide_vane_bloom"
+    },
+    "facing=north,showing=stillness": {
+      "model": "skyseam:block/tide_vane_stillness"
+    },
+    "facing=east,showing=calm": {
+      "model": "skyseam:block/tide_vane_calm",
+      "y": 90
+    },
+    "facing=east,showing=prismfall": {
+      "model": "skyseam:block/tide_vane_prismfall",
+      "y": 90
+    },
+    "facing=east,showing=gale": {
+      "model": "skyseam:block/tide_vane_gale",
+      "y": 90
+    },
+    "facing=east,showing=bloom": {
+      "model": "skyseam:block/tide_vane_bloom",
+      "y": 90
+    },
+    "facing=east,showing=stillness": {
+      "model": "skyseam:block/tide_vane_stillness",
+      "y": 90
+    },
+    "facing=south,showing=calm": {
+      "model": "skyseam:block/tide_vane_calm",
+      "y": 180
+    },
+    "facing=south,showing=prismfall": {
+      "model": "skyseam:block/tide_vane_prismfall",
+      "y": 180
+    },
+    "facing=south,showing=gale": {
+      "model": "skyseam:block/tide_vane_gale",
+      "y": 180
+    },
+    "facing=south,showing=bloom": {
+      "model": "skyseam:block/tide_vane_bloom",
+      "y": 180
+    },
+    "facing=south,showing=stillness": {
+      "model": "skyseam:block/tide_vane_stillness",
+      "y": 180
+    },
+    "facing=west,showing=calm": {
+      "model": "skyseam:block/tide_vane_calm",
+      "y": 270
+    },
+    "facing=west,showing=prismfall": {
+      "model": "skyseam:block/tide_vane_prismfall",
+      "y": 270
+    },
+    "facing=west,showing=gale": {
+      "model": "skyseam:block/tide_vane_gale",
+      "y": 270
+    },
+    "facing=west,showing=bloom": {
+      "model": "skyseam:block/tide_vane_bloom",
+      "y": 270
+    },
+    "facing=west,showing=stillness": {
+      "model": "skyseam:block/tide_vane_stillness",
+      "y": 270
+    }
+  }
+}

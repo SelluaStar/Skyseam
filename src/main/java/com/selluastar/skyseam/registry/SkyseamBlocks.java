@@ -8,6 +8,7 @@ import com.selluastar.skyseam.block.BloomcoralBlock;
 import com.selluastar.skyseam.block.CloudBlock;
 import com.selluastar.skyseam.block.LanternVineBlock;
 import com.selluastar.skyseam.block.SmallShroomBlock;
+import com.selluastar.skyseam.block.TideVaneBlock;
 import com.selluastar.skyseam.halcyon.flora.MurmurberryBlock;
 import com.selluastar.skyseam.halcyon.flora.SpringbloomBlock;
 
@@ -206,6 +207,11 @@ public final class SkyseamBlocks {
     public static final DeferredBlock<MurmurberryBlock> MURMURBERRY = BLOCKS.register("murmurberry",
             () -> new MurmurberryBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY).noCollission().instabreak()
                     .sound(MURMURBERRY_SOUNDS).noOcclusion().pushReaction(PushReaction.DESTROY)));
+
+    /** The Tide Vane (docs/DECISIONS.md K111): a brass weathervane that shows the Tide running, or the next near one. */
+    public static final DeferredBlock<TideVaneBlock> TIDE_VANE = BLOCKS.register("tide_vane",
+            () -> new TideVaneBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_YELLOW).strength(2.0f, 6.0f).requiresCorrectToolForDrops()
+                    .sound(SoundType.COPPER).noOcclusion().pushReaction(PushReaction.DESTROY)));
 
     /** Every Halcyon block, in creative tab order. */
     public static List<DeferredBlock<? extends Block>> halcyonBlocks() {

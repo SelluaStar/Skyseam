@@ -53,6 +53,10 @@ public final class SkyseamParticles {
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> PETAL = simple("petal");
     /** A mote of light riding a wind lane (client/particle/WindMoteParticle): a twinkling glow that keeps the speed passed in. */
     public static final DeferredHolder<ParticleType<?>, SimpleParticleType> WIND_MOTE = simple("wind_mote");
+    /** A sliver of glass falling in a Prismfall, glinting (docs/DECISIONS.md K111). */
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> SHARD_GLINT = simple("shard_glint");
+    /** A fleck of pollen drifting in a Bloom (docs/DECISIONS.md K111). */
+    public static final DeferredHolder<ParticleType<?>, SimpleParticleType> POLLEN = simple("pollen");
 
     private SkyseamParticles() {}
 
