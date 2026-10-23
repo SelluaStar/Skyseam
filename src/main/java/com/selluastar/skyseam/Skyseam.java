@@ -115,6 +115,7 @@ public final class Skyseam {
         NeoForge.EVENT_BUS.addListener(Tides::onServerTick);
         NeoForge.EVENT_BUS.addListener(Tides::onLevelTick);
         NeoForge.EVENT_BUS.addListener(Tides::onLoggedIn);
+        NeoForge.EVENT_BUS.addListener(Tides::onChangedDimension);
         NeoForge.EVENT_BUS.addListener(Tides::onServerStopped);
         NeoForge.EVENT_BUS.addListener(NoiseBus::onPlayerTick);
         NeoForge.EVENT_BUS.addListener(NoiseBus::onExplosion);

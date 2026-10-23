@@ -11,6 +11,7 @@ import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.selluastar.skyseam.Skyseam;
 import com.selluastar.skyseam.client.halcyon.tide.ClientTides;
+import com.selluastar.skyseam.client.halcyon.tide.TideWeather;
 import com.selluastar.skyseam.client.halcyon.sky.Atmosphere;
 import com.selluastar.skyseam.client.halcyon.sky.SkyBodies;
 import com.selluastar.skyseam.client.halcyon.sky.SkyDraw;
@@ -24,6 +25,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.DimensionSpecialEffects;
 import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
@@ -267,6 +269,13 @@ public final class HalcyonSky extends DimensionSpecialEffects {
         glow *= sunUp;
         buffer.addVertex(matrix, x * SkyDraw.DOME, y * SkyDraw.DOME, z * SkyDraw.DOME).setColor(Math.min(1, c[0] + glow),
                 Math.min(1, c[1] + glow * (0.82f - 0.25f * golden)), Math.min(1, c[2] + glow * (0.6f - 0.3f * golden)), 1);
+    }
+
+    /** The Tides' weather: glass, pollen or wind round the camera (docs/DECISIONS.md K113). */
+    @Override
+    public boolean renderSnowAndRain(ClientLevel level, int ticks, float partialTick, LightTexture lightTexture, double camX, double camY,
+            double camZ) {
+        return TideWeather.render(level, ticks, partialTick, lightTexture, camX, camY, camZ);
     }
 
     @Override

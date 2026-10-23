@@ -247,10 +247,10 @@ public final class SkyseamConfig {
                 .defineInRange("stillness_chance", 0.1, 0.0, 1.0);
         TIDES_GALE_CROSSWIND = named(b, "tides.gale_crosswind").comment(
                         "How fast a Gale's crosswind blows, in blocks per second, carrying ships and anyone in the air across it. 0 for none.")
-                .defineInRange("gale_crosswind", 6.0, 0.0, 30.0);
+                .defineInRange("gale_crosswind", 9.0, 0.0, 30.0);
         TIDES_PRISM_DUST_EVERY = named(b, "tides.prism_dust_every").comment(
                         "In a Prismfall, a pinch of Prism Dust falls near each player in the Halcyon about once in this many seconds. 0 for none.")
-                .defineInRange("prism_dust_every", 12, 0, 600);
+                .defineInRange("prism_dust_every", 4, 0, 600);
         b.pop();
 
         section(b, "murmurberry");

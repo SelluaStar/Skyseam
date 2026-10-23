@@ -2,6 +2,7 @@ package com.selluastar.skyseam.client.halcyon.tide;
 
 import com.selluastar.skyseam.config.SkyseamConfig;
 import com.selluastar.skyseam.halcyon.tide.Tide;
+import com.selluastar.skyseam.halcyon.tide.TideEffects;
 import com.selluastar.skyseam.halcyon.tide.TideSchedule;
 import com.selluastar.skyseam.halcyon.tide.Tides;
 import com.selluastar.skyseam.network.TidePayload;
@@ -10,6 +11,7 @@ import com.selluastar.skyseam.world.HalcyonLayout;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -35,8 +37,10 @@ public final class ClientTides {
     private static final int POLLEN_SPREAD = 14;
     private static final int GALE_SPREAD = 22;
     /** How much each Tide tints the sky at its height, and how much it dims it. */
-    private static final float[] TINT = {0, 0.38f, 0.42f, 0.3f, 0.5f};
-    private static final float[] DIM = {0, 0.02f, 0.12f, 0, 0.28f};
+    private static final float[] TINT = {0, 0.55f, 0.6f, 0.5f, 0.7f};
+    private static final float[] DIM = {0, 0.04f, 0.24f, 0, 0.4f};
+    /** How much each Tide closes in the fog at its height (share of the view lost). */
+    private static final float[] FOG = {0, 0.25f, 0.5f, 0.35f, 0.7f};
 
     private static TideSchedule.Forecast forecast = TideSchedule.Forecast.CALM;
 
@@ -61,6 +65,15 @@ public final class ClientTides {
             return 0;
         }
         return (float) forecast.strength(tide, level.getGameTime() + partialTick);
+    }
+
+    /** How far the view reaches now, as a share of the usual: the Tide running closes the fog in. */
+    public static float fogFactor(float partialTick) {
+        float factor = 1;
+        for (Tide tide : Tide.values()) {
+            factor -= FOG[tide.ordinal()] * strength(tide, partialTick);
+        }
+        return Math.max(0.25f, factor);
     }
 
     /** A sky colour leaning towards the Tide running, and dimmed as it asks. */
@@ -115,6 +128,13 @@ public final class ClientTides {
                     (random.nextDouble() - 0.5) * 0.03, 0.004 + random.nextDouble() * 0.01, (random.nextDouble() - 0.5) * 0.03);
         }
         float gale = strength(Tide.GALE, 0);
+        LocalPlayer player = minecraft.player;
+        if (gale > 0 && player != null && player.onGround() && !player.getAbilities().flying && !player.isSpectator()
+                && level.getHeight(Heightmap.Types.MOTION_BLOCKING, player.getBlockX(), player.getBlockZ()) <= Mth.floor(player.getEyeY()) + 1) {
+            // The Gale leans on you on your feet, out under the sky (others it leans on are the server's: TideEffects).
+            Vec3 wind = Tides.crosswind(level.getGameTime(), gale, crosswindSetting());
+            player.addDeltaMovement(wind.normalize().scale(TideEffects.GROUND_PUSH * wind.length() / 9));
+        }
         if (gale > 0) {
             Vec3 wind = Tides.crosswind(level.getGameTime(), gale, Math.max(4, crosswindSetting()));
             Vec3 streak = wind.scale(2.2 / 20);

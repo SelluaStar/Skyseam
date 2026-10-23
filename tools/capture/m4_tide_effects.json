@@ -1,0 +1,167 @@
+{
+ "settle": 200,
+ "steps": [
+  {
+   "command": "gamemode spectator"
+  },
+  {
+   "command": "gamerule doDaylightCycle false"
+  },
+  {
+   "command": "skyseam halcyon time set noon"
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 200
+  },
+  {
+   "command": "gamerule sendCommandFeedback true"
+  },
+  {
+   "command": "execute at @s run tp @s ~ 420 ~"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "command": "execute at @s run fill ~-6 ~-1 ~-6 ~6 ~-1 ~6 skyseam:stillstone_bricks"
+  },
+  {
+   "command": "execute at @s run fill ~-7 ~ ~-7 ~7 ~3 ~7 minecraft:barrier outline"
+  },
+  {
+   "command": "execute at @s run fill ~-6 ~ ~-6 ~6 ~3 ~6 minecraft:air replace minecraft:barrier"
+  },
+  {
+   "command": "execute at @s run tp @s ~ ~ ~ facing ~3 ~ ~"
+  },
+  {
+   "command": "gamemode survival"
+  },
+  {
+   "command": "skyseam halcyon tide stop"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "command": "execute at @s run fill ~2 ~-1 ~-1 ~4 ~-1 ~1 minecraft:farmland"
+  },
+  {
+   "command": "execute at @s run fill ~2 ~ ~-1 ~4 ~ ~1 minecraft:wheat[age=0]"
+  },
+  {
+   "command": "execute at @s run setblock ~3 ~-1 ~2 minecraft:water"
+  },
+  {
+   "gui": true
+  },
+  {
+   "wait": 10
+  },
+  {
+   "command": "data get entity @s Health"
+  },
+  {
+   "command": "skyseam halcyon tide start prismfall 3"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "shot": "tfx_prismfall_title"
+  },
+  {
+   "wait": 300
+  },
+  {
+   "command": "data get entity @s Health"
+  },
+  {
+   "wait": 340
+  },
+  {
+   "shot": "tfx_prismfall"
+  },
+  {
+   "command": "data get entity @s Pos"
+  },
+  {
+   "command": "data get entity @s Health"
+  },
+  {
+   "command": "skyseam halcyon tide start gale 3"
+  },
+  {
+   "wait": 680
+  },
+  {
+   "command": "data get entity @s Pos"
+  },
+  {
+   "wait": 100
+  },
+  {
+   "command": "data get entity @s Pos"
+  },
+  {
+   "shot": "tfx_gale"
+  },
+  {
+   "command": "execute at @s run tp @s ~ ~ ~ facing ~3 ~-1 ~"
+  },
+  {
+   "command": "skyseam halcyon tide start bloom 3"
+  },
+  {
+   "wait": 680
+  },
+  {
+   "shot": "tfx_bloom"
+  },
+  {
+   "wait": 600
+  },
+  {
+   "command": "data get entity @s Health"
+  },
+  {
+   "command": "execute at @s run fill ~-12 ~-12 ~-12 ~12 ~12 ~12 minecraft:wheat[age=6] replace minecraft:wheat[age=7]"
+  },
+  {
+   "command": "execute at @s run fill ~-12 ~-12 ~-12 ~12 ~12 ~12 minecraft:wheat[age=1] replace minecraft:wheat[age=0]"
+  },
+  {
+   "command": "skyseam halcyon tide start stillness 3"
+  },
+  {
+   "wait": 680
+  },
+  {
+   "command": "attribute @s minecraft:generic.gravity get"
+  },
+  {
+   "shot": "tfx_stillness"
+  },
+  {
+   "command": "skyseam halcyon tide stop"
+  },
+  {
+   "wait": 700
+  },
+  {
+   "command": "attribute @s minecraft:generic.gravity get"
+  },
+  {
+   "quit": true
+  }
+ ]
+}

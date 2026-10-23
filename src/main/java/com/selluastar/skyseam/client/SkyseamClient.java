@@ -22,6 +22,7 @@ import com.selluastar.skyseam.client.halcyon.vortex.FarDepth;
 import com.selluastar.skyseam.client.halcyon.vortex.VortexRenderer;
 import com.selluastar.skyseam.client.halcyon.HalcyonAmbience;
 import com.selluastar.skyseam.client.halcyon.tide.ClientTides;
+import com.selluastar.skyseam.client.halcyon.tide.TideBadge;
 import com.selluastar.skyseam.client.halcyon.wind.ClientWindLanes;
 import com.selluastar.skyseam.client.halcyon.wind.WindLaneRenderer;
 import com.selluastar.skyseam.client.particle.GlowParticle;
@@ -134,6 +135,7 @@ public final class SkyseamClient {
     public static void registerGuiLayers(RegisterGuiLayersEvent event) {
         event.registerAbove(VanillaGuiLayers.HOTBAR, Skyseam.id("seam_gauge"), SeamGaugeHud::render);
         event.registerAbove(VanillaGuiLayers.HOTBAR, Skyseam.id("skychart"), SkychartHud::render);
+        event.registerAbove(VanillaGuiLayers.BOSS_OVERLAY, Skyseam.id("tide_badge"), TideBadge::render);
         event.registerAboveAll(Skyseam.id("screen_flash"), ScreenFlash::render);
     }
 }

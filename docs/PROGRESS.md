@@ -1847,3 +1847,44 @@ later, as the author asked. **Moorings** (the Mooring Post that docks a ship, ho
 3. `/skyseam noise watch`, then sprint, ring a bell or set off TNT, in Calm and in a Stillness.
 4. Let a Tide run out while you're in the Halcyon for its advancement. Settings under Config, Tides.
 5. Send screenshots and `logs/latest.log`.
+
+## The Tides do something, and are seen (2026-10-22)
+
+DECISIONS K113. The author: the Tides didn't actually do anything yet and weren't very visible.
+
+**Built**
+- **Prismfall**: out under the open sky without a helmet, the glass cuts you, a heart about every other second; take
+  cover or wear a helmet. Prism Dust falls every 4 seconds.
+- **Gale**: the wind shoves you on your feet (it carries you standing and slows you walking into it), harder in the
+  air, and bends arrows. Crosswind 9 blocks a second.
+- **Bloom**: crops and saplings near you grow many times as fast, and you heal slowly out under the sky.
+- **Stillness**: gravity eases to a little over half; falls and jumps float.
+- **Seen**: a big title as each Tide begins; a badge at the top of the screen with its name, minutes left and a bar;
+  real weather round you (falling glass, drifting pollen, streaks of wind) wherever the sky is open; thicker fog and
+  stronger sky colours.
+
+**Verified (actually run)**
+- **The milestone check:** build ✓, runData ✓, **71/71 GameTests** ✓, server boot ✓.
+- **The real client** (`tools/capture/m4_tide_effects.json`, survival, on a platform at Y 420 above every island):
+  the Prismfall cut the player from 20 to 18 (the capture world is on Peaceful, whose healing made it back); the Gale
+  carried a standing player 3 to 6 blocks, to the platform's wall; a Bloom grew all nine wheat seedlings on the
+  platform to full in about a minute; a Stillness read gravity 0.044 (0.55 of 0.08). Title, badge, weather and fog
+  for each in the sheet [`docs/previews/m4-tide-effects.png`](previews/m4-tide-effects.png).
+- **Found while testing:** the Arrival lies under a floating island, which counts as cover from the glass (as it
+  would from rain); the weather's texture was at first stretched far too long (pillars of light, squares of pollen);
+  the Gale's push on a walking player, done from the server, would have stuttered their walking and was too weak
+  against ground friction, so it runs on the player's own side now.
+
+**Not seen yet**
+- The glass on Normal or Hard difficulty (it should win against healing there), and a helmet keeping it off.
+- The Gale with an elytra or on a real ship; shader packs with the weather sheets; multiplayer.
+- **Existing settings files** keep the old Gale (6) and Prism Dust (12) values. Those in `run/` and `run/capture/`
+  were updated; any other world's `skyseam-server.toml` needs `gale_crosswind = 9.0` and `prism_dust_every = 4`.
+
+**Author's in-game test**
+1. In survival, under the open sky, `/skyseam halcyon tide start prismfall`: the title, badge and falling glass;
+   stand out without a helmet, then put one on or step under a roof.
+2. `tide start gale`: stand still, then walk into the wind; shoot an arrow across it.
+3. Plant wheat or a sapling, `tide start bloom`, and watch it grow.
+4. `tide start stillness`, then jump off something.
+5. Send screenshots and `logs/latest.log`.

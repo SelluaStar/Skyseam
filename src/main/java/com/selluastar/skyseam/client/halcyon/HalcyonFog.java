@@ -1,5 +1,6 @@
 package com.selluastar.skyseam.client.halcyon;
 
+import com.selluastar.skyseam.client.halcyon.tide.ClientTides;
 import com.selluastar.skyseam.halcyon.Veil;
 import com.selluastar.skyseam.world.HalcyonLayout;
 
@@ -89,7 +90,8 @@ public final class HalcyonFog {
         }
         Vec3 at = event.getCamera().getPosition();
         float veil = Veil.thickness(at.x, at.y, at.z);
-        float far = event.getFarPlaneDistance();
+        // The Tides close the fog in: a little in a Prismfall, a haze in a Gale or Bloom, a thick still mist in a Stillness.
+        float far = event.getFarPlaneDistance() * ClientTides.fogFactor((float) event.getPartialTick());
         // The Elderwood's mist closes in to a third of the view in its valleys, the haze starting close.
         float mist = valleyMist(at);
         float misty = Mth.lerp(mist, far, far * 0.6f);

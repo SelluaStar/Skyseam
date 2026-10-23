@@ -20,6 +20,9 @@ import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
+import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
+import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -218,8 +221,13 @@ public final class Tides {
             }
         }
         if (now.current() != null) {
+            // A title as it begins: its name in its colour, and what is happening.
+            Tide tide = now.current().tide();
+            Component title = tide.title().copy().withStyle(style -> style.withColor(tide.colour()).withBold(true));
             for (ServerPlayer player : players(halcyon)) {
-                player.displayClientMessage(Component.translatable("tide.skyseam.begins." + now.current().tide().id()), true);
+                player.connection.send(new ClientboundSetTitlesAnimationPacket(10, 70, 30));
+                player.connection.send(new ClientboundSetSubtitleTextPacket(Component.translatable("tide.skyseam.begins." + tide.id())));
+                player.connection.send(new ClientboundSetTitleTextPacket(title));
             }
         }
         for (ServerPlayer player : players(halcyon)) {
@@ -250,6 +258,7 @@ public final class Tides {
         if (gale > 0) {
             crosswind(level, gale);
         }
+        TideEffects.tick(level);
         double prismfall = strength(level, Tide.PRISMFALL);
         int every = setting(SkyseamConfig.TIDES_PRISM_DUST_EVERY);
         if (prismfall > 0.5 && every > 0 && level.getGameTime() % 20 == 0) {
@@ -330,7 +339,13 @@ public final class Tides {
         }
     }
 
+    /** Leaving the Halcyon, a creature gets its usual gravity back. */
+    public static void onChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        TideEffects.release(event.getEntity());
+    }
+
     public static void onServerStopped(ServerStoppedEvent event) {
+        TideEffects.clear();
         cached = TideSchedule.Forecast.CALM;
         cachedAt = Long.MIN_VALUE;
         sent = null;

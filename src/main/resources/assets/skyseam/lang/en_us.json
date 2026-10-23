@@ -377,5 +377,8 @@
   "subtitles.skyseam.ambience.gale": "A gale howls",
   "subtitles.skyseam.ambience.bloom": "Warm air hums",
   "subtitles.skyseam.ambience.stillness": "The air hangs still",
-  "subtitles.skyseam.ambience.hush": "Far-off tones"
+  "subtitles.skyseam.ambience.hush": "Far-off tones",
+  "death.attack.skyseam.prismfall": "%1$s was cut to ribbons by falling glass",
+  "death.attack.skyseam.prismfall.player": "%1$s was cut to ribbons by falling glass while fighting %2$s",
+  "hud.skyseam.tide.left": "%s, %s min"
 }
