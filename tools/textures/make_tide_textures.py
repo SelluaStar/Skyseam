@@ -8,6 +8,10 @@ Writes, under src/main/resources/assets/skyseam/:
   textures/block/tide_vane_brass.png      16x16, brushed brass for the Tide Vane's post, arms and arrow
   textures/block/tide_vane_<tide>.png     16x16, the faceted gem atop the vane, one colour for each Tide it shows (Calm,
                                           Prismfall, Gale, Bloom, Stillness)
+  textures/environment/glass_rain.png     64x256, the Prismfall's falling glass as weather sheets, white (tinted by code):
+                                          four strips of thin slivers and glints, like vanilla's rain.png
+  textures/environment/pollen_fall.png    64x256, the Bloom's drifting pollen, soft flecks in four strips, like snow.png
+  textures/environment/gale_streaks.png   64x256, the Gale's racing air, long thin streaks in four strips
 and a contact sheet in build/previews/tide_textures.png. Deterministic.
 """
 import random
@@ -134,6 +138,38 @@ def gem(name):
     return img
 
 
+def weather_sheet(seed, kind):
+    """A weather sheet: four 16-wide strips, tiling top to bottom."""
+    rng = random.Random(seed)
+    img = Image.new("RGBA", (64, 256), CLEAR)
+    def put(x, y, a):
+        x %= 64
+        y %= 256
+        r, g, b, old = img.getpixel((x, y))
+        img.putpixel((x, y), (255, 255, 255, max(old, int(a))))
+    for strip in range(4):
+        for _ in range({"glass": 34, "pollen": 46, "gale": 26}[kind]):
+            x = strip * 16 + rng.randrange(1, 15)
+            y = rng.randrange(256)
+            if kind == "glass":
+                length = rng.choice((3, 4, 5, 6))
+                for k in range(length):
+                    put(x, y + k, 120 + 135 * k / (length - 1))
+                if rng.random() < 0.25:
+                    for dx, dy, a in ((-1, length - 1, 160), (1, length - 1, 160), (0, length, 200)):
+                        put(x + dx, y + dy, a)
+            elif kind == "pollen":
+                put(x, y, 255)
+                if rng.random() < 0.5:
+                    for dx, dy in ((1, 0), (0, 1), (1, 1)):
+                        put(x + dx, y + dy, 150)
+            else:
+                length = rng.choice((10, 16, 24, 32))
+                for k in range(length):
+                    put(x, y + k, 200 * min(1, k / 3, (length - k) / 6))
+    return img
+
+
 def main():
     out = {
         "item/prism_dust": prism_dust(),
@@ -145,6 +181,9 @@ def main():
     }
     for name in GEMS:
         out["block/tide_vane_" + name] = gem(name)
+    out["environment/glass_rain"] = weather_sheet(4113, "glass")
+    out["environment/pollen_fall"] = weather_sheet(4114, "pollen")
+    out["environment/gale_streaks"] = weather_sheet(4115, "gale")
     for name, img in out.items():
         path = ASSETS / "textures" / f"{name}.png"
         path.parent.mkdir(parents=True, exist_ok=True)
