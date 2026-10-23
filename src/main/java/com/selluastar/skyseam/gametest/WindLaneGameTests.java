@@ -7,7 +7,9 @@ import com.selluastar.skyseam.Skyseam;
 import com.selluastar.skyseam.config.SkyseamConfig;
 import com.selluastar.skyseam.external.SableBridge;
 import com.selluastar.skyseam.external.Ship;
-import com.selluastar.skyseam.halcyon.LanternSun;
+import com.selluastar.skyseam.halcyon.tide.Tide;
+import com.selluastar.skyseam.halcyon.tide.TideSchedule;
+import com.selluastar.skyseam.halcyon.tide.Tides;
 import com.selluastar.skyseam.halcyon.wind.WindLane;
 import com.selluastar.skyseam.halcyon.wind.WindLaneNetwork;
 import com.selluastar.skyseam.halcyon.wind.WindLanes;
@@ -151,20 +153,31 @@ public final class WindLaneGameTests {
         return false;
     }
 
-    /** The wind blows its usual way through the day and back through the Hush, turning smoothly round each change. */
+    /**
+     * The wind blows its usual way in Calm and back while a Tide runs: harder in a Gale, not at all in a Stillness;
+     * turning smoothly as each comes in and dies away.
+     */
     @GameTest(template = EMPTY)
-    public static void windTurnsRoundInTheHush(GameTestHelper helper) {
-        int phase = LanternSun.PHASE_TICKS;
-        helper.assertTrue(WindLanes.flow(phase / 2.0) == 1, "Dawn's wind is " + WindLanes.flow(phase / 2.0));
-        helper.assertTrue(WindLanes.flow(2.5 * phase) == 1, "Dusk's wind is " + WindLanes.flow(2.5 * phase));
-        helper.assertTrue(WindLanes.flow(3.5 * phase) == -1, "The Hush's wind is " + WindLanes.flow(3.5 * phase));
-        helper.assertTrue(Math.abs(WindLanes.flow(3.0 * phase)) < 0.01, "The wind isn't half turned as the Hush begins: " + WindLanes.flow(3.0 * phase));
-        helper.assertTrue(Math.abs(WindLanes.flow(0)) < 0.01, "The wind isn't half turned as the day begins: " + WindLanes.flow(0));
-        double previous = WindLanes.flow(0);
-        for (int clock = 20; clock <= LanternSun.CYCLE_TICKS; clock += 20) {
-            double now = WindLanes.flow(clock);
-            helper.assertTrue(Math.abs(now - previous) < 0.12, "The wind jumps from " + previous + " to " + now + " at " + clock);
-            previous = now;
+    public static void windTurnsWithTheTides(GameTestHelper helper) {
+        long start = 10_000;
+        long end = 20_000;
+        for (Tide tide : new Tide[] {Tide.PRISMFALL, Tide.GALE, Tide.BLOOM, Tide.STILLNESS}) {
+            TideSchedule.Forecast forecast = new TideSchedule.Forecast(new TideSchedule.Window(tide, start, end), null);
+            helper.assertTrue(WindLanes.flow(forecast, start - 100) == 1, "Before the " + tide + " the wind is " + WindLanes.flow(forecast, start - 100));
+            helper.assertTrue(WindLanes.flow(forecast, end + 100) == 1, "After the " + tide + " the wind is " + WindLanes.flow(forecast, end + 100));
+            double expected = switch (tide) {
+                case STILLNESS -> 0;
+                case GALE -> -WindLanes.GALE_BOOST;
+                default -> -1;
+            };
+            double middle = WindLanes.flow(forecast, (start + end) / 2.0);
+            helper.assertTrue(Math.abs(middle - expected) < 1.0e-6, "In the " + tide + " the wind is " + middle + ", not " + expected);
+            double previous = WindLanes.flow(forecast, start - 200);
+            for (long time = start - 180; time <= end + 200; time += 20) {
+                double now = WindLanes.flow(forecast, time);
+                helper.assertTrue(Math.abs(now - previous) < 0.15, "In the " + tide + " the wind jumps from " + previous + " to " + now + " at " + time);
+                previous = now;
+            }
         }
         helper.succeed();
     }
@@ -197,7 +210,7 @@ public final class WindLaneGameTests {
                     pig[0] = TestShips.require(EntityType.PIG.create(level), "No pig");
                     pig[0].moveTo(dropAt.x, dropAt.y, dropAt.z);
                     level.addFreshEntity(pig[0]);
-                    flow[0] = WindLanes.flow(LanternSun.clock(level.getGameTime(), LanternSun.offset(level.getServer())));
+                    flow[0] = WindLanes.flow(Tides.forecast(level.getServer()), level.getGameTime());
                 })
                 .thenExecuteAfter(16, () -> {
                     double drift = pig[0].getDeltaMovement().x * 20;
@@ -212,7 +225,7 @@ public final class WindLaneGameTests {
                     double beside = SableBridge.linearVelocity(ships[1]).length();
                     Skyseam.LOGGER.info("Skyseam wind lane: after 3 s the raft in it goes {} blocks/s along it, the one beside it {} (the wind {} blocks/s)",
                             String.format("%.1f", along), String.format("%.1f", beside), String.format("%.1f", WindLanes.windSpeed(lane,
-                                    LanternSun.clock(level.getGameTime(), LanternSun.offset(level.getServer())))));
+                                    WindLanes.flow(Tides.forecast(level.getServer()), level.getGameTime()))));
                     if (Math.abs(flow[0]) > 0.5) {
                         helper.assertTrue(along * Math.signum(flow[0]) > 4, "The raft in the lane goes only " + along + " blocks/s along it");
                     }

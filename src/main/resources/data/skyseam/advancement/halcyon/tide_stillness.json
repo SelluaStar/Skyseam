@@ -1,0 +1,22 @@
+{
+  "parent": "skyseam:halcyon/root",
+  "display": {
+    "icon": {
+      "id": "skyseam:tide_vane"
+    },
+    "title": {
+      "translate": "advancements.skyseam.halcyon.tide_stillness.title"
+    },
+    "description": {
+      "translate": "advancements.skyseam.halcyon.tide_stillness.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "lived_through": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

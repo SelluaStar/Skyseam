@@ -24,6 +24,8 @@ public final class SkyseamNetwork {
                 (payload, context) -> com.selluastar.skyseam.client.halcyon.vortex.ClientVortices.accept(payload.vortices()));
         registrar.playToClient(WindLanePayload.TYPE, WindLanePayload.STREAM_CODEC,
                 (payload, context) -> com.selluastar.skyseam.client.halcyon.wind.ClientWindLanes.accept(payload));
+        registrar.playToClient(TidePayload.TYPE, TidePayload.STREAM_CODEC,
+                (payload, context) -> com.selluastar.skyseam.client.halcyon.tide.ClientTides.accept(payload));
         registrar.playToClient(MurmurPayload.TYPE, MurmurPayload.STREAM_CODEC,
                 (payload, context) -> com.selluastar.skyseam.client.flora.ClientMurmurberries.ripple(payload));
     }

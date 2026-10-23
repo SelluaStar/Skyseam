@@ -1,0 +1,185 @@
+{
+ "settle": 200,
+ "steps": [
+  {
+   "command": "gamemode spectator"
+  },
+  {
+   "command": "gamerule doDaylightCycle false"
+  },
+  {
+   "command": "skyseam halcyon time set noon"
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 200
+  },
+  {
+   "command": "gamerule sendCommandFeedback true"
+  },
+  {
+   "command": "execute at @s run fill ~-5 ~-1 ~-5 ~5 ~-1 ~5 skyseam:stillstone_bricks"
+  },
+  {
+   "command": "execute at @s run setblock ~1 ~ ~3 skyseam:tide_vane"
+  },
+  {
+   "command": "gamemode creative"
+  },
+  {
+   "command": "execute at @s run tp @s ~ ~ ~ facing ~1 ~0.8 ~3"
+  },
+  {
+   "command": "skyseam halcyon tide stop"
+  },
+  {
+   "command": "skyseam halcyon tide"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "shot": "tide_calm"
+  },
+  {
+   "subtitles": true
+  },
+  {
+   "gui": true
+  },
+  {
+   "command": "skyseam halcyon tide start prismfall 3"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "shot": "tide_prismfall_hud"
+  },
+  {
+   "wait": 660
+  },
+  {
+   "gui": false
+  },
+  {
+   "command": "execute at @s run tp @s ~ ~ ~ ~ -25"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "shot": "tide_prismfall_sky"
+  },
+  {
+   "command": "execute at @s run tp @s ~ ~ ~ facing ~1 ~0.8 ~3"
+  },
+  {
+   "wait": 300
+  },
+  {
+   "shot": "tide_prismfall"
+  },
+  {
+   "command": "kill @e[type=item,distance=..60]"
+  },
+  {
+   "command": "skyseam halcyon lanes list"
+  },
+  {
+   "command": "skyseam noise watch"
+  },
+  {
+   "command": "skyseam noise emit 30 ping"
+  },
+  {
+   "wait": 5
+  },
+  {
+   "command": "skyseam halcyon tide start gale 3"
+  },
+  {
+   "wait": 700
+  },
+  {
+   "shot": "tide_gale"
+  },
+  {
+   "command": "skyseam halcyon lanes list"
+  },
+  {
+   "command": "skyseam noise emit 30 ping"
+  },
+  {
+   "command": "skyseam halcyon tide start bloom 3"
+  },
+  {
+   "wait": 700
+  },
+  {
+   "shot": "tide_bloom"
+  },
+  {
+   "command": "skyseam halcyon tide start stillness 3"
+  },
+  {
+   "wait": 700
+  },
+  {
+   "shot": "tide_stillness"
+  },
+  {
+   "command": "skyseam halcyon lanes list"
+  },
+  {
+   "command": "skyseam noise emit 30 ping"
+  },
+  {
+   "wait": 5
+  },
+  {
+   "command": "execute at @s run tp @s ~ ~ ~ ~ 50"
+  },
+  {
+   "wait": 5
+  },
+  {
+   "shot": "noise_ring_stillness"
+  },
+  {
+   "command": "execute at @s run tp @s ~ ~ ~ facing ~1 ~0.8 ~3"
+  },
+  {
+   "command": "skyseam halcyon tide start bloom 1"
+  },
+  {
+   "wait": 1300
+  },
+  {
+   "command": "execute if entity @s[advancements={skyseam:halcyon/tide_bloom=true}] run say lived through a Bloom"
+  },
+  {
+   "command": "skyseam halcyon tide"
+  },
+  {
+   "command": "skyseam halcyon time set midnight"
+  },
+  {
+   "wait": 200
+  },
+  {
+   "shot": "tide_calm_hush"
+  },
+  {
+   "quit": true
+  }
+ ]
+}

@@ -678,6 +678,150 @@ MURMURBERRY = ([(f"chime_{k + 1}", (lambda k=k: murmurberry_chime(k))) for k in 
                + [(f"place_{k + 1}", (lambda k=k: murmurberry_place(k))) for k in range(2)])
 
 
+# ---- The Tides (docs/DECISIONS.md K111): the Halcyon's ambience, a loop for Calm, each Tide and the Hush (spec section
+# 21: "one synthesized loop per Tide and one for the Hush"), and the swell as a Tide turns -------------------------------
+
+AMBIENCE_SECONDS = 16.0
+
+
+def looped_air(build, seconds=AMBIENCE_SECONDS, fade=1.0):
+    """A noise layer `seconds` long that joins its own start: `build(t)` makes it over a little longer, and its tail is
+    crossfaded into its head."""
+    long_t = t_axis(seconds + fade)
+    air = build(long_t)
+    n = int(fade * RATE)
+    head = air[:n].copy()
+    air = air[n:]
+    ramp = np.linspace(0, 1, n)
+    air[-n:] = air[-n:] * (1 - ramp) + head * ramp
+    return air
+
+
+def folded(x, seconds=AMBIENCE_SECONDS):
+    """Folds whatever rings on past `seconds` back onto the start, so a chime near the end carries over the loop point."""
+    n = int(seconds * RATE)
+    out = x[:n].copy()
+    tail = x[n:]
+    out[:len(tail)] += tail[:n]
+    return out
+
+
+def hum(t, cycles_and_amps, seconds=AMBIENCE_SECONDS):
+    """Sine tones each a whole number of cycles in `seconds`, so they loop cleanly, each swelling slowly on its own."""
+    out = np.zeros(len(t))
+    for k, (cycles, amp) in enumerate(cycles_and_amps):
+        swell = 0.6 + 0.4 * np.sin(2 * np.pi * (1 + k % 2) * t / seconds + k * 1.7)
+        out += amp * swell * np.sin(2 * np.pi * (cycles / seconds) * t)
+    return out
+
+
+def chimes(times_freqs, decay, amp, seconds=AMBIENCE_SECONDS, wet=0.35):
+    """Soft glass chimes struck at the given times, in a little space, folded over the loop point."""
+    t = t_axis(seconds + decay * 6)
+    x = np.zeros(len(t))
+    for when, f0 in times_freqs:
+        start = int(when * RATE)
+        tt = t[: len(t) - start]
+        x[start:] += bell(tt, f0, ratios=(1, 2.76, 5.4), amps=(1, 0.3, 0.1), decay=decay)
+    return folded(reverb(x, seconds=2.5, wet=wet), seconds) * amp
+
+
+def ambience_calm():
+    """Calm: a light breeze rising and falling, air high above it, a soft pad of A, C sharp and E swelling slowly under
+    it, and now and then a far-off glass chime."""
+    gust = lambda t: 0.6 + 0.4 * np.sin(2 * np.pi * t / AMBIENCE_SECONDS) * np.sin(2 * np.pi * 2 * t / AMBIENCE_SECONDS + 0.5)
+    breeze = looped_air(lambda t: swept_noise(t, 360 + 120 * np.sin(2 * np.pi * 2 * t / AMBIENCE_SECONDS), q=0.7, seed=111) * gust(t))
+    high = looped_air(lambda t: swept_noise(t, 2400 + 600 * np.sin(2 * np.pi * 3 * t / AMBIENCE_SECONDS + 1), q=1.2, seed=112) * gust(t)) * 0.12
+    t = t_axis(AMBIENCE_SECONDS)
+    pad = hum(t, ((3520, 0.08), (4440, 0.05), (5280, 0.06)))
+    glass = chimes(((2.3, 1318.5), (9.1, 880.0), (13.7, 1108.7)), decay=1.4, amp=0.05)
+    x = breeze * 0.5 + high + pad + glass
+    x -= np.mean(x)
+    return x / np.max(np.abs(x)) * PEAK * 0.6
+
+
+def ambience_prismfall():
+    """Prismfall: the hiss of glass falling like fine rain, and a thousand tiny tinkles as the shards land, over a low
+    breeze."""
+    hiss = looped_air(lambda t: swept_noise(t, 5200 + 500 * np.sin(2 * np.pi * 2 * t / AMBIENCE_SECONDS), q=0.8, seed=121)) * 0.35
+    hiss += looped_air(lambda t: swept_noise(t, 2900 + 300 * np.sin(2 * np.pi * 3 * t / AMBIENCE_SECONDS), q=1.0, seed=122)) * 0.18
+    breeze = looped_air(lambda t: swept_noise(t, 340 + 90 * np.sin(2 * np.pi * 2 * t / AMBIENCE_SECONDS), q=0.7, seed=123)) * 0.3
+    t = t_axis(AMBIENCE_SECONDS + 3)
+    tinkles = np.zeros(len(t))
+    for _ in range(90):
+        start = int(rng.uniform(0, AMBIENCE_SECONDS) * RATE)
+        tt = t[: len(t) - start]
+        tinkles[start:] += bell(tt, rng.uniform(2200, 5200), ratios=(1, 2.76), amps=(1, 0.25), decay=rng.uniform(0.12, 0.35)) * rng.uniform(0.02, 0.09)
+    tinkles = folded(reverb(tinkles, seconds=1.6, wet=0.3))
+    x = hiss + breeze + tinkles
+    x -= np.mean(x)
+    return x / np.max(np.abs(x)) * PEAK * 0.7
+
+
+def ambience_gale():
+    """Gale: a strong wind roaring in gusts, a howl rising and falling through it, a thin whistle high above and the
+    flutter of air past everything."""
+    def gusts(t):
+        return 0.55 + 0.45 * np.sin(2 * np.pi * 3 * t / AMBIENCE_SECONDS) * np.sin(2 * np.pi * t / AMBIENCE_SECONDS + 0.4)
+    roar = looped_air(lambda t: swept_noise(t, 230 + 110 * gusts(t), q=0.6, seed=131) * gusts(t) * (1 + 0.15 * np.sin(2 * np.pi * 11 * t)))
+    howl = looped_air(lambda t: swept_noise(t, 700 + 260 * np.sin(2 * np.pi * 2 * t / AMBIENCE_SECONDS + 1), q=9.0, seed=132) * gusts(t) ** 2) * 0.3
+    whistle = looped_air(lambda t: swept_noise(t, 2300 + 500 * np.sin(2 * np.pi * 5 * t / AMBIENCE_SECONDS), q=7.0, seed=133) * gusts(t)) * 0.09
+    x = roar + howl + whistle
+    x -= np.mean(x)
+    return x / np.max(np.abs(x)) * PEAK * 0.8
+
+
+def ambience_bloom():
+    """Bloom: a soft, warm breeze, a pad of C, E, G and C swelling gently, and bright little chimes now and then, like
+    flowers opening."""
+    breeze = looped_air(lambda t: swept_noise(t, 520 + 140 * np.sin(2 * np.pi * 2 * t / AMBIENCE_SECONDS), q=0.7, seed=141)) * 0.35
+    t = t_axis(AMBIENCE_SECONDS)
+    pad = hum(t, ((4186, 0.08), (5274, 0.06), (6272, 0.06), (8372, 0.025)))
+    pentatonic = (1046.5, 1174.66, 1318.5, 1568.0, 1760.0)
+    shimmer = chimes([(0.8 + 1.9 * k + rng.uniform(-0.3, 0.3), pentatonic[int(rng.integers(5))]) for k in range(8)], decay=0.9, amp=0.06)
+    x = breeze + pad + shimmer
+    x -= np.mean(x)
+    return x / np.max(np.abs(x)) * PEAK * 0.6
+
+
+def ambience_stillness():
+    """Stillness: no wind at all. A deep, slow drone, low A beating against itself, felt more than heard, and the faint
+    pressure of still air."""
+    t = t_axis(AMBIENCE_SECONDS)
+    drone = hum(t, ((880, 0.5), (884, 0.4), (1320, 0.18), (1760, 0.1)))
+    air = looped_air(lambda tt: swept_noise(tt, 180 + 40 * np.sin(2 * np.pi * tt / AMBIENCE_SECONDS), q=0.5, seed=151)) * 0.06
+    x = drone + air
+    x -= np.mean(x)
+    return x / np.max(np.abs(x)) * PEAK * 0.5
+
+
+def ambience_hush():
+    """The Hush: nearly silent on purpose (spec section 7, sound is a channel there). The faintest low air, and twice a
+    loop a deep, distant tone, like a bell very far away."""
+    air = looped_air(lambda t: swept_noise(t, 260 + 60 * np.sin(2 * np.pi * t / AMBIENCE_SECONDS), q=0.6, seed=161))
+    far = chimes(((3.0, 110.0), (11.0, 164.8)), decay=3.0, amp=1.0, wet=0.5)
+    x = air * 0.6 + far * 0.4
+    x -= np.mean(x)
+    return x / np.max(np.abs(x)) * PEAK * 0.35
+
+
+def tide_turn():
+    """A Tide turning: a breath of air swelling up and away, and a soft glass chord (C, E, G) ringing out through it."""
+    seconds = 3.5
+    t = t_axis(seconds)
+    swell = np.minimum(1, t / 1.2) * np.exp(-np.maximum(0, t - 1.2) / 0.6)
+    whoosh = svf(rng.standard_normal(len(t)), 300 + 2100 * np.minimum(1, t / 1.4), q=1.1) * swell * 0.5
+    chord = np.zeros(len(t))
+    start = int(0.9 * RATE)
+    for f0 in (523.25, 659.25, 783.99):
+        chord[start:] += bell(t[: len(t) - start], f0, decay=1.4) * 0.3
+    return finish_level(reverb(whoosh + chord, seconds=2.2, wet=0.35), -18, fade_out=0.4)
+
+
+TIDE = [("turn", tide_turn), ("ambience_calm", ambience_calm), ("ambience_prismfall", ambience_prismfall), ("ambience_gale", ambience_gale),
+        ("ambience_bloom", ambience_bloom), ("ambience_stillness", ambience_stillness), ("ambience_hush", ambience_hush)]
+
+
 APERTURE = [("charge", aperture_charge), ("ready", aperture_ready), ("mount", aperture_mount)]
 MIRROR_SEA = [("rebound", mirror_sea_rebound)]
 SKYCHART = [("unfold", skychart_unfold)]
@@ -688,11 +832,12 @@ SEAM = (
     + [(f"thread_snap_{k + 1}", (lambda k=k: seam_thread_snap(k))) for k in range(5)]
     + [("hum", seam_hum), ("ring_pulse", seam_ring_pulse), ("crossing", seam_crossing), ("mend", seam_mend)]
 )
-LOOPS = {"seam/hum", "aperture/charge", "flux_vortex/loop", "wind_lane/loop"}
+LOOPS = {"seam/hum", "aperture/charge", "flux_vortex/loop", "wind_lane/loop"} | {f"tide/{name}" for name, _ in TIDE if name.startswith("ambience")}
 # The Seam's closing crackle has its own folder (sounds/closing/), see docs/CLOSING-AUDIO.md.
 CLOSING = [("close", seam_close)]
 GROUPS = {"seam": SEAM, "closing": CLOSING, "aperture": APERTURE, "skychart": SKYCHART, "mirror_sea": MIRROR_SEA,
-          "flux_vortex": FLUX_VORTEX, "springbloom": SPRINGBLOOM, "murmurberry": MURMURBERRY, "wind_lane": WIND_LANE}
+          "flux_vortex": FLUX_VORTEX, "springbloom": SPRINGBLOOM, "murmurberry": MURMURBERRY, "wind_lane": WIND_LANE,
+          "tide": TIDE}
 
 
 def main(argv):

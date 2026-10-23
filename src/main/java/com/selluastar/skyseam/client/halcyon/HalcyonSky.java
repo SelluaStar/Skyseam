@@ -10,6 +10,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.selluastar.skyseam.Skyseam;
+import com.selluastar.skyseam.client.halcyon.tide.ClientTides;
 import com.selluastar.skyseam.client.halcyon.sky.Atmosphere;
 import com.selluastar.skyseam.client.halcyon.sky.SkyBodies;
 import com.selluastar.skyseam.client.halcyon.sky.SkyDraw;
@@ -90,14 +91,15 @@ public final class HalcyonSky extends DimensionSpecialEffects {
 
     /**
      * The sky colour above the horizon at an elevation (degrees) for the clock, blended across phase changes and
-     * towards the Hush's palette by {@code hush} (the Hush ring's standing dusk).
+     * towards the Hush's palette by {@code hush} (the Hush ring's standing dusk), and tinted by the Tide running.
      */
     static float[] skyColour(double clock, float elevation, float hush) {
         int phase = (int) (Math.floorMod((long) clock, LanternSun.CYCLE_TICKS) / LanternSun.PHASE_TICKS);
         float progress = LanternSun.phaseProgress((long) clock);
         float blend = SkyDraw.smooth(Mth.clamp((progress - 0.75f) / 0.25f, 0, 1));
         float[] colour = mix(paletteAt(PALETTES[phase], elevation), paletteAt(PALETTES[(phase + 1) % 4], elevation), blend);
-        return hush > 0 ? mix(colour, paletteAt(PALETTES[3], elevation), hush) : colour;
+        // And towards the Tide running (docs/DECISIONS.md K111).
+        return ClientTides.tint(hush > 0 ? mix(colour, paletteAt(PALETTES[3], elevation), hush) : colour);
     }
 
     /** The mirrored sea far below the horizon: the sky above mirrored in deep blue water, a little darker as it nears. */

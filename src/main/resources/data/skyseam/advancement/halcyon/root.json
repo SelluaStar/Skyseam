@@ -1,0 +1,24 @@
+{
+  "display": {
+    "icon": {
+      "id": "skyseam:stillstone_bricks"
+    },
+    "title": {
+      "translate": "advancements.skyseam.halcyon.root.title"
+    },
+    "description": {
+      "translate": "advancements.skyseam.halcyon.root.description"
+    },
+    "background": "skyseam:textures/block/stillstone_bricks.png",
+    "show_toast": true,
+    "announce_to_chat": false
+  },
+  "criteria": {
+    "entered": {
+      "trigger": "minecraft:changed_dimension",
+      "conditions": {
+        "to": "skyseam:halcyon"
+      }
+    }
+  }
+}

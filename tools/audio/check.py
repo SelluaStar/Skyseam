@@ -24,7 +24,7 @@ SOUNDS = ASSETS / "sounds"
 OUT = ROOT / "build" / "audio-check"
 RATE = 44100
 # Files that loop. Their join must be smooth.
-LOOPS = {"seam/hum", "aperture/charge", "flux_vortex/loop", "wind_lane/loop"}
+LOOPS = {"seam/hum", "aperture/charge", "flux_vortex/loop", "wind_lane/loop", "tide/ambience_calm", "tide/ambience_prismfall", "tide/ambience_gale", "tide/ambience_bloom", "tide/ambience_stillness", "tide/ambience_hush"}
 
 
 def spectrogram(data, path):
@@ -76,11 +76,13 @@ def check_file(path, problems):
         problems.append(f"{rel}: DC offset {dc:.4f}")
     if rel in LOOPS:
         n = int(0.01 * rate)
-        jump = abs(mono[-1] - mono[0]) / max(peak, 1e-9)
+        # A click is a jump bigger than the sound's own movement from one sample to the next: bright hiss moves a lot.
+        own = float(np.percentile(np.abs(np.diff(mono)), 99.9)) if len(mono) > 1 else 0.0
+        jump = max(0.0, abs(mono[-1] - mono[0]) - own) / max(peak, 1e-9)
         rms_end = float(np.sqrt(np.mean(mono[-n:] ** 2)))
         rms_start = float(np.sqrt(np.mean(mono[:n] ** 2)))
         level_step = abs(rms_end - rms_start) / max(peak, 1e-9)
-        notes.append(f"loop join: sample jump {jump:.3f}, level step {level_step:.3f}")
+        notes.append(f"loop join: sample jump {jump:.3f} beyond its own, level step {level_step:.3f}")
         if jump > 0.1 or level_step > 0.1:
             problems.append(f"{rel}: the loop join jumps (sample {jump:.3f}, level {level_step:.3f} of peak)")
     OUT.mkdir(parents=True, exist_ok=True)

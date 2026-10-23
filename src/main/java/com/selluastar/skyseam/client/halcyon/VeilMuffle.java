@@ -2,7 +2,9 @@ package com.selluastar.skyseam.client.halcyon;
 
 import org.jetbrains.annotations.Nullable;
 
+import com.selluastar.skyseam.client.halcyon.tide.ClientTides;
 import com.selluastar.skyseam.halcyon.Veil;
+import com.selluastar.skyseam.halcyon.tide.Tide;
 import com.selluastar.skyseam.world.HalcyonLayout;
 
 import net.minecraft.client.Minecraft;
@@ -18,13 +20,16 @@ import net.neoforged.neoforge.client.event.sound.PlaySoundEvent;
 
 /**
  * Quieter places (spec section 7): in the Veil, world sounds play quieter the deeper the listener is in it, and the
- * Hush has muted sound throughout.
+ * Hush has muted sound throughout. In a Stillness every sound in the Halcyon deepens, played lower (docs/DECISIONS.md
+ * K111).
  */
 public final class VeilMuffle {
     /** At the rim, sounds play at this share of their volume. */
     private static final float DEEPEST = 0.35f;
     /** How much quieter sounds are inside the Hush. */
     private static final float HUSH_MUTE = 0.35f;
+    /** How much lower sounds play at the height of a Stillness. */
+    private static final float STILLNESS_DEEPEN = 0.2f;
 
     private VeilMuffle() {}
 
@@ -39,13 +44,14 @@ public final class VeilMuffle {
         float veil = Veil.thickness(at.x, at.y, at.z);
         float hush = ClientHush.at(at.x, at.y, at.z);
         float factor = (1 - (1 - DEEPEST) * veil) * (1 - HUSH_MUTE * hush);
-        if (factor < 0.999f) {
-            event.setSound(new Muffled(sound, factor));
+        float pitch = 1 - STILLNESS_DEEPEN * ClientTides.strength(Tide.STILLNESS, 0);
+        if (factor < 0.999f || pitch < 0.999f) {
+            event.setSound(new Muffled(sound, factor, pitch));
         }
     }
 
-    /** A sound played at part of its volume; everything else is the original's. */
-    private record Muffled(SoundInstance sound, float factor) implements SoundInstance {
+    /** A sound played at part of its volume and pitch; everything else is the original's. */
+    private record Muffled(SoundInstance sound, float factor, float deepen) implements SoundInstance {
         @Override
         public ResourceLocation getLocation() {
             return sound.getLocation();
@@ -89,7 +95,7 @@ public final class VeilMuffle {
 
         @Override
         public float getPitch() {
-            return sound.getPitch();
+            return sound.getPitch() * deepen;
         }
 
         @Override

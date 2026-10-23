@@ -1,0 +1,110 @@
+{
+ "settle": 200,
+ "steps": [
+  {
+   "command": "gamemode spectator"
+  },
+  {
+   "command": "gamerule doDaylightCycle false"
+  },
+  {
+   "command": "skyseam halcyon time set noon"
+  },
+  {
+   "command": "skyseam halcyon tp highlands"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "skyseam halcyon tp highlands"
+  },
+  {
+   "wait": 200
+  },
+  {
+   "command": "gamerule sendCommandFeedback true"
+  },
+  {
+   "command": "gamemode survival"
+  },
+  {
+   "command": "execute at @s positioned over motion_blocking run tp @s ~ ~ ~"
+  },
+  {
+   "wait": 20
+  },
+  {
+   "command": "execute at @s if block ~ ~-1 ~ minecraft:water run say over water"
+  },
+  {
+   "command": "execute at @s unless block ~ ~-1 ~ minecraft:water run say on land"
+  },
+  {
+   "command": "skyseam halcyon tide stop"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "command": "skyseam noise watch"
+  },
+  {
+   "command": "data get entity @s OnGround"
+  },
+  {
+   "command": "data get entity @s Pos"
+  },
+  {
+   "sprint": 30
+  },
+  {
+   "command": "data get entity @s Pos"
+  },
+  {
+   "wait": 10
+  },
+  {
+   "command": "gamemode creative"
+  },
+  {
+   "subtitles": true
+  },
+  {
+   "gui": true
+  },
+  {
+   "wait": 20
+  },
+  {
+   "command": "skyseam halcyon tide start prismfall 3"
+  },
+  {
+   "wait": 30
+  },
+  {
+   "shot": "tide_land_prismfall_begins"
+  },
+  {
+   "gui": false
+  },
+  {
+   "wait": 900
+  },
+  {
+   "shot": "tide_land_prismfall"
+  },
+  {
+   "command": "execute at @s run kill @e[type=item,distance=..48]"
+  },
+  {
+   "command": "skyseam halcyon tide stop"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "quit": true
+  }
+ ]
+}

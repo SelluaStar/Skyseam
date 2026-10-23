@@ -1,0 +1,22 @@
+{
+  "parent": "skyseam:halcyon/root",
+  "display": {
+    "icon": {
+      "id": "skyseam:petal_carpet"
+    },
+    "title": {
+      "translate": "advancements.skyseam.halcyon.tide_bloom.title"
+    },
+    "description": {
+      "translate": "advancements.skyseam.halcyon.tide_bloom.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true
+  },
+  "criteria": {
+    "lived_through": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

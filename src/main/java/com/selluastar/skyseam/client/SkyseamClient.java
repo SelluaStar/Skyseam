@@ -20,11 +20,15 @@ import com.selluastar.skyseam.client.halcyon.VeilMuffle;
 import com.selluastar.skyseam.client.halcyon.vortex.ClientVortices;
 import com.selluastar.skyseam.client.halcyon.vortex.FarDepth;
 import com.selluastar.skyseam.client.halcyon.vortex.VortexRenderer;
+import com.selluastar.skyseam.client.halcyon.HalcyonAmbience;
+import com.selluastar.skyseam.client.halcyon.tide.ClientTides;
 import com.selluastar.skyseam.client.halcyon.wind.ClientWindLanes;
 import com.selluastar.skyseam.client.halcyon.wind.WindLaneRenderer;
 import com.selluastar.skyseam.client.particle.GlowParticle;
 import com.selluastar.skyseam.client.particle.PetalParticle;
 import com.selluastar.skyseam.client.particle.VortexParticle;
+import com.selluastar.skyseam.client.particle.PollenParticle;
+import com.selluastar.skyseam.client.particle.ShardGlintParticle;
 import com.selluastar.skyseam.client.particle.WindMoteParticle;
 import com.selluastar.skyseam.client.particle.WispParticle;
 import com.selluastar.skyseam.client.seam.SeamClientEffects;
@@ -68,6 +72,8 @@ public final class SkyseamClient {
         NeoForge.EVENT_BUS.addListener(VortexRenderer::onRenderLevel);
         NeoForge.EVENT_BUS.addListener(ClientWindLanes::onClientTick);
         NeoForge.EVENT_BUS.addListener(WindLaneRenderer::onRenderLevel);
+        NeoForge.EVENT_BUS.addListener(ClientTides::onClientTick);
+        NeoForge.EVENT_BUS.addListener(HalcyonAmbience::onClientTick);
         // The in-game config screen (Mods > Skyseam > Config), for the shake and flash strength among others.
         ModList.get().getModContainerById(Skyseam.MOD_ID)
                 .ifPresent(container -> container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new));
@@ -78,6 +84,8 @@ public final class SkyseamClient {
             ClientSkychart.clear();
             ClientVortices.clear();
             ClientWindLanes.clear();
+            ClientTides.clear();
+            HalcyonAmbience.clear();
         });
     }
 
@@ -118,6 +126,8 @@ public final class SkyseamClient {
         event.registerSpriteSet(SkyseamParticles.SPRINGBLOOM_SPORE.get(), SporeParticle.Provider::new);
         event.registerSpriteSet(SkyseamParticles.PETAL.get(), PetalParticle.Provider::new);
         event.registerSpriteSet(SkyseamParticles.WIND_MOTE.get(), WindMoteParticle.Provider::new);
+        event.registerSpriteSet(SkyseamParticles.SHARD_GLINT.get(), ShardGlintParticle.Provider::new);
+        event.registerSpriteSet(SkyseamParticles.POLLEN.get(), PollenParticle.Provider::new);
     }
 
     @SubscribeEvent

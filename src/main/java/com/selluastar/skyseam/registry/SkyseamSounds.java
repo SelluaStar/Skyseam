@@ -73,6 +73,16 @@ public final class SkyseamSounds {
     /** The rush of a wind lane's air, a loop the client plays from the lane's nearest point. */
     public static final DeferredHolder<SoundEvent, SoundEvent> WIND_LANE_LOOP = local("wind_lane.loop");
 
+    // The Tides (docs/DECISIONS.md K111): a swell as one begins or ends, and the Halcyon's ambience, one loop for Calm,
+    // each Tide and the Hush (spec section 21).
+    public static final DeferredHolder<SoundEvent, SoundEvent> TIDE_TURN = local("tide.turn");
+    public static final DeferredHolder<SoundEvent, SoundEvent> AMBIENCE_CALM = local("ambience.calm");
+    public static final DeferredHolder<SoundEvent, SoundEvent> AMBIENCE_PRISMFALL = local("ambience.prismfall");
+    public static final DeferredHolder<SoundEvent, SoundEvent> AMBIENCE_GALE = local("ambience.gale");
+    public static final DeferredHolder<SoundEvent, SoundEvent> AMBIENCE_BLOOM = local("ambience.bloom");
+    public static final DeferredHolder<SoundEvent, SoundEvent> AMBIENCE_STILLNESS = local("ambience.stillness");
+    public static final DeferredHolder<SoundEvent, SoundEvent> AMBIENCE_HUSH = local("ambience.hush");
+
     // The Murmurberry (docs/DECISIONS.md K106, K107).
     /** A Murmurberry lights up: a soft glassy chime, on one of five notes of a pentatonic scale. Played by each client. */
     public static final DeferredHolder<SoundEvent, SoundEvent> MURMURBERRY_CHIME = local("murmurberry.chime");

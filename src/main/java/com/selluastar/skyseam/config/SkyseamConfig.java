@@ -73,6 +73,13 @@ public final class SkyseamConfig {
     public static final ModConfigSpec.DoubleValue WIND_LANES_SPEED;
     public static final ModConfigSpec.DoubleValue WIND_LANES_SHIP_PUSH;
     public static final ModConfigSpec.IntValue WIND_LANES_SPACING;
+    public static final ModConfigSpec.BooleanValue TIDES_ENABLED;
+    public static final ModConfigSpec.IntValue TIDES_INTERVAL;
+    public static final ModConfigSpec.IntValue TIDES_SHORTEST;
+    public static final ModConfigSpec.IntValue TIDES_LONGEST;
+    public static final ModConfigSpec.DoubleValue TIDES_STILLNESS_CHANCE;
+    public static final ModConfigSpec.DoubleValue TIDES_GALE_CROSSWIND;
+    public static final ModConfigSpec.IntValue TIDES_PRISM_DUST_EVERY;
     public static final ModConfigSpec.DoubleValue WIND_LANES_CHANCE;
     public static final ModConfigSpec.IntValue MURMURBERRY_RANGE;
     public static final ModConfigSpec.DoubleValue MURMURBERRY_MAX_DELAY_SECONDS;
@@ -219,6 +226,31 @@ public final class SkyseamConfig {
         WIND_LANES_CHANCE = named(b, "wind_lanes.chance").comment(
                         "The chance a cell has a lane.")
                 .defineInRange("chance", 0.85, 0.0, 1.0);
+        b.pop();
+
+        section(b, "tides");
+        TIDES_ENABLED = named(b, "tides.enabled").comment(
+                        "Whether the Halcyon has its Tides: weather on top of the Lantern-Sun's day. Every so often one runs for a while:",
+                        "Prismfall (glass-shard rain, Prism Dust to gather), Gale (crosswinds, the wind lanes blowing back hard), Bloom",
+                        "(pollen, helpers make twice as much) or, rarely, Stillness (the wind stops, sound deepens, noise carries twice",
+                        "as far). The wind lanes blow back while one runs. Off, only a Tide started by command runs.")
+                .define("enabled", true);
+        TIDES_INTERVAL = named(b, "tides.interval_minutes").comment(
+                        "About how often a Tide comes, in minutes: one in each stretch of this long, starting somewhere in it.")
+                .defineInRange("interval_minutes", 25, 5, 240);
+        TIDES_SHORTEST = named(b, "tides.shortest_minutes").comment("How long a Tide runs, at least, in minutes.")
+                .defineInRange("shortest_minutes", 6, 1, 120);
+        TIDES_LONGEST = named(b, "tides.longest_minutes").comment("How long a Tide runs, at most, in minutes.")
+                .defineInRange("longest_minutes", 10, 1, 120);
+        TIDES_STILLNESS_CHANCE = named(b, "tides.stillness_chance").comment(
+                        "The chance a Tide is a Stillness; the other three share the rest alike.")
+                .defineInRange("stillness_chance", 0.1, 0.0, 1.0);
+        TIDES_GALE_CROSSWIND = named(b, "tides.gale_crosswind").comment(
+                        "How fast a Gale's crosswind blows, in blocks per second, carrying ships and anyone in the air across it. 0 for none.")
+                .defineInRange("gale_crosswind", 6.0, 0.0, 30.0);
+        TIDES_PRISM_DUST_EVERY = named(b, "tides.prism_dust_every").comment(
+                        "In a Prismfall, a pinch of Prism Dust falls near each player in the Halcyon about once in this many seconds. 0 for none.")
+                .defineInRange("prism_dust_every", 12, 0, 600);
         b.pop();
 
         section(b, "murmurberry");

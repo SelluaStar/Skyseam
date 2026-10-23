@@ -30,6 +30,7 @@ final class SkyseamBlockTags extends BlockTagsProvider {
                 SkyseamBlocks.DUSKSTONE_TILES.get(), SkyseamBlocks.CHISELED_DUSKSTONE.get(), SkyseamBlocks.RUNED_DUSKSTONE.get(),
                 SkyseamBlocks.CLIFFSTONE.get(), SkyseamBlocks.OCHRE_CLIFFSTONE.get(), SkyseamBlocks.UMBER_CLIFFSTONE.get(),
                 SkyseamBlocks.MOSSY_CLIFFSTONE.get(), SkyseamBlocks.HORNSTONE.get());
+        tag(BlockTags.MINEABLE_WITH_PICKAXE).add(SkyseamBlocks.TIDE_VANE.get());
         tag(BlockTags.LEAVES).add(SkyseamBlocks.PALE_BLOSSOM_LEAVES.get(), SkyseamBlocks.ELDER_LEAVES.get(), SkyseamBlocks.DUSKWOOD_LEAVES.get(),
                 SkyseamBlocks.SPIREPINE_NEEDLES.get());
         tag(BlockTags.MINEABLE_WITH_HOE).add(SkyseamBlocks.PALE_BLOSSOM_LEAVES.get(), SkyseamBlocks.ELDER_LEAVES.get(),

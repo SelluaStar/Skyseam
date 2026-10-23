@@ -1,0 +1,32 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_prism_dust": {
+      "conditions": {
+        "items": [
+          {
+            "items": "skyseam:prism_dust"
+          }
+        ]
+      },
+      "trigger": "minecraft:inventory_changed"
+    },
+    "has_the_recipe": {
+      "conditions": {
+        "recipe": "skyseam:tide_vane"
+      },
+      "trigger": "minecraft:recipe_unlocked"
+    }
+  },
+  "requirements": [
+    [
+      "has_the_recipe",
+      "has_prism_dust"
+    ]
+  ],
+  "rewards": {
+    "recipes": [
+      "skyseam:tide_vane"
+    ]
+  }
+}
