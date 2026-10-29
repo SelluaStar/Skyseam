@@ -1888,3 +1888,21 @@ DECISIONS K113. The author: the Tides didn't actually do anything yet and weren'
 3. Plant wheat or a sapling, `tide start bloom`, and watch it grow.
 4. `tide start stillness`, then jump off something.
 5. Send screenshots and `logs/latest.log`.
+
+## Floating in the wind lanes (2026-10-29)
+
+DECISIONS K114. The author: the player fell to the ground in the wind lanes; in the stream there should be no gravity,
+and you just float along it.
+
+**Built**: in the air inside a lane, players and creatures float: no gravity, drawn gently to the lane's middle, their
+sideways drift eased away, carried along at the wind's speed, no fall damage counted. Sneak to drop out.
+
+**Verified (actually run)**: 71/71 GameTests ✓ (a pig dropped into a lane now rides it at 10.4 blocks a second, was
+3.8). In the real client (`tools/capture/m4_lane_float.json`) a survival player put in a lane read gravity 0.0, rose
+with the lane from Y 383 to 397 instead of falling, and was carried at about 14.5 blocks a second.
+
+**Not seen yet**: sneaking out of a lane (the capture tool can't sneak); riding a lane through a Tide (it turns round,
+or in a Stillness stops, and you float in place); an elytra in a lane; multiplayer.
+
+**Author's in-game test**: `/skyseam halcyon lanes find`, fly or jump into the lane in survival, and ride it; hold
+sneak to drop out.

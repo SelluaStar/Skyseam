@@ -2,13 +2,16 @@ package com.selluastar.skyseam.halcyon.wind;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.jetbrains.annotations.Nullable;
 
+import com.selluastar.skyseam.Skyseam;
 import com.selluastar.skyseam.config.SkyseamConfig;
 import com.selluastar.skyseam.external.SableBridge;
 import com.selluastar.skyseam.external.Ship;
@@ -21,10 +24,14 @@ import com.selluastar.skyseam.world.halcyon.HalcyonChunkGenerator;
 import com.selluastar.skyseam.world.halcyon.plan.HalcyonPlan;
 
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
@@ -45,8 +52,9 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * <li>A ship inside a lane is carried along it: each tick its motion along the lane goes part of the way to the wind's
  * speed ({@code wind_lanes.speed}), the more the nearer the lane's middle ({@code wind_lanes.ship_push}). A ship already
  * outrunning the wind is left to it; one flying against it is held back. Its motion across the lane is its own.</li>
- * <li>So are players and creatures in the air in a lane (gliding, falling, jumping off an island into it), but not those
- * standing, swimming, riding, or flying in creative.</li>
+ * <li>Players and creatures in the air in a lane (gliding, falling, jumping off an island into it; not those standing,
+ * swimming, riding, or flying in creative) float in it: no gravity, drawn to its middle, carried along it at the wind's
+ * speed, no fall counted. Sneaking, a player drops out (docs/DECISIONS.md K114).</li>
  * <li>The wind runs one way along each lane in Calm and the other way while a Tide runs ({@link #flow}; docs/DECISIONS.md
  * K111): back harder in a Gale, and not at all in Stillness. It dies down and builds up again the other way over the
  * half minute the Tide takes to come in, and back as it dies away.</li>
@@ -58,7 +66,17 @@ public final class WindLanes {
     /** Players and creatures this far from a player are looked at (beyond, nothing is moving to see). */
     private static final double RIDER_RANGE = 96;
     /** How firmly a lane carries a player or creature in the air at its middle, per second. */
-    private static final double RIDER_PUSH = 1.2;
+    private static final double RIDER_PUSH = 3;
+    /**
+     * Riding a lane (players and creatures in the air in it), there is no gravity: they float, drawn this much a tick
+     * towards its middle for each block off it, their drift across it eased away, and carried along it. Sneaking, a
+     * player drops out.
+     */
+    private static final double CENTRE_PULL = 0.01;
+    private static final double ACROSS_EASE = 0.85;
+    private static final ResourceLocation FLOAT = Skyseam.id("wind_lane_float");
+    /** Who floats in a lane now, in each level, to give them their gravity back when they leave it. */
+    private static final Map<ResourceKey<Level>, Set<UUID>> FLOATING = new HashMap<>();
     /** Each player is sent the lanes this far round them (the ribbons are drawn out to 640), and again once this far on. */
     private static final double SENT_RANGE = 900;
     private static final double RESEND = 256;
@@ -193,18 +211,50 @@ public final class WindLanes {
                 }
             }
         }
+        Set<UUID> floating = new HashSet<>();
         for (Map.Entry<LivingEntity, List<WindLane>> entry : riders(level).entrySet()) {
             LivingEntity rider = entry.getKey();
-            WindLane.Near near = inside(entry.getValue(), rider.position(), 0);
-            if (near == null) {
+            Vec3 middle = rider.position().add(0, rider.getBbHeight() / 2, 0);
+            WindLane.Near near = inside(entry.getValue(), middle, 0);
+            if (near == null || rider.isShiftKeyDown()) {
                 continue;
             }
-            // Blocks per tick for creatures.
-            double push = carry(rider.getDeltaMovement().scale(20), near, windSpeed(near.lane(), flow), RIDER_PUSH * near.depth()) / 20;
-            if (push != 0) {
-                rider.setDeltaMovement(rider.getDeltaMovement().add(near.tangent().scale(push)));
-                rider.hurtMarked = true;
+            floating.add(rider.getUUID());
+            unweigh(rider, true);
+            // Along the lane: carried towards the wind's speed. Across it: drift eased away, drawn to its middle.
+            Vec3 tangent = near.tangent();
+            Vec3 motion = rider.getDeltaMovement();
+            double along = motion.dot(tangent) + carry(motion.scale(20), near, windSpeed(near.lane(), flow), RIDER_PUSH) / 20;
+            Vec3 across = motion.subtract(tangent.scale(motion.dot(tangent))).scale(ACROSS_EASE);
+            Vec3 off = near.point().subtract(middle);
+            Vec3 toMiddle = off.subtract(tangent.scale(off.dot(tangent))).scale(CENTRE_PULL);
+            rider.setDeltaMovement(tangent.scale(along).add(across).add(toMiddle));
+            rider.hurtMarked = true;
+            rider.resetFallDistance();
+        }
+        Set<UUID> was = FLOATING.getOrDefault(level.dimension(), Set.of());
+        for (UUID id : was) {
+            if (!floating.contains(id) && level.getEntity(id) instanceof LivingEntity left) {
+                unweigh(left, false);
             }
+        }
+        if (floating.isEmpty()) {
+            FLOATING.remove(level.dimension());
+        } else {
+            FLOATING.put(level.dimension(), floating);
+        }
+    }
+
+    /** Takes away an entity's gravity while it floats in a lane, or gives it back. */
+    private static void unweigh(LivingEntity entity, boolean floating) {
+        AttributeInstance gravity = entity.getAttribute(Attributes.GRAVITY);
+        if (gravity == null) {
+            return;
+        }
+        if (!floating) {
+            gravity.removeModifier(FLOAT);
+        } else if (gravity.getModifier(FLOAT) == null) {
+            gravity.addTransientModifier(new AttributeModifier(FLOAT, -1, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
         }
     }
 
@@ -294,6 +344,7 @@ public final class WindLanes {
     }
 
     public static void onChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        unweigh(event.getEntity(), false);
         if (event.getEntity() instanceof ServerPlayer player) {
             send(player);
         }
@@ -304,6 +355,7 @@ public final class WindLanes {
         SENT_AT.clear();
         SENT_IN.clear();
         SENT_WHOLE.clear();
+        FLOATING.clear();
     }
 
     private static <T> T setting(net.neoforged.neoforge.common.ModConfigSpec.ConfigValue<T> value) {
