@@ -1,0 +1,80 @@
+{
+ "settle": 200,
+ "steps": [
+  {
+   "command": "gamemode spectator"
+  },
+  {
+   "command": "gamerule doDaylightCycle false"
+  },
+  {
+   "command": "skyseam halcyon time set noon"
+  },
+  {
+   "command": "skyseam halcyon tide stop"
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "skyseam halcyon tp arrival"
+  },
+  {
+   "wait": 200
+  },
+  {
+   "command": "gamerule sendCommandFeedback true"
+  },
+  {
+   "command": "skyseam halcyon lanes ride"
+  },
+  {
+   "command": "gamemode survival"
+  },
+  {
+   "wait": 5
+  },
+  {
+   "command": "data get entity @s Pos"
+  },
+  {
+   "wait": 40
+  },
+  {
+   "command": "data get entity @s Pos"
+  },
+  {
+   "command": "data get entity @s Motion"
+  },
+  {
+   "camera": "back"
+  },
+  {
+   "shot": "float_1"
+  },
+  {
+   "wait": 60
+  },
+  {
+   "command": "data get entity @s Pos"
+  },
+  {
+   "command": "attribute @s minecraft:generic.gravity get"
+  },
+  {
+   "shot": "float_2"
+  },
+  {
+   "command": "gamemode spectator"
+  },
+  {
+   "camera": "first"
+  },
+  {
+   "quit": true
+  }
+ ]
+}
